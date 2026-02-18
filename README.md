@@ -12,13 +12,7 @@ The Stacks liquid stacking space needs fresh energy. StackingDAO has missed stac
 
 ## Origin
 
-Juice started as a conversation between [RaphaStacks](https://x.com/RaphaStacks) and [friedger.btc](https://x.com/AskFriedger):
-
-> **Rapha:** I think I'm getting interested in building a STX liquid stacking token. You said you wanted more innovation in that space. StackingDAO has missed the deadline to stack for people — people are not happy, it's the 2nd time. LISA doesn't have a swap for their users. I think there is space for a new one. My only condition is to make a totally new entity, not LISA. Starting from scratch.
->
-> **friedger:** We can take the 2M STX from LISA to get started. LISA is a DAO, we can turn it into anything.
->
-> **Rapha:** Okay, I'm studying the StackingDAO contracts...
+Juice started as a conversation between [RaphaStacks](https://x.com/RaphaStacks) and [friedger.btc](https://x.com/AskFriedger) about the need for more innovation in the Stacks liquid stacking space — and a commitment to build something new from scratch, with the community first.
 
 The study plan is public at [stxjuice.com/learn](https://www.stxjuice.com/learn).
 
