@@ -1,22 +1,103 @@
 [project]
 name = "stx-juice"
-description = ""
+description = "jSTX liquid stacking protocol - earn sBTC yield on your STX"
 authors = []
 telemetry = false
 cache_dir = "./.cache"
 
-# [contracts.counter]
-# path = "contracts/counter.clar"
-# epoch = "latest"
+# -------------------------------------------------------
+# Traits (no dependencies)
+# -------------------------------------------------------
+[contracts.sip-010-trait]
+path = "contracts/traits/sip-010-trait.clar"
 
-# Check-checker settings:
-# trusted_sender: if true, inputs are trusted after tx_sender has been checked.
-# trusted_caller: if true, inputs are trusted after contract-caller has been checked.
-# callee_filter: if true, untrusted data may be passed into a private function without a
-# warning, if it gets checked inside. This check will also propagate up to the
-# caller.
-# More informations: https://www.hiro.so/blog/new-safety-checks-in-clarinet
+[contracts.sip-009-trait]
+path = "contracts/traits/sip-009-trait.clar"
 
+[contracts.commission-trait]
+path = "contracts/traits/commission-trait.clar"
+
+[contracts.position-trait]
+path = "contracts/traits/position-trait.clar"
+
+[contracts.stacking-trait]
+path = "contracts/traits/stacking-trait.clar"
+
+# -------------------------------------------------------
+# Mocks (depend on traits only)
+# -------------------------------------------------------
+[contracts.sbtc-mock]
+path = "contracts/mocks/sbtc-mock.clar"
+
+[contracts.pox-4-mock]
+path = "contracts/mocks/pox-4-mock.clar"
+
+[contracts.zest-mock]
+path = "contracts/mocks/zest-mock.clar"
+
+# -------------------------------------------------------
+# Foundation (no contract dependencies)
+# -------------------------------------------------------
+[contracts.dao]
+path = "contracts/dao.clar"
+
+# -------------------------------------------------------
+# Registry (depends on dao)
+# -------------------------------------------------------
+[contracts.registry]
+path = "contracts/registry.clar"
+
+# -------------------------------------------------------
+# Data layer (depends on dao)
+# -------------------------------------------------------
+[contracts.share-data]
+path = "contracts/share-data.clar"
+
+[contracts.withdraw-nft]
+path = "contracts/withdraw-nft.clar"
+
+# -------------------------------------------------------
+# Token + Reward tracking (depends on dao, share-data, sbtc-mock)
+# -------------------------------------------------------
+[contracts.jstx-token]
+path = "contracts/jstx-token.clar"
+
+[contracts.share]
+path = "contracts/share.clar"
+
+# -------------------------------------------------------
+# Protocol (depends on everything above)
+# -------------------------------------------------------
+[contracts.vault]
+path = "contracts/vault.clar"
+
+[contracts.commission]
+path = "contracts/commission.clar"
+
+[contracts.yield]
+path = "contracts/yield.clar"
+
+[contracts.core]
+path = "contracts/core.clar"
+
+[contracts.pool]
+path = "contracts/pool.clar"
+
+[contracts.drip]
+path = "contracts/drip.clar"
+
+[contracts.helpers]
+path = "contracts/helpers.clar"
+
+# -------------------------------------------------------
+# DeFi integration
+# -------------------------------------------------------
+[contracts.position-zest]
+path = "contracts/position-zest.clar"
+
+# -------------------------------------------------------
+# Analysis settings
+# -------------------------------------------------------
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
