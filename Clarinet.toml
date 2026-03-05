@@ -62,9 +62,6 @@ path = "contracts/withdraw-nft.clar"
 [contracts.jstx-token]
 path = "contracts/jstx-token.clar"
 
-[contracts.share]
-path = "contracts/share.clar"
-
 # -------------------------------------------------------
 # Protocol (depends on everything above)
 # -------------------------------------------------------
@@ -82,9 +79,6 @@ path = "contracts/core.clar"
 
 [contracts.pool]
 path = "contracts/pool.clar"
-
-[contracts.drip]
-path = "contracts/drip.clar"
 
 [contracts.helpers]
 path = "contracts/helpers.clar"

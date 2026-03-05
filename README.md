@@ -58,10 +58,7 @@ User deposits STX
        +---> pool owner cut (signer operator revenue share)
        |
        v
-  drip.clar triggers ~30 times per cycle (every ~70 blocks)
-       |
-       v
-  share.clar updates global reward-per-share counter
+  yield.clar vests rewards linearly over ~2100 blocks (no keeper needed)
        |
        v
   jSTX holders claim sBTC proportional to their balance
@@ -74,7 +71,7 @@ User deposits STX
 1. **Multi-signer from day 1**: Even though we launch with one signer, the architecture supports N signers. Adding a signer is a registry update, not a code change.
 2. **Separated data and logic**: Data contracts (share-data) are separate from logic contracts (share) so logic can be upgraded without migrating state.
 3. **Trait-based modularity**: Commission strategy, pool implementation, and DeFi adapters are all trait-based. Swap implementations via DAO governance without touching the pipeline.
-4. **No circular dependencies**: The token calls share, but share never calls back to the token. Balance data flows as parameters to break the cycle.
+4. **No circular dependencies**: The token calls yield, but yield never calls back to the token. Balance data flows as parameters to break the cycle.
 
 ### Contract Map
 
@@ -94,14 +91,6 @@ User deposits STX
     +-----+------+    +------+------+    +-------+-------+
           |                  |                    |
           |           +------v------+             |
-          |           |   share     |             |
-          |           | Reward math |             |
-          |           | brain (the  |             |
-          |           | cumm-reward |             |
-          |           | algorithm)  |             |
-          |           +------+------+             |
-          |                  |                    |
-          |           +------v------+             |
           |           | jstx-token  |             |
           |           | SIP-010     |             |
           |           | "Juiced STX"|             |
@@ -116,18 +105,10 @@ User deposits STX
           |                  |
     +-----v------+    +------v------+     +-------------+
     |    pool     |    |   yield     |     | commission  |
-    | PoX-4       |    | Drip        |     | Fee splitter|
-    | signer      |    | scheduler   +---->| (trait-     |
-    | operator    |    | for sBTC    |     |  based)     |
-    +-------------+    +------+------+     +-------------+
-                              |
-                       +------v------+
-                       |    drip     |
-                       | Keeper      |
-                       | trigger     |
-                       | (anyone     |
-                       |  can call)  |
-                       +-------------+
+    | PoX-4       |    | Rewards +   |     | Fee splitter|
+    | signer      |    | vesting +   +---->| (trait-     |
+    | operator    |    | settlement  |     |  based)     |
+    +-------------+    +-------------+     +-------------+
 ```
 
 ### Contract Details
@@ -136,15 +117,13 @@ User deposits STX
 |----------|-------------|--------------------------|
 | **dao** | Permission gate. Two whitelists: "protocols" (authorized contracts) and "admins" (authorized wallets). Every privileged function in the system calls `dao.check-is-protocol` or `dao.check-is-admin` before executing. Deployer is the initial admin. | `dao.clar` |
 | **registry** | Central directory of signer pools. Tracks which signers are active, how much STX each gets (weight in basis points), per-pool commission rates, pool-owner revenue share, and delegate contract assignments. Multi-signer is a registry update, not a code change. | `data-pools-v1.clar` |
-| **jstx-token** | SIP-010 fungible token ("Juiced STX", 6 decimals). Every transfer/mint/burn refreshes reward tracking for affected wallets first, so no one can game the reward timing. Claims sBTC rewards go through here too. | `ststxbtc-token.clar` |
-| **share** | The reward math brain. Uses cumulative-reward-per-share algorithm: when sBTC arrives, adds (amount / total_supply) to a global counter. Each holder's pending = (global - their_snapshot) * their_balance. O(1) regardless of holder count. | `ststxbtc-tracking.clar` |
-| **share-data** | Data store for share. Holds the global reward-per-share counter, per-holder snapshots, tracked supply, and registered DeFi positions. Separated so share logic can be upgraded without migrating data. | `ststxbtc-tracking-data.clar` |
+| **jstx-token** | SIP-010 fungible token ("Juiced STX", 6 decimals). Every transfer/mint/burn refreshes reward tracking via yield.settle-wallet first, so no one can game the reward timing. Claims sBTC rewards go through here too. | `ststxbtc-token.clar` |
+| **share-data** | Data store for reward tracking. Holds the global reward-per-share counter, per-holder snapshots, tracked supply, and registered DeFi positions. Separated so yield logic can be upgraded without migrating data. | `ststxbtc-tracking-data.clar` |
 | **vault** | The STX bank account. All deposited STX lives here. Only authorized contracts can deposit or withdraw. Simple by design -- deposit, withdraw, check balance. | `reserve-v1.clar` |
 | **core** | User entry point. Deposit (STX in, jSTX out at 1:1). Init-withdraw (lock jSTX, get withdrawal NFT with unlock height). Withdraw (after unlock, burn NFT + jSTX, get STX back). | `stacking-dao-core-btc-v3.clar` |
-| **yield** | Drip scheduler. sBTC rewards are released gradually across a PoX cycle (~30 drips) to prevent flash-mint attacks. Handles per-pool commission calculation using rates from registry. Pool owner gets their cut immediately; rest accumulates for drip distribution. | `rewards-v5.clar` |
+| **yield** | Unified reward + distribution contract. Receives sBTC from signer pools, takes per-pool commission, then vests rewards linearly over ~2100 blocks as a function of block height (no keeper needed). Handles wallet settlement using cumulative-reward-per-share math (O(1) per holder). Also settles DeFi positions (jSTX in Zest still earns). | `rewards-v5.clar` + `ststxbtc-tracking.clar` |
 | **commission** | Fee splitter. Takes the commission portion of sBTC rewards and sends it to the treasury. Implements a trait so governance can deploy a new commission strategy (e.g., add governance staker rewards) without touching the yield pipeline. | `commission-btc-v1.clar` |
 | **pool** | PoX-4 signer operator contract. Each signer in the network gets their own deployed copy. Manages signer key + signature registration per cycle, calls pox-4 to lock STX and commit aggregated stake. The pool owner (signer operator) controls their own key material. | `stacking-pool-signer-v1.clar` |
-| **drip** | Permissionless keeper trigger. Anyone can call it every ~70 blocks to release the next slice of sBTC rewards from yield into share. Enforces minimum interval. In production, a bot calls this regularly. | `rewards-job-v1.clar` |
 | **helpers** | Multi-pool router. Routes STX to the correct signer pool based on registry weights. Core contract calls helpers, helpers calls the pool trait. When we add a new signer, helpers automatically routes to them. | `direct-helpers-v4.clar` |
 | **withdraw-nft** | SIP-009 NFT for withdrawal receipts. Each NFT represents a claim on X STX after block height Y. Includes a built-in non-custodial marketplace: list your withdrawal position for sale if you don't want to wait. | `ststxbtc-withdraw-nft.clar` |
 | **position-zest** | Zest DeFi adapter. Tells the share contract how much jSTX a user has deposited as collateral in Zest, so they still earn sBTC rewards on collateralized jSTX. ~10 lines. | `position-zest-v2.clar` |
@@ -249,7 +228,13 @@ As Philip (StackingDAO lead dev) explained:
 | Shared pool | Both tokens share the same STX reserve and signer infrastructure | Single pool for jSTX |
 | Naming | Version-suffixed (reserve-v1, rewards-v5, commission-btc-v1) | Clean names (vault, yield, commission) |
 | Strategy | Complex on-chain allocation algorithm (strategy-v3-pools, strategy-v3-delegates, algo) | Off-chain keeper calculates, on-chain executes via helpers |
-| Complexity | ~40+ contracts across v1/v2/v3 | 14 core contracts + 5 traits + 3 mocks |
+| Reward distribution | Keeper-triggered drips (30x per cycle) | Time-based vesting (no keeper for distribution) |
+| Complexity | ~40+ contracts across v1/v2/v3 | 12 core contracts + 5 traits + 3 mocks |
+
+### What we changed from StackingDAO
+
+- **Merged yield + share into one contract** -- StackingDAO has separate reward routing (rewards-v5) and reward tracking (ststxbtc-tracking) because they route to two different token types (stSTX + stSTXbtc). We have one token, one destination, so the routing layer is unnecessary. Data store (share-data) remains separate for upgradeability.
+- **Time-based vesting replaces keeper drips** -- instead of a keeper calling drip() 30 times per cycle, rewards vest linearly as a function of block height. `apply-vested` computes `total * elapsed / VESTING_BLOCKS` lazily on every settle. Same flash-mint protection, zero keeper dependency for distribution.
 
 ### What we kept from StackingDAO
 
@@ -265,6 +250,47 @@ As Philip (StackingDAO lead dev) explained:
 - **No on-chain strategy algo** -- off-chain keeper determines allocations
 - **No version suffixes** -- contracts are named for what they do
 - **Fewer layers** -- no data-core, data-direct-stacking, strategy-v3-algo, etc.
+
+## Research: Keeper-less sBTC Reward Flow
+
+**Status: Open question -- needs validation with sBTC team**
+
+### The idea (from friedger.btc)
+
+Instead of a keeper converting BTC rewards to sBTC off-chain, set the pool's PoX reward address (`btc-address` in `pool.clar`) to the sBTC deposit address that maps to the yield contract's Stacks principal. Then:
+
+1. Miners pay BTC rewards to the pox-addr (which IS the sBTC deposit address)
+2. sBTC bridge sees the BTC deposit, mints sBTC to the yield contract
+3. No keeper needed for BTC→sBTC conversion
+
+### How the pox-addr works in PoX-4
+
+- `pool.clar` stores `btc-address` as `{ version: (buff 1), hashbytes: (buff 32) }` -- a BTC address, not a Stacks principal
+- This gets passed to `pox-4.stack-aggregation-commit-indexed` once per cycle
+- Once committed, `stack-aggregation-increase` enforces the **same** pox-addr for that cycle
+- But it can be set to a **different** address on the next cycle via `register-cycle-auth`
+
+### The sBTC deposit address problem
+
+The sBTC deposit address (from Emily API) is a taproot address derived from the current sBTC signer set. When signers rotate, the deposit address changes.
+
+- **Within a cycle**: pox-addr is locked at commit time. If sBTC signers rotate mid-cycle, BTC rewards still go to the old deposit address. Question: does the bridge still honor deposits to a previous-rotation address?
+- **Between cycles**: we can query Emily for the current deposit address and use it for the next cycle's commit. This part works cleanly.
+
+### Potential fallback: own taproot key
+
+If the sBTC deposit address is constructed as a taproot address using a BTC pubkey we control, we could potentially claw back BTC from a stale deposit address even after signer rotation. This depends on how Emily constructs the deposit address -- whether our key is part of the taproot spend path.
+
+### Questions for Friedger / sBTC team
+
+1. Does the sBTC deposit address stay valid for deposits after a signer rotation? (i.e., will BTC sent to a previous-rotation deposit address still get bridged?)
+2. Can we get a deposit address that maps to a specific contract principal (not just an EOA)?
+3. Is there a taproot key path that lets the depositor reclaim BTC if the bridge fails to process?
+4. What's the expected signer rotation frequency relative to PoX cycle length (~2100 blocks)?
+
+### Current approach (safe)
+
+Keeper collects BTC from signer, converts to sBTC off-chain, calls `yield.receive-rewards()`. This works regardless of sBTC bridge behavior. The keeper-less approach is an optimization to explore, not a blocker.
 
 ## Development
 
