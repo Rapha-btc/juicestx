@@ -10,6 +10,7 @@
 ;;
 ;; This is a TEST-ONLY contract -- never deployed to mainnet.
 
+;; Mainnet: (impl-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
 (impl-trait .sip-010-trait.sip-010-trait)
 
 (define-fungible-token sbtc)
