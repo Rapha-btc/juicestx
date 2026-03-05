@@ -89,7 +89,8 @@
 ;; doesn't dilute their pending rewards.
 (define-public (mint (amount uint) (recipient principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (contract-call? .yield settle-wallet recipient (ft-get-balance jstx recipient) (ft-get-supply jstx)))
     (try! (ft-mint? jstx amount recipient))
     (print { action: "mint", amount: amount, recipient: recipient })
@@ -101,7 +102,8 @@
 ;; Refreshes the owner's rewards first so they get paid before burning.
 (define-public (burn (amount uint) (owner principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (contract-call? .yield settle-wallet owner (ft-get-balance jstx owner) (ft-get-supply jstx)))
     (try! (ft-burn? jstx amount owner))
     (print { action: "burn", amount: amount, owner: owner })

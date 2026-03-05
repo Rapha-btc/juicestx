@@ -27,7 +27,8 @@
 ;; The STX is transferred from tx-sender (the user) to this contract.
 (define-public (receive (amount uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (stx-transfer? amount tx-sender (as-contract tx-sender))
   )
 )
@@ -36,7 +37,8 @@
 ;; user withdrawal, or by delegate contracts pulling STX for stacking.
 (define-public (release (amount uint) (recipient principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (as-contract (stx-transfer? amount tx-sender recipient))
   )
 )

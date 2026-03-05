@@ -41,7 +41,8 @@
 ;; For now, 100% goes to treasury.
 (define-public (process (sbtc-amount uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (if (> sbtc-amount u0)
       (try! (as-contract (contract-call? .sbtc-mock transfer sbtc-amount tx-sender PROTOCOL_TREASURY none)))
       true

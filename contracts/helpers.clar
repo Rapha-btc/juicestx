@@ -40,7 +40,8 @@
 ;; The pool-contract must implement stacking-trait.
 (define-public (route-to-signer (pool-contract <stacking-trait>) (amount uint) (stacker principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (contract-call? pool-contract delegate-stx amount stacker))
     (print { action: "route-to-signer", pool: (contract-of pool-contract), amount: amount, stacker: stacker })
     (ok true)
@@ -50,7 +51,8 @@
 ;; Withdraw STX from a specific signer pool back to the vault.
 (define-public (recall-from-signer (pool-contract <stacking-trait>) (stacker principal) (amount uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (contract-call? pool-contract return-stx stacker amount))
     (print { action: "recall-from-signer", pool: (contract-of pool-contract), stacker: stacker, amount: amount })
     (ok true)
@@ -60,7 +62,8 @@
 ;; Revoke delegation from a specific pool.
 (define-public (revoke-from-signer (pool-contract <stacking-trait>) (stacker principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (contract-call? pool-contract revoke-delegate-stx stacker))
     (print { action: "revoke-from-signer", pool: (contract-of pool-contract), stacker: stacker })
     (ok true)

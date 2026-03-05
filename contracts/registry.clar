@@ -103,49 +103,49 @@
 
 (define-public (set-signers (new-signers (list 30 principal)))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (var-set signers new-signers))
   )
 )
 
 (define-public (set-base-fee (rate uint))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (var-set base-fee rate))
   )
 )
 
 (define-public (set-signer-allocation (signer principal) (alloc uint))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (map-set signer-allocation signer alloc))
   )
 )
 
 (define-public (set-signer-fee (signer principal) (rate uint))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (map-set signer-fee signer rate))
   )
 )
 
 (define-public (set-operator-cut (signer principal) (receiver principal) (cut uint))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (map-set operator-cut signer { receiver: receiver, share: cut }))
   )
 )
 
 (define-public (set-signer-delegates (signer principal) (delegates (list 10 principal)))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (map-set signer-delegates signer delegates))
   )
 )
 
 (define-public (set-delegate-allocation (delegate principal) (alloc uint))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (map-set delegate-allocation delegate alloc))
   )
 )

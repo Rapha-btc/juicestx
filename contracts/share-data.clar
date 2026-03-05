@@ -76,28 +76,31 @@
 
 (define-public (set-global-index (new-value uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (ok (var-set global-index new-value))
   )
 )
 
 (define-public (set-tracked-supply (new-value uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (ok (var-set tracked-supply new-value))
   )
 )
 
 (define-public (set-wallet-snapshot (who principal) (snapshot { index: uint, balance: uint }))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (ok (map-set wallet-snapshot who snapshot))
   )
 )
 
 (define-public (set-defi-adapter (protocol principal) (active bool))
   (begin
-    (try! (contract-call? .dao guard-admin))
+    (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (map-set defi-adapters protocol active))
   )
 )

@@ -125,7 +125,8 @@
       (map-get? reward-bucket cycle)
     ))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
 
     ;; Transfer sBTC from caller into this contract
     (try! (contract-call? .sbtc-mock transfer sbtc-amount tx-sender (as-contract tx-sender) none))
@@ -173,7 +174,8 @@
   (let (
     (cycle (var-get active-cycle))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
 
     ;; Apply any newly vested rewards to global index
     (try! (apply-vested cycle))
@@ -211,7 +213,8 @@
   (let (
     (cycle (var-get active-cycle))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (apply-vested cycle))
 
     (let (
@@ -248,7 +251,8 @@
     (bucket (unwrap! (map-get? reward-bucket cycle) ERR_NOTHING_TO_VEST))
     (commission-amount (get commission-sbtc bucket))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (asserts! (> commission-amount u0) ERR_NOTHING_TO_VEST)
 
     (try! (as-contract (contract-call? commission-contract process commission-amount)))

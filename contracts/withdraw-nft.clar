@@ -87,7 +87,8 @@
   (let (
     (new-id (+ (var-get mint-counter) u1))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (nft-mint? withdrawal-receipt new-id recipient))
     (map-set receipt-data new-id {
       stx-amount: stx-amount,
@@ -103,7 +104,8 @@
   (let (
     (owner (unwrap! (nft-get-owner? withdrawal-receipt id) ERR_NOT_FOUND))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (map-delete receipt-data id)
     (map-delete offers id)
     (nft-burn? withdrawal-receipt id owner)

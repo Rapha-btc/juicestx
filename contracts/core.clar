@@ -54,7 +54,8 @@
 ;; delegates it to signer pools at the next cycle boundary.
 (define-public (deposit (amount uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (asserts! (> amount u0) ERR_ZERO_AMOUNT)
 
     ;; Transfer STX from user to vault
@@ -85,7 +86,8 @@
   (let (
     (current-reserved (default-to u0 (map-get? reserved-jstx tx-sender)))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (asserts! (> amount u0) ERR_ZERO_AMOUNT)
 
     ;; Track reserved jSTX for this user
@@ -112,7 +114,8 @@
     (unlock-height (get unlock-height receipt))
     (nft-owner (unwrap! (unwrap-panic (contract-call? .withdraw-nft get-owner nft-id)) ERR_NOT_NFT_OWNER))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (asserts! (is-eq tx-sender nft-owner) ERR_NOT_NFT_OWNER)
     (asserts! (>= burn-block-height unlock-height) ERR_NOT_UNLOCKED)
 

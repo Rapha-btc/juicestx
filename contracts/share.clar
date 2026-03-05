@@ -50,7 +50,8 @@
       current-idx
     ))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (contract-call? .share-data set-global-index new-idx))
     (print { action: "distribute-rewards", sbtc-amount: sbtc-amount, new-index: new-idx })
     (ok true)
@@ -77,7 +78,8 @@
       u0
     ))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     ;; Pay out pending sBTC if any
     (if (> pending u0)
       (try! (as-contract (contract-call? .sbtc-mock transfer pending tx-sender who none)))
@@ -109,7 +111,8 @@
       u0
     ))
   )
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (asserts! (contract-call? .share-data is-defi-adapter (contract-of adapter)) ERR_UNAUTHORIZED)
     ;; Pay out pending sBTC if any
     (if (> pending u0)

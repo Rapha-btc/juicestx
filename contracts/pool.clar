@@ -111,7 +111,8 @@
 ;; Delegate STX from a delegate contract to this pool
 (define-public (delegate-stx (amount uint) (stacker principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (print { action: "delegate-stx", pool: (as-contract tx-sender), amount: amount, stacker: stacker })
     (ok true)
   )
@@ -120,7 +121,8 @@
 ;; Revoke a delegation
 (define-public (revoke-delegate-stx (stacker principal))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (print { action: "revoke-delegation", pool: (as-contract tx-sender), stacker: stacker })
     (ok true)
   )
@@ -129,7 +131,8 @@
 ;; Return STX from stacking back to the vault
 (define-public (return-stx (stacker principal) (amount uint))
   (begin
-    (try! (contract-call? .dao guard-protocol))
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
     (print { action: "return-stx", pool: (as-contract tx-sender), stacker: stacker, amount: amount })
     (ok true)
   )
