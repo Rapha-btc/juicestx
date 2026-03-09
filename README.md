@@ -250,6 +250,7 @@ As Philip (StackingDAO lead dev) explained:
 - **No on-chain strategy algo** -- off-chain keeper determines allocations
 - **No version suffixes** -- contracts are named for what they do
 - **Fewer layers** -- no data-core, data-direct-stacking, strategy-v3-algo, etc.
+- **No governance token staking split in commission** -- StackingDAO passes a `staking-contract` through core into commission so protocol fees can be split between treasury and governance token stakers. We don't need this yet. Our fees-trait is designed so that a future fees contract can handle any split internally (treasury, governance stakers, burn, etc.) without changing core. When we launch a governance token, we deploy a new fees contract that distributes accordingly -- no protocol upgrade required.
 
 ## Research: Keeper-less sBTC Reward Flow
 

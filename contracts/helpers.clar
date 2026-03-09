@@ -22,7 +22,7 @@
 ;; Inspired by: StackingDAO direct-helpers-v4.clar
 ;; Source: stacking-dao/contracts/version-2/direct-helpers-v4.clar
 
-(use-trait stacking-trait .stacking-trait.stacking-trait)
+(use-trait stacker-trait .stacker-trait.stacker-trait)
 
 ;; ---------------------------------------------------------
 ;; Constants
@@ -37,8 +37,8 @@
 
 ;; Deposit STX into a specific signer pool. The strategy/keeper calls this
 ;; after calculating how much each pool should receive.
-;; The pool-contract must implement stacking-trait.
-(define-public (route-to-signer (pool-contract <stacking-trait>) (amount uint) (stacker principal))
+;; The pool-contract must implement stacker-trait.
+(define-public (route-to-signer (pool-contract <stacker-trait>) (amount uint) (stacker principal))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
@@ -49,7 +49,7 @@
 )
 
 ;; Withdraw STX from a specific signer pool back to the vault.
-(define-public (recall-from-signer (pool-contract <stacking-trait>) (stacker principal) (amount uint))
+(define-public (recall-from-signer (pool-contract <stacker-trait>) (stacker principal) (amount uint))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
@@ -60,7 +60,7 @@
 )
 
 ;; Revoke delegation from a specific pool.
-(define-public (revoke-from-signer (pool-contract <stacking-trait>) (stacker principal))
+(define-public (revoke-from-signer (pool-contract <stacker-trait>) (stacker principal))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))

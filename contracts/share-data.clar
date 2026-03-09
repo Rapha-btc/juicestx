@@ -17,7 +17,8 @@
 ;;   deposited as collateral. Holders in DeFi still earn sBTC rewards.
 ;;
 ;; Inspired by: StackingDAO ststxbtc-tracking-data.clar
-;; Source: stacking-dao/contracts/version-3/ststxbtc-tracking-data.clar
+;; Source (data):  stacking-dao/contracts/core/ststxbtc-tracking-data.clar
+;; Source (logic): stacking-dao/contracts/core/ststxbtc-tracking.clar
 
 ;; ---------------------------------------------------------
 ;; Constants

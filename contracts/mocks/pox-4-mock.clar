@@ -92,3 +92,14 @@
 (define-public (revoke-delegate-stx)
   (ok true)
 )
+
+;; Returns the current PoX reward cycle number (stubbed for testing)
+(define-read-only (current-pox-reward-cycle)
+  u1
+)
+
+;; Returns the burn height at which a given reward cycle starts
+;; Stub: assumes cycle length 2100 starting at height 0
+(define-read-only (reward-cycle-to-burn-height (cycle uint))
+  (* cycle u2100)
+)

@@ -1,4 +1,4 @@
-;; Title: withdraw-nft
+;; Title: redeem-nft
 ;;
 ;; What this contract does:
 ;; When a user wants to withdraw STX from STX Juice, their STX is locked
@@ -14,11 +14,12 @@
 ;; pays STX now and gets the right to claim the STX later.
 ;; This is non-custodial -- the NFT stays in the seller's wallet until bought.
 ;;
-;; Inspired by: StackingDAO ststxbtc-withdraw-nft.clar
-;; Source: stacking-dao/contracts/version-3/ststxbtc-withdraw-nft.clar
+;; Inspired by: StackingDAO ststxbtc-redeem-nft.clar
+;; Source: stacking-dao/contracts/version-3/ststxbtc-redeem-nft.clar
 
 ;; Mainnet: (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 (impl-trait .sip-009-trait.sip-009-trait)
+(impl-trait .redeem-nft-trait.redeem-nft-trait)
 
 ;; ---------------------------------------------------------
 ;; Constants
@@ -65,7 +66,7 @@
 )
 
 (define-read-only (get-token-uri (id uint))
-  (ok (some "https://stxjuice.com/api/withdrawal/{id}"))
+  (ok (some u"https://stxjuice.com/api/withdrawal/{id}"))
 )
 
 (define-read-only (get-owner (id uint))
@@ -116,8 +117,12 @@
 ;; Read-only: receipt info
 ;; ---------------------------------------------------------
 
+(define-read-only (get-nft-owner (id uint))
+  (nft-get-owner? withdrawal-receipt id)
+)
+
 (define-read-only (get-receipt (id uint))
-  (map-get? receipt-data id)
+  (ok (map-get? receipt-data id))
 )
 
 (define-read-only (get-offer (id uint))

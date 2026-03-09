@@ -14,14 +14,23 @@ path = "contracts/traits/sip-010-trait.clar"
 [contracts.sip-009-trait]
 path = "contracts/traits/sip-009-trait.clar"
 
+[contracts.vault-trait]
+path = "contracts/traits/vault-trait.clar"
+
+[contracts.fees-trait]
+path = "contracts/traits/fees-trait.clar"
+
+[contracts.redeem-nft-trait]
+path = "contracts/traits/redeem-nft-trait.clar"
+
 [contracts.commission-trait]
 path = "contracts/traits/commission-trait.clar"
 
 [contracts.position-trait]
 path = "contracts/traits/position-trait.clar"
 
-[contracts.stacking-trait]
-path = "contracts/traits/stacking-trait.clar"
+[contracts.stacker-trait]
+path = "contracts/traits/stacker-trait.clar"
 
 # -------------------------------------------------------
 # Mocks (depend on traits only)
@@ -34,6 +43,9 @@ path = "contracts/mocks/pox-4-mock.clar"
 
 [contracts.zest-mock]
 path = "contracts/mocks/zest-mock.clar"
+
+[contracts.fees-none]
+path = "contracts/fees-none.clar"
 
 # -------------------------------------------------------
 # Foundation (no contract dependencies)
@@ -53,14 +65,20 @@ path = "contracts/registry.clar"
 [contracts.share-data]
 path = "contracts/share-data.clar"
 
-[contracts.withdraw-nft]
-path = "contracts/withdraw-nft.clar"
+[contracts.redeem-nft]
+path = "contracts/redeem-nft.clar"
 
 # -------------------------------------------------------
 # Token + Reward tracking (depends on dao, share-data, sbtc-mock)
 # -------------------------------------------------------
 [contracts.jstx-token]
 path = "contracts/jstx-token.clar"
+
+# -------------------------------------------------------
+# Delegation (depends on dao)
+# -------------------------------------------------------
+[contracts.delegation]
+path = "contracts/delegation.clar"
 
 # -------------------------------------------------------
 # Protocol (depends on everything above)
@@ -76,9 +94,11 @@ path = "contracts/yield.clar"
 
 [contracts.core]
 path = "contracts/core.clar"
+epoch = "latest"
 
-[contracts.pool]
-path = "contracts/pool.clar"
+[contracts.stacker]
+path = "contracts/stacker.clar"
+epoch = 3.0
 
 [contracts.helpers]
 path = "contracts/helpers.clar"

@@ -1,9 +1,9 @@
-;; Title: pool
+;; Title: stacker
 ;;
 ;; What this contract does:
-;; This is the signer pool operator contract -- the thing that actually talks
+;; This is the signer stacker contract -- the thing that actually talks
 ;; to PoX-4 to stack STX with a specific signer. Each signer in the STX Juice
-;; network deploys their own copy of this contract (or we deploy one for them).
+;; network gets their own copy of this contract.
 ;;
 ;; What it does each PoX cycle:
 ;; 1. Takes delegated STX from delegate contracts
@@ -26,7 +26,7 @@
 ;; Inspired by: StackingDAO stacking-pool-signer-v1.clar
 ;; Source: stacking-dao/contracts/version-2/stacking-pool-signer-v1.clar
 
-(impl-trait .stacking-trait.stacking-trait)
+(impl-trait .stacker-trait.stacker-trait)
 
 ;; ---------------------------------------------------------
 ;; Constants
@@ -34,6 +34,7 @@
 (define-constant ERR_UNAUTHORIZED (err u11001))
 (define-constant ERR_MISSING_AUTH (err u11002))
 (define-constant ERR_NOT_OPERATOR (err u11003))
+(define-constant ERR_POX_FAILED (err u11004))
 
 ;; ---------------------------------------------------------
 ;; Data
@@ -153,7 +154,11 @@
     (pox-addr (var-get btc-address))
   )
     (asserts! (is-eq tx-sender (var-get operator)) ERR_NOT_OPERATOR)
-    (as-contract (contract-call? .pox-4-mock delegate-stack-stx stacker amount pox-addr start-burn-ht lock-period))
+    (let (
+      (result (unwrap! (as-contract (contract-call? 'SP000000000000000000002Q6VF78.pox-4 delegate-stack-stx stacker amount pox-addr start-burn-ht lock-period)) ERR_POX_FAILED))
+    )
+      (ok result)
+    )
   )
 )
 
@@ -163,14 +168,18 @@
     (auth (unwrap! (map-get? cycle-auth { cycle: cycle, topic: "agg-commit" }) ERR_MISSING_AUTH))
   )
     (asserts! (is-eq tx-sender (var-get operator)) ERR_NOT_OPERATOR)
-    (as-contract (contract-call? .pox-4-mock stack-aggregation-commit-indexed
-      (get pox-addr auth)
-      cycle
-      (some (get signer-sig auth))
-      (get signer-key auth)
-      (get max-amount auth)
-      (get auth-id auth)
-    ))
+    (let (
+      (result (unwrap! (as-contract (contract-call? 'SP000000000000000000002Q6VF78.pox-4 stack-aggregation-commit-indexed
+        (get pox-addr auth)
+        cycle
+        (some (get signer-sig auth))
+        (get signer-key auth)
+        (get max-amount auth)
+        (get auth-id auth)
+      )) ERR_POX_FAILED))
+    )
+      (ok result)
+    )
   )
 )
 

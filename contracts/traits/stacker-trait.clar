@@ -6,7 +6,7 @@
 ;;          to know which signer is being used.
 ;; Inspired by: StackingDAO stacking-pool-trait.clar
 
-(define-trait stacking-trait
+(define-trait stacker-trait
   (
     ;; Delegate STX from a delegate contract to this pool for stacking.
     ;; amount: micro-STX to delegate
