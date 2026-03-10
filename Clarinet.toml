@@ -94,6 +94,7 @@ path = "contracts/yield.clar"
 
 [contracts.core]
 path = "contracts/core.clar"
+clarity_version = 4
 epoch = "latest"
 
 [contracts.stacker]

@@ -64,8 +64,7 @@
             (prev-stacker (get stacker (unwrap-panic current)))
             (prev-amount (get amount (unwrap-panic current)))
           )
-            (try! (remove-delegation user prev-stacker prev-amount))
-            true
+            (remove-delegation user prev-stacker prev-amount)
           )
           false
         )
@@ -93,8 +92,7 @@
             (prev-stacker (get stacker (unwrap-panic current)))
             (prev-amount (get amount (unwrap-panic current)))
           )
-            (try! (remove-delegation user prev-stacker prev-amount))
-            true
+            (remove-delegation user prev-stacker prev-amount)
           )
           false
         )
@@ -124,7 +122,7 @@
         (if (>= amount cur-amount)
           ;; Full removal
           (begin
-            (try! (remove-delegation user cur-stacker cur-amount))
+            (remove-delegation user cur-stacker cur-amount)
             (print { action: "clear", user: user })
             (ok true)
           )
@@ -159,6 +157,6 @@
     (map-delete user-delegation user)
     (map-set stacker-total stacker (- stacker-sum amount))
     (var-set total-delegated (- global-sum amount))
-    (ok true)
+    true
   )
 )

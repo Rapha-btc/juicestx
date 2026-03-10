@@ -213,7 +213,7 @@
     (asserts! (> ustx u0) ERR_ZERO_AMOUNT)
 
     ;; Transfer jSTX from user to this contract (burned on final withdraw)
-    (try! (contract-call? .jstx-token transfer ustx tx-sender (as-contract tx-sender) none))
+    (try! (contract-call? .jstx-token transfer ustx tx-sender current-contract none))
 
     ;; Earmark STX in vault so stacker doesn't touch it
     (try! (contract-call? vault reserve ustx))
@@ -234,7 +234,7 @@
 ;; Burns the NFT + jSTX (held by core since start-withdraw), sends STX to user.
 (define-public (finalize-withdraw (nft-id uint) (vault <vault-trait>) (fees <fees-trait>))
   (let (
-    (receipt (unwrap! (try! (contract-call? .redeem-nft get-receipt nft-id)) ERR_NO_RECEIPT))
+    (receipt (unwrap! (unwrap-panic (contract-call? .redeem-nft get-receipt nft-id)) ERR_NO_RECEIPT))
     (ustx (get stx-amount receipt))
     (unlock-height (get unlock-height receipt))
     (nft-owner (unwrap! (contract-call? .redeem-nft get-nft-owner nft-id) ERR_NOT_NFT_OWNER))
@@ -253,7 +253,9 @@
     (try! (contract-call? .redeem-nft burn nft-id))
 
     ;; Burn jSTX held by this contract since start-withdraw
-    (try! (as-contract (contract-call? .jstx-token burn ustx tx-sender)))
+    (try! (as-contract? ((with-ft .jstx-token "jstx" ustx))
+      (try! (contract-call? .jstx-token burn ustx current-contract))
+    ))
 
     ;; Release earmark and send net STX from vault to user
     (try! (contract-call? vault unreserve ustx))
