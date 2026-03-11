@@ -223,7 +223,7 @@
     (asserts! (> excess u0) ERR_NOTHING_TO_ALLOCATE)
 
     ;; Tell stacker to return STX to vault
-    (try! (contract-call? stacker return-stx stacker-principal excess))
+    (try! (contract-call? stacker return-stx (contract-of vault) excess))
 
     ;; Update allocated tracking
     (map-set stacker-allocated stacker-principal target)

@@ -5,6 +5,9 @@ authors = []
 telemetry = false
 cache_dir = "./.cache"
 
+[[project.requirements]]
+contract_id = "SP000000000000000000002Q6VF78.pox-4"
+
 # -------------------------------------------------------
 # Traits (no dependencies)
 # -------------------------------------------------------
@@ -103,7 +106,8 @@ epoch = "latest"
 
 [contracts.stacker]
 path = "contracts/stacker.clar"
-epoch = 3.0
+clarity_version = 4
+epoch = "latest"
 
 [contracts.helpers]
 path = "contracts/helpers.clar"

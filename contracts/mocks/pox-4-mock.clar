@@ -93,6 +93,11 @@
   (ok true)
 )
 
+;; Mock stx-account for testing (mainnet uses native stx-account)
+(define-read-only (stx-account-mock (account principal))
+  { locked: u0, unlocked: (stx-get-balance account), unlock-height: u0 }
+)
+
 ;; Returns the current PoX reward cycle number (stubbed for testing)
 (define-read-only (current-pox-reward-cycle)
   u1

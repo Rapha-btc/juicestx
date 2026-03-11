@@ -17,8 +17,8 @@
     ;; stacker: the delegate contract to revoke
     (revoke-delegate-stx (principal) (response bool uint))
 
-    ;; Return unlocked STX from stacking back to the vault.
-    ;; stacker: the delegate contract
+    ;; Return unlocked STX from stacking back to a recipient (vault).
+    ;; recipient: where to send the STX (typically the vault)
     ;; amount: micro-STX to return
     (return-stx (principal uint) (response bool uint))
   )

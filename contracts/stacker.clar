@@ -1,32 +1,30 @@
 ;; Title: stacker
 ;;
-;; What this contract does:
-;; This is the signer stacker contract -- the thing that actually talks
-;; to PoX-4 to stack STX with a specific signer. Each signer in the STX Juice
-;; network gets their own copy of this contract.
+;; A delegate contract that holds STX and delegates it to PoX via a signer.
 ;;
-;; What it does each PoX cycle:
-;; 1. Takes delegated STX from delegate contracts
-;; 2. Calls pox-4.delegate-stack-stx to lock each delegator's STX
-;; 3. Calls pox-4.stack-aggregation-commit-indexed to commit the total
-;;    to the reward cycle with the signer's key and signature
+;; Architecture:
+;; Each signer has multiple stacker contracts (e.g. stacker-1a, stacker-1b, stacker-1c).
+;; All stacker contracts for a signer delegate to the same PoX pool with the same
+;; signer key. Multiple delegates per signer are needed because PoX does not allow
+;; decreasing stacked amounts -- only stopping entirely. By splitting STX across
+;; multiple delegates, the protocol can stop one delegate to free up STX for
+;; withdrawals while the others keep stacking and earning yield.
 ;;
-;; Signer coordination:
-;; Each cycle, the operator (signer or our backend) must call
-;; register-cycle-auth to register the signer key + signature for that cycle.
-;; This is the manual step -- if you miss the prepare window (~100 blocks),
-;; this pool misses the cycle and earns no rewards.
+;; STX flow:
+;;   vault -> stacker (via allocation.execute-allocation)
+;;   stacker -> vault (via allocation.return-excess)
 ;;
-;; Multi-signer design:
-;; This is ONE pool contract. In a multi-signer setup, each signer has their
-;; own deployed copy. The registry tracks which pools are active and how STX
-;; is split between them. A single-signer launch just means one pool in the
-;; registry.
+;; PoX flow (operator, each cycle):
+;;   1. register-cycle-auth -- signer key + signature for the cycle
+;;   2. lock-delegator -- call pox-4.delegate-stack-stx to lock STX
+;;   3. finalize-cycle -- call pox-4.stack-aggregation-commit-indexed
 ;;
-;; Inspired by: StackingDAO stacking-pool-signer-v1.clar
-;; Source: stacking-dao/contracts/version-2/stacking-pool-signer-v1.clar
+;; Inspired by: StackingDAO stacking-delegate-1.clar + delegates-handler-v1.clar
+;; Source: stacking-dao/contracts/version-2/stacking-delegate-1.clar
+;; Source: stacking-dao/contracts/version-2/delegates-handler-v1.clar
 
 (impl-trait .stacker-trait.stacker-trait)
+(use-trait vault-trait .vault-trait.vault-trait)
 
 ;; ---------------------------------------------------------
 ;; Constants
@@ -35,12 +33,13 @@
 (define-constant ERR_MISSING_AUTH (err u11002))
 (define-constant ERR_NOT_OPERATOR (err u11003))
 (define-constant ERR_POX_FAILED (err u11004))
+(define-constant ERR_INSUFFICIENT_BALANCE (err u11005))
 
 ;; ---------------------------------------------------------
 ;; Data
 ;; ---------------------------------------------------------
 
-;; Who controls this pool (the signer operator). They register auth each cycle.
+;; Who controls this stacker (the signer operator). They register auth each cycle.
 (define-data-var operator principal tx-sender)
 
 ;; The Bitcoin address where PoX rewards are sent
@@ -49,7 +48,6 @@
 )
 
 ;; Per-cycle signer authorization. Must be set by operator before prepare phase.
-;; This is the critical manual step -- miss it and the pool misses the cycle.
 (define-map cycle-auth
   { cycle: uint, topic: (string-ascii 14) }
   {
@@ -66,7 +64,7 @@
 ;; ---------------------------------------------------------
 
 ;; Register signer key + signature for a cycle. Must be done before the
-;; prepare phase (last 100 blocks of the cycle).
+;; prepare phase (~100 blocks before cycle end).
 (define-public (register-cycle-auth
     (cycle uint)
     (topic (string-ascii 14))
@@ -106,36 +104,62 @@
 )
 
 ;; ---------------------------------------------------------
-;; Stacking trait implementation (called by helpers/strategy)
+;; Stacking trait implementation (called by allocation)
 ;; ---------------------------------------------------------
 
-;; Delegate STX from a delegate contract to this pool
+;; Receive STX from vault via allocation.execute-allocation.
+;; STX arrives via vault.release before this is called -- this is the
+;; accounting acknowledgment that the stacker received funds.
 (define-public (delegate-stx (amount uint) (stacker principal))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (print { action: "delegate-stx", pool: (as-contract tx-sender), amount: amount, stacker: stacker })
+    (print { action: "delegate-stx", stacker: current-contract, amount: amount })
     (ok true)
   )
 )
 
-;; Revoke a delegation
+;; Revoke delegation for this stacker
 (define-public (revoke-delegate-stx (stacker principal))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (print { action: "revoke-delegation", pool: (as-contract tx-sender), stacker: stacker })
+    (print { action: "revoke-delegate-stx", stacker: current-contract })
     (ok true)
   )
 )
 
-;; Return STX from stacking back to the vault
-(define-public (return-stx (stacker principal) (amount uint))
-  (begin
+;; Return STX from this stacker back to a recipient (vault).
+;; Called by allocation.return-excess when this stacker has more than its target.
+;; Only returns unlocked STX -- locked STX must wait for cycle end.
+(define-public (return-stx (recipient principal) (amount uint))
+  (let (
+    (unlocked (get unlocked (stx-account current-contract)))
+  )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (print { action: "return-stx", pool: (as-contract tx-sender), stacker: stacker, amount: amount })
+    (asserts! (>= unlocked amount) ERR_INSUFFICIENT_BALANCE)
+    (try! (as-contract? ((with-stx amount))
+      (try! (stx-transfer? amount tx-sender recipient))))
+    (print { action: "return-stx", stacker: current-contract, recipient: recipient, amount: amount })
     (ok true)
+  )
+)
+
+;; Return all unlocked STX to vault. Admin emergency function.
+(define-public (return-all (vault <vault-trait>))
+  (let (
+    (unlocked (get unlocked (stx-account current-contract)))
+  )
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
+    (if (> unlocked u0)
+      (try! (as-contract? ((with-stx unlocked))
+        (try! (stx-transfer? unlocked tx-sender (contract-of vault)))))
+      true
+    )
+    (print { action: "return-all", stacker: current-contract, amount: unlocked })
+    (ok unlocked)
   )
 )
 
@@ -143,22 +167,20 @@
 ;; PoX-4 interaction (called by operator during prepare phase)
 ;; ---------------------------------------------------------
 
-;; Lock a delegator's STX into PoX stacking
+;; Lock this stacker's STX into PoX stacking
 (define-public (lock-delegator
     (stacker principal)
     (amount uint)
     (start-burn-ht uint)
     (lock-period uint)
   )
-  (let (
-    (pox-addr (var-get btc-address))
-  )
+  (begin
     (asserts! (is-eq tx-sender (var-get operator)) ERR_NOT_OPERATOR)
-    (let (
-      (result (unwrap! (as-contract (contract-call? 'SP000000000000000000002Q6VF78.pox-4 delegate-stack-stx stacker amount pox-addr start-burn-ht lock-period)) ERR_POX_FAILED))
-    )
-      (ok result)
-    )
+    (as-contract? ((with-all-assets-unsafe))
+      (try! (match (contract-call? 'SP000000000000000000002Q6VF78.pox-4 delegate-stack-stx
+        stacker amount (var-get btc-address) start-burn-ht lock-period)
+        success (ok success)
+        error (err (to-uint error)))))
   )
 )
 
@@ -168,18 +190,16 @@
     (auth (unwrap! (map-get? cycle-auth { cycle: cycle, topic: "agg-commit" }) ERR_MISSING_AUTH))
   )
     (asserts! (is-eq tx-sender (var-get operator)) ERR_NOT_OPERATOR)
-    (let (
-      (result (unwrap! (as-contract (contract-call? 'SP000000000000000000002Q6VF78.pox-4 stack-aggregation-commit-indexed
+    (as-contract? ((with-all-assets-unsafe))
+      (try! (match (contract-call? 'SP000000000000000000002Q6VF78.pox-4 stack-aggregation-commit-indexed
         (get pox-addr auth)
         cycle
         (some (get signer-sig auth))
         (get signer-key auth)
         (get max-amount auth)
-        (get auth-id auth)
-      )) ERR_POX_FAILED))
-    )
-      (ok result)
-    )
+        (get auth-id auth))
+        success (ok success)
+        error (err (to-uint error)))))
   )
 )
 
@@ -197,4 +217,12 @@
 
 (define-read-only (get-cycle-auth (cycle uint) (topic (string-ascii 14)))
   (map-get? cycle-auth { cycle: cycle, topic: topic })
+)
+
+(define-read-only (get-unlocked-balance)
+  (get unlocked (stx-account current-contract))
+)
+
+(define-read-only (get-locked-balance)
+  (get locked (stx-account current-contract))
 )
