@@ -31,7 +31,7 @@ Need 2M for withdrawals:
 User deposits STX
        |
        v
-   [vault.clar]  -- holds all idle STX
+   [vault.clar]  -- holds all pending STX
        |
        | allocation.execute-allocation (per cycle)
        v
@@ -39,7 +39,7 @@ User deposits STX
        |
        | operator calls lock-delegator + finalize-cycle
        v
-   [PoX-4]  -- STX locked, earning BTC rewards
+   [PoX-4]  -- STX locked, earning sBTC yield
        |
        | cycle ends, STX unlocks
        v
@@ -62,16 +62,27 @@ Each PoX cycle (~2 weeks), the operator must:
 
 4. **Finalize** -- `stacker.finalize-cycle` calls `pox-4.stack-aggregation-commit-indexed` to commit the total stacked amount with the signer's authorization.
 
+## Reward Flow (sBTC)
+
+Each stacker's `btc-address` is a peg-in address derived from the Emily API (sBTC bridge). The input principal to the Emily API is the yield contract (`yield.clar`), which produces a deterministic Bitcoin address.
+
+When PoX pays BTC rewards to that address:
+1. sBTC bridge detects the deposit
+2. Emily mints sBTC to the yield contract on Stacks
+3. `yield.clar` distributes sBTC to jSTX holders based on their share
+
+This means rewards arrive on-chain as sBTC automatically -- no manual bridging step.
+
 ## Withdrawal Flow
 
 When a user requests withdrawal:
 
 1. `core.clar` calls `vault.reserve(amount)` -- earmarks STX in vault
-2. If vault has enough idle STX, withdrawal completes immediately
+2. If vault has enough pending STX, withdrawal completes immediately
 3. If not, user waits for next cycle:
    - `vault.get-pending-balance` returns less (pending = balance - reserved)
    - `allocation.calculate-stacker-target` sees lower total-stackable
-   - Strategy picks which stacker(s) to stop to free up STX
+   - Operator picks which stacker(s) to stop to free up STX
    - At cycle end, stopped stacker's STX unlocks
    - `allocation.return-excess` sends it back to vault
    - Withdrawal completes
@@ -96,9 +107,9 @@ The multi-stacker split is invisible to users. They pick a signer; the protocol 
 | Delegates per signer | 3 (delegate-1-1, 1-2, 1-3) | 2-3 per signer (stacker-1a, 1b, 1c) |
 | Handler/orchestrator | delegates-handler-v1 | allocation.clar (combined) |
 | Strategy (per pool) | strategy-v3-pools-v1 | allocation.calculate-stacker-target |
-| Strategy (per delegate) | strategy-v3-delegates-v1 | TBD -- currently allocation targets individual stackers |
+| Strategy (per delegate) | strategy-v3-delegates-v1 | allocation.clar targets individual stackers directly |
 | STX holder | reserve-v1 | vault.clar |
-| Outflow algorithm | strategy-v3-algo-v1 (lowest-combination) | TBD -- manual operator decision for now |
+| Outflow algorithm | strategy-v3-algo-v1 (lowest-combination) | Off-chain keeper picks which stacker(s) to stop |
 
 ### Key Differences
 
@@ -118,15 +129,18 @@ For each signer, deploy multiple copies of `stacker.clar`:
 # Clarinet.toml
 [contracts.stacker-1a]
 path = "contracts/stacker.clar"
-epoch = 3.0
+clarity_version = 4
+epoch = "latest"
 
 [contracts.stacker-1b]
 path = "contracts/stacker.clar"
-epoch = 3.0
+clarity_version = 4
+epoch = "latest"
 
 [contracts.stacker-1c]
 path = "contracts/stacker.clar"
-epoch = 3.0
+clarity_version = 4
+epoch = "latest"
 ```
 
 Register each in the registry with equal weights. Allocation treats them as independent stackers.
@@ -134,5 +148,4 @@ Register each in the registry with equal weights. Allocation treats them as inde
 ## Future Improvements
 
 - **On-chain outflow algorithm**: Automatically pick which stacker(s) to stop based on locked amounts and withdrawal needs (like StackingDAO's lowest-combination algo)
-- **Delegate splitting layer**: A contract that takes a signer's total target and splits it evenly across its stackers
 - **Reward detection**: Compare stacker balance vs expected to detect PoX rewards (like StackingDAO's delegates-handler-v1.calculate-rewards)
