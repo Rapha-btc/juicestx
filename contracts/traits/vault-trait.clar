@@ -8,6 +8,6 @@
     (release (uint principal) (response bool uint))
     (reserve (uint) (response bool uint))
     (unreserve (uint) (response bool uint))
-    (get-idle-balance () (response uint uint))
+    (get-pending-balance () (response uint uint))
   )
 )

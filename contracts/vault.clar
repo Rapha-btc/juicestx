@@ -76,7 +76,7 @@
 ;; ---------------------------------------------------------
 
 ;; How much STX is sitting in the vault but not earmarked for withdrawals
-(define-read-only (get-idle-balance)
+(define-read-only (get-pending-balance)
   (ok (- (stx-get-balance (as-contract tx-sender)) (var-get reserved-stx)))
 )
 
@@ -84,7 +84,7 @@
   (var-get reserved-stx)
 )
 
-;; Total STX managed by the protocol (idle + reserved + stacked).
+;; Total STX managed by the protocol (pending + reserved + stacked).
 ;; For now this just returns vault balance. When pool contracts are active,
 ;; this should also include STX locked in PoX via delegates.
 ;; TODO: add stacked-stx tracking when delegate contracts are wired up

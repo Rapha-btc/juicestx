@@ -109,8 +109,8 @@ path = "contracts/helpers.clar"
 # -------------------------------------------------------
 # Strategy (depends on dao, delegation, registry, vault)
 # -------------------------------------------------------
-[contracts.strategy]
-path = "contracts/strategy.clar"
+[contracts.allocation]
+path = "contracts/allocation.clar"
 clarity_version = 4
 epoch = "latest"
 
