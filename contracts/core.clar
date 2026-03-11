@@ -145,7 +145,7 @@
     (asserts! (<= fee (/ (* ustx (var-get max-deposit-fee)) PRECISION)) ERR_FEE_TOO_HIGH)
 
     ;; Transfer net STX to vault
-    (try! (stx-transfer? ustx-net tx-sender (contract-of vault)))
+    (try! (contract-call? vault receive ustx-net))
 
     ;; Mint jSTX to user
     (try! (contract-call? .jstx-token mint ustx-net tx-sender))

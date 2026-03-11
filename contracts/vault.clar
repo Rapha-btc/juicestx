@@ -38,7 +38,7 @@
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (stx-transfer? amount tx-sender (as-contract tx-sender))
+    (stx-transfer? amount tx-sender current-contract)
   )
 )
 
@@ -48,7 +48,8 @@
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (as-contract (stx-transfer? amount tx-sender recipient))
+    (as-contract? ((with-stx amount))
+      (try! (stx-transfer? amount tx-sender recipient)))
   )
 )
 
@@ -77,17 +78,15 @@
 
 ;; How much STX is sitting in the vault but not earmarked for withdrawals
 (define-read-only (get-pending-balance)
-  (ok (- (stx-get-balance (as-contract tx-sender)) (var-get reserved-stx)))
+  (ok (- (stx-get-balance current-contract) (var-get reserved-stx)))
 )
 
 (define-read-only (get-reserved-stx)
   (var-get reserved-stx)
 )
 
-;; Total STX managed by the protocol (pending + reserved + stacked).
-;; For now this just returns vault balance. When pool contracts are active,
-;; this should also include STX locked in PoX via delegates.
-;; TODO: add stacked-stx tracking when delegate contracts are wired up
+;; Total STX in vault only. For protocol-wide total (vault + allocated to stackers),
+;; see allocation.get-stacking-amounts.
 (define-read-only (get-total-managed)
-  (stx-get-balance (as-contract tx-sender))
+  (stx-get-balance current-contract)
 )

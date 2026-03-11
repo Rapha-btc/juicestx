@@ -87,6 +87,8 @@ epoch = "latest"
 # -------------------------------------------------------
 [contracts.vault]
 path = "contracts/vault.clar"
+clarity_version = 4
+epoch = "latest"
 
 [contracts.commission]
 path = "contracts/commission.clar"
