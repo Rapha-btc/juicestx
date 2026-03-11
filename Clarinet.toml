@@ -75,10 +75,12 @@ path = "contracts/redeem-nft.clar"
 path = "contracts/jstx-token.clar"
 
 # -------------------------------------------------------
-# Delegation (depends on dao)
+# Delegation (depends on dao, jstx-token)
 # -------------------------------------------------------
 [contracts.delegation]
 path = "contracts/delegation.clar"
+clarity_version = 4
+epoch = "latest"
 
 # -------------------------------------------------------
 # Protocol (depends on everything above)
@@ -103,6 +105,14 @@ epoch = 3.0
 
 [contracts.helpers]
 path = "contracts/helpers.clar"
+
+# -------------------------------------------------------
+# Strategy (depends on dao, delegation, registry, vault)
+# -------------------------------------------------------
+[contracts.strategy]
+path = "contracts/strategy.clar"
+clarity_version = 4
+epoch = "latest"
 
 # -------------------------------------------------------
 # DeFi integration

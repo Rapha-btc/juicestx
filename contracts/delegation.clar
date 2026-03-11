@@ -3,10 +3,11 @@
 ;; Tracks which stacker each user wants their STX delegated to.
 ;; Called by core on deposit / withdraw.
 ;;
-;; Two operations:
+;; Operations:
 ;;   assign  -- user picks (or changes) stacker on deposit
-;;            - pass none to clear preference (protocol allocates via registry)
-;;   reduce  -- user withdraws some STX, decrease their delegation
+;;              pass none to clear preference (protocol allocates via registry)
+;;   reduce  -- reduce or clear delegation (protocol on withdraw, or user self-service)
+;;   update  -- keeper corrects stale delegations when user sells jSTX
 ;;
 ;; Inspired by: StackingDAO data-direct-stacking-v1.clar + direct-helpers-v4.clar
 ;; Source (data):  stacking-dao/contracts/version-2/data-direct-stacking-v1.clar
@@ -28,10 +29,6 @@
 ;; global sum of all user-directed STX
 (define-data-var total-delegated uint u0)
 
-;; ---------------------------------------------------------
-;; Read-only
-;; ---------------------------------------------------------
-
 (define-read-only (get-user-delegation (user principal))
   (map-get? user-delegation user)
 )
@@ -44,110 +41,116 @@
   (var-get total-delegated)
 )
 
-;; ---------------------------------------------------------
-;; Assign delegation on deposit
-;; ---------------------------------------------------------
+ (define-public (assign (user principal) (stacker (optional principal)) (amount uint))
+    (let (
+      (delegated (map-get? user-delegation user))
+      (prev-amount (default-to u0 (get amount delegated)))
+      (cleared (if (is-some delegated)
+        (remove-delegation user (get stacker (unwrap-panic delegated)) prev-amount)
+        true
+      ))
+    )
+      (try! (contract-call? .dao check-is-authorized contract-caller))
 
-(define-public (assign (user principal) (stacker (optional principal)) (amount uint))
-  (let (
-    (current (map-get? user-delegation user))
-  )
-    (try! (contract-call? .dao check-is-authorized contract-caller))
-
-    (if (is-some stacker)
-
-      ;; User chose a stacker
-      (begin
-        ;; Remove previous delegation if any
-        (if (is-some current)
-          (let (
-            (prev-stacker (get stacker (unwrap-panic current)))
-            (prev-amount (get amount (unwrap-panic current)))
-          )
-            (remove-delegation user prev-stacker prev-amount)
-          )
-          false
-        )
-
-        ;; Add delegation to chosen stacker (prev amount carried forward if switching)
+      (if (is-some stacker)
         (let (
-          (chosen (unwrap-panic stacker))
-          (prev-amount (default-to u0 (get amount current)))
+          (new-stacker (unwrap-panic stacker))
           (new-amount (+ prev-amount amount))
-          (stacker-sum (get-stacker-total chosen))
+          (stacker-sum (get-stacker-total new-stacker))
           (global-sum (var-get total-delegated))
         )
-          (map-set user-delegation user { stacker: chosen, amount: new-amount })
-          (map-set stacker-total chosen (+ stacker-sum new-amount))
+          (map-set user-delegation user { stacker: new-stacker, amount: new-amount })
+          (map-set stacker-total new-stacker (+ stacker-sum new-amount))
           (var-set total-delegated (+ global-sum new-amount))
-          (print { action: "assign", user: user, stacker: chosen, amount: new-amount })
+          (print { action: "assign", user: user, stacker: new-stacker, amount: new-amount })
+          (ok true)
+        )
+        (begin
+          (print { action: "deposit", user: user, stacker: none, amount: amount })
           (ok true)
         )
       )
+    )
+  )
 
-      ;; User passed none -> clear any existing delegation
-      (begin
-        (if (is-some current)
-          (let (
-            (prev-stacker (get stacker (unwrap-panic current)))
-            (prev-amount (get amount (unwrap-panic current)))
-          )
+(define-public (reduce (user principal) (amount uint))
+  (let (
+    (delegated (map-get? user-delegation user))
+  )
+    (if (is-eq user tx-sender)
+      true
+      (try! (contract-call? .dao check-is-authorized contract-caller))
+    )
+
+    (if (is-some delegated)
+      (let (
+        (prev-stacker (get stacker (unwrap-panic delegated)))
+        (prev-amount (get amount (unwrap-panic delegated)))
+      )
+        (if (>= amount prev-amount)
+          (begin
             (remove-delegation user prev-stacker prev-amount)
+            (print { action: "clear", user: user, stacker: prev-stacker, amount: prev-amount })
+            (ok true)
           )
-          false
+          (let (
+            (stacker-sum (get-stacker-total prev-stacker))
+            (global-sum (var-get total-delegated))
+          )
+            (map-set user-delegation user { stacker: prev-stacker, amount: (- prev-amount amount) })
+            (map-set stacker-total prev-stacker (- stacker-sum amount))
+            (var-set total-delegated (- global-sum amount))
+            (print { action: "reduce", user: user, stacker: prev-stacker, amount: amount })
+            (ok true)
+          )
         )
-        (print { action: "clear", user: user })
-        (ok true)
+      )
+      (begin
+          (print { action: "withdraw", user: user, stacker: none, amount: amount })
+          (ok true)
       )
     )
   )
 )
 
 ;; ---------------------------------------------------------
-;; Reduce delegation on withdraw
+;; Stale delegation cleanup
 ;; ---------------------------------------------------------
-;; If amount >= current delegation, clears it entirely.
+;; If a user sells their jSTX, their delegation entry overstates
+;; their actual stake. This checks wallet balance only.
+;; A future authorized contract can account for DeFi positions
+;; (Zest, etc.) and call reduce directly with the correct excess.
+;; Mirrors StackingDAO direct-helpers-v4 update-direct-stacking.
 
-(define-public (reduce (user principal) (amount uint))
+(define-read-only (get-delegation-info (user principal))
   (let (
-    (current (map-get? user-delegation user))
+    (delegation (map-get? user-delegation user))
+    (delegated-stx (default-to u0 (get amount delegation)))
+    (jstx-balance (unwrap-panic (contract-call? .jstx-token get-balance user)))
+  )
+    {
+      delegated-stx: delegated-stx,
+      jstx-balance: jstx-balance,
+      excess: (if (> delegated-stx jstx-balance)
+        (- delegated-stx jstx-balance)
+        u0
+      )
+    }
+  )
+)
+
+(define-public (update (user principal))
+  (let (
+    (info (get-delegation-info user))
+    (excess (get excess info))
   )
     (try! (contract-call? .dao check-is-authorized contract-caller))
-
-    (if (is-some current)
-      (let (
-        (cur-stacker (get stacker (unwrap-panic current)))
-        (cur-amount (get amount (unwrap-panic current)))
-      )
-        (if (>= amount cur-amount)
-          ;; Full removal
-          (begin
-            (remove-delegation user cur-stacker cur-amount)
-            (print { action: "clear", user: user })
-            (ok true)
-          )
-          ;; Partial reduction
-          (let (
-            (stacker-sum (get-stacker-total cur-stacker))
-            (global-sum (var-get total-delegated))
-          )
-            (map-set user-delegation user { stacker: cur-stacker, amount: (- cur-amount amount) })
-            (map-set stacker-total cur-stacker (- stacker-sum amount))
-            (var-set total-delegated (- global-sum amount))
-            (print { action: "reduce", user: user, stacker: cur-stacker, reduced-by: amount })
-            (ok true)
-          )
-        )
-      )
-      ;; No delegation to reduce
+    (if (> excess u0)
+      (reduce user excess)
       (ok true)
     )
   )
 )
-
-;; ---------------------------------------------------------
-;; Private helpers
-;; ---------------------------------------------------------
 
 (define-private (remove-delegation (user principal) (stacker principal) (amount uint))
   (let (
