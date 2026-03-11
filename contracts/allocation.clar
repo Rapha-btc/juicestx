@@ -146,16 +146,18 @@
   (var-get total-allocated)
 )
 
-;; How much more STX a stacker needs (target - already allocated)
-(define-read-only (get-stacker-deficit (stacker principal))
+;; How far a stacker is from its target (positive = needs more, negative = has excess)
+(define-read-only (get-stacker-delta (stacker principal))
   (let (
     (target (calculate-stacker-target stacker))
     (allocated (get-stacker-allocated stacker))
   )
-    (if (> target allocated)
-      (- target allocated)
-      u0
-    )
+    {
+      target: target,
+      allocated: allocated,
+      deficit: (if (> target allocated) (- target allocated) u0),
+      excess: (if (> allocated target) (- allocated target) u0)
+    }
   )
 )
 
@@ -172,8 +174,9 @@
   )
   (let (
     (stacker-principal (contract-of stacker))
-    (deficit (get-stacker-deficit stacker-principal))
-    (allocated (get-stacker-allocated stacker-principal))
+    (delta (get-stacker-delta stacker-principal))
+    (deficit (get deficit delta))
+    (allocated (get allocated delta))
     (new-allocated (+ allocated deficit))
   )
     (try! (contract-call? .dao check-is-authorized contract-caller))
@@ -211,9 +214,9 @@
   )
   (let (
     (stacker-principal (contract-of stacker))
-    (target (calculate-stacker-target stacker-principal))
-    (allocated (get-stacker-allocated stacker-principal))
-    (excess (if (> allocated target) (- allocated target) u0))
+    (delta (get-stacker-delta stacker-principal))
+    (excess (get excess delta))
+    (target (get target delta))
   )
     (try! (contract-call? .dao check-is-authorized contract-caller))
 
