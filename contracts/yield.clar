@@ -4,10 +4,10 @@
 ;;
 ;; Flow:
 ;; 1. Emily mints sBTC into each stacker contract (BTC address registered with Emily)
-;; 2. Keeper calls sweep-stacker for each stacker that has sBTC
+;; 2. Keeper calls sweep-stacker for each stacker that has sBTC (once per cycle)
 ;; 3. Yield pulls sBTC from stacker via release-rewards (stacker reports amount + fee)
 ;; 4. Commission is split (signer operator cut + protocol treasury)
-;; 5. Net rewards stored with a start-height, vest linearly over VESTING_BLOCKS (~2100 blocks)
+;; 5. Net rewards accumulate in a per-cycle bucket, vest linearly over VESTING_BLOCKS
 ;; 6. On any settle (transfer/mint/burn/claim), vested amount is
 ;;    calculated from block height -- no keeper needed for distribution
 ;;
@@ -37,28 +37,30 @@
 ;; Data
 ;; ---------------------------------------------------------
 
-;; Per-sweep reward bucket. Each sweep batch gets its own vesting window.
+;; Per-cycle reward bucket. All stackers swept in the same cycle
+;; accumulate into the same bucket and vest together.
 (define-map reward-bucket uint
   {
-    total-sbtc: uint,        ;; net sBTC for this window (after commission)
+    total-sbtc: uint,        ;; net sBTC for this cycle (after commission)
     vested-sbtc: uint,       ;; how much has been applied to global-index so far
     commission-sbtc: uint,   ;; protocol commission (flush to treasury)
-    start-height: uint       ;; burn-block-height when rewards were deposited
+    start-height: uint       ;; burn-block-height when first sweep of this cycle happened
   }
 )
 
-;; Monotonic counter for vesting windows
-(define-data-var window-id uint u0)
+;; Which cycle we're currently vesting from
+(define-data-var active-cycle uint u0)
 
-;; Which window we're currently vesting from
-(define-data-var active-window uint u0)
+;; Per-stacker yield accounting: how much gross sBTC each stacker
+;; has contributed across all cycles (for dashboards / attribution).
+(define-map stacker-yield-total principal uint)
 
 ;; ---------------------------------------------------------
-;; Internal: compute how much of a window's rewards have vested
+;; Internal: compute how much of a cycle's rewards have vested
 ;; ---------------------------------------------------------
 
-(define-read-only (get-vested-amount (window uint))
-  (match (map-get? reward-bucket window)
+(define-read-only (get-vested-amount (cycle uint))
+  (match (map-get? reward-bucket cycle)
     bucket
       (let (
         (total (get total-sbtc bucket))
@@ -78,8 +80,8 @@
 ;; Apply any newly vested rewards to the global index.
 ;; Called internally before every settle. If nothing new has vested,
 ;; this is a no-op (no state change, minimal cost).
-(define-private (apply-vested (window uint))
-  (match (map-get? reward-bucket window)
+(define-private (apply-vested (cycle uint))
+  (match (map-get? reward-bucket cycle)
     bucket
       (let (
         (total (get total-sbtc bucket))
@@ -101,7 +103,7 @@
               (+ current-idx (/ (* new-amount INDEX_SCALE) supply))
             ))
             ;; Record what we've vested
-            (map-set reward-bucket window (merge bucket { vested-sbtc: should-be-vested }))
+            (map-set reward-bucket cycle (merge bucket { vested-sbtc: should-be-vested }))
             (ok true)
           )
           (ok true)
@@ -112,17 +114,17 @@
 )
 
 ;; ---------------------------------------------------------
-;; Sweep rewards from a stacker (called by keeper)
+;; Sweep rewards from a stacker (called by keeper, once per cycle)
 ;; ---------------------------------------------------------
 
 ;; Keeper triggers this per stacker. Yield pulls sBTC from the stacker
 ;; via release-rewards. The stacker reports how much sBTC it had and
-;; its fee rate. Yield applies the fee, pays the operator, and stores
-;; net rewards in a new vesting window.
+;; its fee rate. Yield applies the fee, pays the operator, and adds
+;; net rewards to the current cycle's bucket.
 ;;
-;; No cycle parameter -- whatever sBTC is sitting in the stacker gets
-;; swept. Rewards vest linearly over VESTING_BLOCKS from this moment.
-(define-public (sweep-stacker (stacker <stacker-trait>))
+;; Multiple stackers swept in the same cycle share one vesting window.
+;; The cycle param groups them -- keeper passes the current PoX cycle.
+(define-public (sweep-stacker (stacker <stacker-trait>) (cycle uint))
   (let (
     (stacker-principal (contract-of stacker))
     ;; Pull sBTC from stacker -- it transfers to us and returns amount + fee
@@ -139,12 +141,14 @@
     (owner-amount (/ (* commission-amount (get share owner-cut)) BPS))
     (protocol-commission (- commission-amount owner-amount))
 
-    ;; New vesting window
-    (window (+ (var-get window-id) u1))
+    ;; Get or create cycle bucket (start-height set on first sweep of cycle)
     (existing (default-to
       { total-sbtc: u0, vested-sbtc: u0, commission-sbtc: u0, start-height: burn-block-height }
-      (map-get? reward-bucket window)
+      (map-get? reward-bucket cycle)
     ))
+
+    ;; Running total for this stacker
+    (prev-total (default-to u0 (map-get? stacker-yield-total stacker-principal)))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
@@ -155,22 +159,24 @@
       true
     )
 
-    ;; Store net rewards + protocol commission
-    (map-set reward-bucket window {
+    ;; Accumulate net rewards + protocol commission into cycle bucket
+    (map-set reward-bucket cycle {
       total-sbtc: (+ (get total-sbtc existing) net-rewards),
       vested-sbtc: (get vested-sbtc existing),
       commission-sbtc: (+ (get commission-sbtc existing) protocol-commission),
       start-height: (get start-height existing)
     })
 
-    ;; Advance window
-    (var-set window-id window)
-    (var-set active-window window)
+    ;; Track per-stacker yield attribution
+    (map-set stacker-yield-total stacker-principal (+ prev-total sbtc-amount))
+
+    ;; Update active cycle
+    (var-set active-cycle cycle)
 
     (print {
       action: "sweep-stacker",
       stacker: stacker-principal,
-      window: window,
+      cycle: cycle,
       gross: sbtc-amount,
       signer-fee: fee-rate,
       commission: commission-amount,
@@ -192,7 +198,7 @@
 ;; 4. Updates their snapshot
 (define-public (settle-wallet (who principal) (current-balance uint) (total-supply uint))
   (let (
-    (cycle (var-get active-window))
+    (cycle (var-get active-cycle))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
@@ -231,7 +237,7 @@
 ;; Same logic but reads balance from the DeFi adapter.
 (define-public (settle-defi-position (who principal) (adapter <position-trait>))
   (let (
-    (cycle (var-get active-window))
+    (cycle (var-get active-cycle))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
@@ -266,9 +272,9 @@
 ;; Flush commission to treasury
 ;; ---------------------------------------------------------
 
-(define-public (flush-commission (window uint) (commission-contract <commission-trait>))
+(define-public (flush-commission (cycle uint) (commission-contract <commission-trait>))
   (let (
-    (bucket (unwrap! (map-get? reward-bucket window) ERR_NOTHING_TO_VEST))
+    (bucket (unwrap! (map-get? reward-bucket cycle) ERR_NOTHING_TO_VEST))
     (commission-amount (get commission-sbtc bucket))
   )
     (try! (contract-call? .dao check-is-live))
@@ -277,9 +283,9 @@
 
     (try! (as-contract (contract-call? commission-contract process commission-amount)))
 
-    (map-set reward-bucket window (merge bucket { commission-sbtc: u0 }))
+    (map-set reward-bucket cycle (merge bucket { commission-sbtc: u0 }))
 
-    (print { action: "flush-commission", window: window, amount: commission-amount })
+    (print { action: "flush-commission", cycle: cycle, amount: commission-amount })
     (ok true)
   )
 )
@@ -288,23 +294,27 @@
 ;; Read-only
 ;; ---------------------------------------------------------
 
-(define-read-only (get-reward-bucket (window uint))
-  (map-get? reward-bucket window)
+(define-read-only (get-reward-bucket (cycle uint))
+  (map-get? reward-bucket cycle)
 )
 
-(define-read-only (get-active-window)
-  (var-get active-window)
+(define-read-only (get-active-cycle)
+  (var-get active-cycle)
+)
+
+(define-read-only (get-stacker-yield (stacker principal))
+  (default-to u0 (map-get? stacker-yield-total stacker))
 )
 
 (define-read-only (get-unclaimed (who principal))
   (let (
-    (window (var-get active-window))
+    (cycle (var-get active-cycle))
     ;; Calculate what global-index WOULD be after applying vested
     (current-idx (contract-call? .share-data get-global-index))
     (supply (contract-call? .share-data get-tracked-supply))
-    (vested-now (get-vested-amount window))
+    (vested-now (get-vested-amount cycle))
     (already-vested (default-to u0
-      (match (map-get? reward-bucket window)
+      (match (map-get? reward-bucket cycle)
         bucket (some (get vested-sbtc bucket))
         none
       )

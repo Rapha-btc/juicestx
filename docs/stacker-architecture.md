@@ -64,14 +64,58 @@ Each PoX cycle (~2 weeks), the operator must:
 
 ## Reward Flow (sBTC)
 
-Each stacker's `btc-address` is a peg-in address derived from the Emily API (sBTC bridge). The input principal to the Emily API is the yield contract (`yield.clar`), which produces a deterministic Bitcoin address.
+Each stacker's `btc-address` is registered with the Emily API (sBTC bridge). PoX miners pay BTC to this address every block throughout the cycle.
 
-When PoX pays BTC rewards to that address:
-1. sBTC bridge detects the deposit
-2. Emily mints sBTC to the yield contract on Stacks
-3. `yield.clar` distributes sBTC to jSTX holders based on their share
+### How rewards arrive
 
-This means rewards arrive on-chain as sBTC automatically -- no manual bridging step.
+1. Miners pay BTC to the stacker's registered BTC address (every block)
+2. Emily detects the deposit and mints sBTC into the stacker contract on Stacks
+3. sBTC accumulates in the stacker throughout the cycle
+
+### How rewards are distributed
+
+Rewards are swept **one cycle behind**: the keeper sweeps cycle N's sBTC during cycle N+1.
+
+```
+Cycle N:    miners pay BTC every block → Emily mints sBTC into stacker contracts
+Cycle N+1:  keeper calls yield.sweep-stacker(stacker, N) for each stacker
+            → stacker.release-rewards transfers all sBTC to yield, reports fee rate
+            → yield deducts signer fee (operator cut + protocol commission)
+            → net sBTC stored in reward-bucket[N]
+            → rewards vest linearly over 2100 blocks (~1 cycle)
+            → jSTX holders claim as it vests via settle-wallet
+```
+
+### Why sweep one cycle behind (not mid-cycle)
+
+Miners pay BTC to the stacker's address throughout the entire cycle. If we swept mid-cycle:
+
+- **Partial rewards**: We'd only capture BTC paid so far, not the full cycle. The remaining sBTC would leak into the next cycle's sweep, skewing per-cycle accounting.
+- **Flash-mint gaming**: Someone could mint jSTX, trigger a sweep of whatever sBTC is there, claim a disproportionate share, then burn jSTX. The vesting mechanism mitigates this, but sweeping a complete cycle removes the attack surface entirely.
+- **Uneven attribution**: With multiple stackers, some might have more sBTC than others at any given moment depending on block timing. Waiting for the full cycle ensures each stacker's contribution reflects its actual locked STX proportion.
+
+By waiting until cycle N is complete, we know all BTC has been paid, all sBTC has been minted, and the sweep captures the full cycle's yield for each stacker.
+
+### Per-stacker accounting
+
+Yield tracks gross sBTC contributed per stacker in `stacker-yield-total` (on-chain map). Each `sweep-stacker` call also emits a print event with the stacker, gross amount, fee, and net -- enabling off-chain dashboards to show per-signer yield performance.
+
+### Fee structure
+
+Each signer sets their fee rate on their stacker contract (`set-signer-fee`, in basis points). When yield sweeps:
+
+1. **Signer fee** is calculated from gross sBTC (e.g. 500 bps = 5%)
+2. **Operator cut** (from registry) determines what share of the fee goes to the signer operator vs protocol treasury
+3. **Net rewards** (gross - fee) go into the vesting bucket for jSTX holders
+4. **Protocol commission** accumulates in the bucket, flushed to treasury via `flush-commission`
+
+If signer fee is u0, users get 100% of yield. Signers can turn on fees at any time.
+
+### Advantage over other liquid stacking protocols
+
+In other protocols, the signer must manually sell BTC for STX and deposit it into the correct delegate contract each cycle. If they're late or make a mistake, stakers miss rewards.
+
+With STX Juice, the signer does nothing on the reward side. Emily mints sBTC automatically, yield sweeps it. The signer just registers their key each cycle and earns their fee.
 
 ## Withdrawal Flow
 
@@ -148,4 +192,3 @@ Register each in the registry with equal weights. Allocation treats them as inde
 ## Future Improvements
 
 - **On-chain outflow algorithm**: Automatically pick which stacker(s) to stop based on locked amounts and withdrawal needs (like StackingDAO's lowest-combination algo)
-- **Reward detection**: Compare stacker balance vs expected to detect PoX rewards (like StackingDAO's delegates-handler-v1.calculate-rewards)
