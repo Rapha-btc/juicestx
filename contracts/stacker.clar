@@ -42,10 +42,14 @@
 ;; Who controls this stacker (the signer operator). They register auth each cycle.
 (define-data-var operator principal tx-sender)
 
-;; The Bitcoin address where PoX rewards are sent
+;; The Bitcoin address where PoX rewards are sent (registered with Emily)
 (define-data-var btc-address { version: (buff 1), hashbytes: (buff 32) }
   { version: 0x04, hashbytes: 0x0000000000000000000000000000000000000000000000000000000000000000 }
 )
+
+;; Signer's fee on yield, in basis points (e.g. 500 = 5%).
+;; Set by the operator. Applied by yield when sweeping rewards.
+(define-data-var signer-fee uint u0)
 
 ;; Per-cycle signer authorization. Must be set by operator before prepare phase.
 (define-map cycle-auth
@@ -100,6 +104,13 @@
   (begin
     (asserts! (is-eq tx-sender (var-get operator)) ERR_NOT_OPERATOR)
     (ok (var-set btc-address addr))
+  )
+)
+
+(define-public (set-signer-fee (rate uint))
+  (begin
+    (asserts! (is-eq tx-sender (var-get operator)) ERR_NOT_OPERATOR)
+    (ok (var-set signer-fee rate))
   )
 )
 
@@ -204,6 +215,29 @@
 )
 
 ;; ---------------------------------------------------------
+;; Reward release (called by yield to sweep sBTC)
+;; ---------------------------------------------------------
+
+;; Yield calls this to pull all sBTC from this stacker.
+;; Emily mints sBTC here when BTC arrives at btc-address.
+;; Returns amount transferred + signer fee rate so yield can
+;; split commission without needing registry lookups.
+(define-public (release-rewards (recipient principal))
+  (let (
+    (balance (unwrap-panic (contract-call? .sbtc-mock get-balance current-contract)))
+    (fee (var-get signer-fee))
+  )
+    (try! (contract-call? .dao check-is-live))
+    (try! (contract-call? .dao check-is-authorized contract-caller))
+    (asserts! (> balance u0) ERR_INSUFFICIENT_BALANCE)
+    (try! (as-contract? ((with-all-assets-unsafe))
+      (try! (contract-call? .sbtc-mock transfer balance tx-sender recipient none))))
+    (print { action: "release-rewards", stacker: current-contract, amount: balance, fee: fee })
+    (ok { amount: balance, fee: fee })
+  )
+)
+
+;; ---------------------------------------------------------
 ;; Read-only
 ;; ---------------------------------------------------------
 
@@ -213,6 +247,14 @@
 
 (define-read-only (get-btc-address)
   (var-get btc-address)
+)
+
+(define-read-only (get-signer-fee)
+  (var-get signer-fee)
+)
+
+(define-read-only (get-sbtc-balance)
+  (contract-call? .sbtc-mock get-balance current-contract)
 )
 
 (define-read-only (get-cycle-auth (cycle uint) (topic (string-ascii 14)))

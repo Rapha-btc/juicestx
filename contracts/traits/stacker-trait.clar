@@ -21,5 +21,12 @@
     ;; recipient: where to send the STX (typically the vault)
     ;; amount: micro-STX to return
     (return-stx (principal uint) (response bool uint))
+
+    ;; Release all sBTC rewards to yield contract.
+    ;; Called by yield.sweep-stacker to pull sBTC out.
+    ;; Returns the amount transferred and the signer's fee rate
+    ;; so yield can split commission correctly.
+    ;; recipient: the yield contract address
+    (release-rewards (principal) (response { amount: uint, fee: uint } uint))
   )
 )
