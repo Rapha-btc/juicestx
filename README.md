@@ -225,43 +225,6 @@ With many signers:
 3. **Early warning system** -- alerts if signer info isn't registered N blocks before deadline
 4. **Graceful degradation** -- if one signer in a multi-signer setup misses, only their share is affected (multi-signer is risk diversification)
 
-## Research: Keeper-less sBTC Reward Flow
-
-**Status: Open question -- needs validation with sBTC team**
-
-### The idea
-
-Set the pool's PoX reward address (`btc-address` in `pool.clar`) to the sBTC deposit address that maps to the stacker contract's principal. Then:
-
-1. Miners pay BTC rewards to the pox-addr (which IS the sBTC deposit address)
-2. Emily bridge sees the BTC deposit, mints sBTC to the stacker contract
-3. No keeper needed for BTC → sBTC conversion
-
-### How the pox-addr works in PoX-4
-
-- `pool.clar` stores `btc-address` as `{ version: (buff 1), hashbytes: (buff 32) }` -- a BTC address, not a Stacks principal
-- This gets passed to `pox-4.stack-aggregation-commit-indexed` once per cycle
-- Once committed, `stack-aggregation-increase` enforces the **same** pox-addr for that cycle
-- But it can be set to a **different** address on the next cycle via `register-cycle-auth`
-
-### The sBTC deposit address problem
-
-The sBTC deposit address (from Emily API) is a taproot address derived from the current sBTC signer set. When signers rotate, the deposit address changes.
-
-- **Within a cycle**: pox-addr is locked at commit time. If sBTC signers rotate mid-cycle, BTC rewards still go to the old deposit address. Question: does the bridge still honor deposits to a previous-rotation address?
-- **Between cycles**: we can query Emily for the current deposit address and use it for the next cycle's commit. This part works cleanly.
-
-### Questions to validate
-
-1. Does the sBTC deposit address stay valid for deposits after a signer rotation?
-2. Can we get a deposit address that maps to a specific contract principal (not just an EOA)?
-3. Is there a taproot key path that lets the depositor reclaim BTC if the bridge fails to process?
-4. What's the expected signer rotation frequency relative to PoX cycle length (~2100 blocks)?
-
-### Current approach (safe)
-
-Keeper collects BTC from signer, converts to sBTC off-chain, calls `yield.receive-rewards()`. This works regardless of sBTC bridge behavior. The keeper-less approach is an optimization to explore, not a blocker.
-
 ## Development
 
 ```bash
