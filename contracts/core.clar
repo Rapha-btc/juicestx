@@ -66,6 +66,13 @@
 (define-data-var max-deposit-fee uint u500)
 (define-data-var max-withdraw-fee uint u500)
 
+;; Fee on instant withdrawal of idle STX (basis points, 100 = 1%)
+;; Prevents deposit-drip-withdraw gaming. Fee is sent to treasury.
+(define-data-var withdraw-pending-fee uint u100)
+
+;; Treasury contract that receives STX fees. Swappable by admin.
+(define-data-var treasury-address principal .treasury)
+
 ;; Prepare phase length: last 100 blocks of each cycle.
 ;; Deposits during prepare phase can't be delegated for the upcoming cycle,
 ;; so they're tracked as idle for the next cycle instead.
@@ -171,6 +178,8 @@
   (let (
     (cycle (get-pending-cycle))
     (current-pending (get-pending-ustx cycle))
+    (fee (/ (* ustx (var-get withdraw-pending-fee)) PRECISION))
+    (ustx-net (- ustx fee))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized (contract-of vault)))
@@ -181,17 +190,23 @@
     ;; Decrease idle tracking
     (map-set pending-ustx-per-cycle cycle (- current-pending ustx))
 
-    ;; Burn jSTX
+    ;; Burn full jSTX amount
     (try! (contract-call? .jstx-token burn ustx tx-sender))
 
     ;; Reduce stacker preference
     (try! (contract-call? .delegation reduce tx-sender ustx))
 
-    ;; Send STX from vault to user
-    (try! (contract-call? vault release ustx tx-sender))
+    ;; Send net STX to user
+    (try! (contract-call? vault release ustx-net tx-sender))
 
-    (print { action: "withdraw-pending", user: tx-sender, ustx: ustx, cycle: cycle })
-    (ok ustx)
+    ;; Send fee to treasury (maintains 1:1 ratio)
+    (if (> fee u0)
+      (try! (contract-call? vault release fee (var-get treasury-address)))
+      true
+    )
+
+    (print { action: "withdraw-pending", user: tx-sender, ustx: ustx, ustx-net: ustx-net, fee: fee, cycle: cycle })
+    (ok ustx-net)
   )
 )
 
@@ -290,6 +305,14 @@
   (var-get max-withdraw-fee)
 )
 
+(define-read-only (get-withdraw-pending-fee)
+  (var-get withdraw-pending-fee)
+)
+
+(define-read-only (get-treasury-address)
+  (var-get treasury-address)
+)
+
 (define-read-only (get-prepare-buffer)
   (var-get prepare-buffer)
 )
@@ -334,6 +357,21 @@
   (begin
     (try! (contract-call? .dao check-is-admin tx-sender))
     (ok (var-set max-withdraw-fee cap))
+  )
+)
+
+(define-public (set-withdraw-pending-fee (fee uint))
+  (begin
+    (try! (contract-call? .dao check-is-admin tx-sender))
+    (asserts! (<= fee (var-get max-withdraw-fee)) ERR_FEE_TOO_HIGH)
+    (ok (var-set withdraw-pending-fee fee))
+  )
+)
+
+(define-public (set-treasury-address (new-treasury principal))
+  (begin
+    (try! (contract-call? .dao check-is-admin tx-sender))
+    (ok (var-set treasury-address new-treasury))
   )
 )
 

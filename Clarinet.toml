@@ -96,6 +96,9 @@ path = "contracts/vault.clar"
 clarity_version = 4
 epoch = "latest"
 
+[contracts.treasury]
+path = "contracts/treasury.clar"
+
 [contracts.commission]
 path = "contracts/commission.clar"
 
