@@ -32,6 +32,9 @@ path = "contracts/traits/commission-trait.clar"
 [contracts.position-trait]
 path = "contracts/traits/position-trait.clar"
 
+[contracts.pool-trait]
+path = "contracts/traits/pool-trait.clar"
+
 [contracts.stacker-trait]
 path = "contracts/traits/stacker-trait.clar"
 
@@ -101,6 +104,11 @@ path = "contracts/yield.clar"
 
 [contracts.core]
 path = "contracts/core.clar"
+clarity_version = 4
+epoch = "latest"
+
+[contracts.pool]
+path = "contracts/pool.clar"
 clarity_version = 4
 epoch = "latest"
 

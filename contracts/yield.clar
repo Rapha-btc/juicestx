@@ -18,6 +18,7 @@
 ;; Data layer: share-data.clar (upgradeable logic, persistent state)
 
 (use-trait stacker-trait .stacker-trait.stacker-trait)
+(use-trait pool-trait .pool-trait.pool-trait)
 (use-trait commission-trait .commission-trait.commission-trait)
 (use-trait position-trait .position-trait.position-trait)
 
@@ -131,11 +132,11 @@
 ;;
 ;; Multiple stackers swept in the same cycle share one vesting window.
 ;; The cycle param groups them -- keeper passes the current PoX cycle.
-(define-public (sweep-stacker (stacker <stacker-trait>) (cycle uint))
+(define-public (sweep-stacker (stacker <stacker-trait>) (pool <pool-trait>) (cycle uint))
   (let (
     (stacker-principal (contract-of stacker))
     ;; Pull sBTC from stacker -- stacker already paid signer fee, sends net to us
-    (reward-data (try! (contract-call? stacker release-rewards current-contract)))
+    (reward-data (try! (contract-call? stacker release-rewards current-contract pool)))
     (net-from-stacker (get amount reward-data))
     (signer-fee-paid (get fee reward-data))
 

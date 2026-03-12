@@ -195,8 +195,8 @@ This is the operational challenge that StackingDAO has struggled with, and that 
 Every PoX cycle (~2,100 Bitcoin blocks, ~2 weeks), there is a **prepare phase** in the last 100 blocks before the next cycle starts. During this window, pool operators MUST:
 
 1. Get the signer's key + authorization signature for the next cycle
-2. Call `pool.set-signer-info(cycle, signer-key, signer-sig, ...)` on the pool contract
-3. Call `pool.commit-stacking(cycle)` which calls `pox-4.stack-aggregation-commit-indexed`
+2. Call `pool.register-cycle-auth(cycle, ...)` with signer key and signature
+3. Call `pool.finalize-cycle(cycle)` which calls `pox-4.stack-aggregation-commit-indexed`
 
 If ANY of these steps are late -- the entire pool earns **zero rewards** for that cycle. There is no partial commit, no grace period, no retry.
 

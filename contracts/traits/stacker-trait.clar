@@ -1,22 +1,22 @@
-;; Title: Stacking Trait
-;; Purpose: Interface for pool/signer contracts that interact with PoX-4.
-;;          Each signer (e.g. our own, Fast Pool, ALUM Labs) deploys a contract
-;;          implementing this trait. The helpers contract routes STX to whichever
-;;          pool the registry says is active, without the core contract needing
-;;          to know which signer is being used.
-;; Inspired by: StackingDAO stacking-pool-trait.clar
+;; Title: Stacker Trait
+;; Purpose: Interface for stacker contracts (thin STX + sBTC holders).
+;;          Used by allocation to move STX and by yield to sweep rewards.
+
+(use-trait vault-trait .vault-trait.vault-trait)
+(use-trait pool-trait .pool-trait.pool-trait)
 
 (define-trait stacker-trait
   (
-    ;; Transfer unlocked STX from stacker back to a recipient (vault).
-    ;; amount: micro-STX to transfer
-    ;; recipient: where to send the STX (typically the vault)
-    (stx-transfer (uint principal) (response bool uint))
+    ;; Transfer unlocked STX from stacker back to vault.
+    ;; ustx: micro-STX to transfer
+    ;; vault: the vault contract to send STX to
+    (stx-transfer (uint <vault-trait>) (response uint uint))
 
     ;; Release sBTC rewards: pays signer fee directly, sends net to recipient.
     ;; Called by yield.sweep-stacker.
     ;; Returns net amount sent, fee paid to signer, and signer principal.
     ;; recipient: the yield contract address
-    (release-rewards (principal) (response { amount: uint, fee: uint, signer: principal } uint))
+    ;; pool-contract: the pool to read signer/fee from (asserted against stored pool var)
+    (release-rewards (principal <pool-trait>) (response { amount: uint, fee: uint, signer: principal } uint))
   )
 )
