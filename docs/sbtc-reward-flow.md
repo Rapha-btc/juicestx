@@ -32,13 +32,20 @@ jSTX holders claim sBTC proportional to their balance
 
 ## Emily Bridge Integration
 
-The pool's `btc-address` is registered with Emily so that when BTC rewards arrive, Emily automatically mints sBTC into the stacker contract.
+The pool's `btc-address` is a taproot address obtained from the Emily API. When BTC rewards arrive at this address, Emily automatically mints sBTC into the stacker contract.
 
-### Open Questions
+The taproot address is derived from a pubkey we provide to Emily. This matters for the signer rotation edge case below.
 
-- If sBTC signers rotate mid-cycle, do deposits to the previous-rotation address still get bridged?
-- What's the expected signer rotation frequency relative to PoX cycle length (~2100 blocks)?
+## sBTC Signer Rotation Mid-Cycle
 
-## Fallback
+If sBTC signers rotate mid-cycle, the deposit address registered with Emily may change. Since pox-addr is locked at commit time, BTC rewards still go to the old address.
+
+**Best case**: the sBTC bridge still honors deposits to the previous-rotation address and mints sBTC normally. No action needed.
+
+**Fallback**: because the taproot address was created using our pubkey, we can claw back BTC that wasn't processed by the bridge via the taproot spend path. This is a safety net, not the expected flow.
+
+**To validate with friedger**: is this understanding correct? Does the taproot key path we provided to Emily give us reclaim capability if the bridge doesn't process a deposit after signer rotation?
+
+## Manual Fallback
 
 If Emily minting fails for any reason, a keeper can manually convert BTC to sBTC off-chain and call `yield.receive-rewards()`. The protocol works either way.
