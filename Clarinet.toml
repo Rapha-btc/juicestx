@@ -117,9 +117,6 @@ path = "contracts/stacker.clar"
 clarity_version = 4
 epoch = "latest"
 
-[contracts.helpers]
-path = "contracts/helpers.clar"
-
 # -------------------------------------------------------
 # Strategy (depends on dao, delegation, registry, vault)
 # -------------------------------------------------------

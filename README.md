@@ -136,7 +136,6 @@ Each signer has **one pool contract** (complex, deployed once) and **multiple st
 | **pool** | PoX-4 signer operator contract. One per signer. Manages signer key + signature registration per cycle, calls pox-4 to lock/extend/increase STX and commit aggregated stake. The signer controls their own key material. Sets their own fee rate. |
 | **stacker** | Thin STX + sBTC holder. Multiple deployed per signer. Holds STX for PoX locking, receives sBTC from Emily bridge. Pays signer fee directly during reward release. |
 | **allocation** | Computes per-stacker STX targets blending admin weights (registry) with user delegation preferences, then executes allocation by moving STX from vault to stacker contracts. |
-| **helpers** | Multi-pool router. Routes STX to the correct signer pool based on registry weights. |
 | **redeem-nft** | SIP-009 NFT for withdrawal receipts. Each NFT represents a claim on X STX after block height Y. Includes a built-in non-custodial marketplace: list your withdrawal position for sale if you don't want to wait. |
 | **position-zest** | Zest DeFi adapter. Tells the share contract how much jSTX a user has deposited as collateral in Zest, so they still earn sBTC rewards on collateralized jSTX. |
 
