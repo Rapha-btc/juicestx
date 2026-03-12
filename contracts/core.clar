@@ -220,7 +220,7 @@
 (define-public (start-withdraw (ustx uint) (vault <vault-trait>))
   (let (
     (unlock-height (get-unlock-height))
-    (nft-id (try! (contract-call? .redeem-nft mint ustx unlock-height tx-sender)))
+    (nft-id (try! (contract-call? .redeem-stx-nft mint ustx unlock-height tx-sender)))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized (contract-of vault)))
@@ -249,10 +249,10 @@
 ;; Burns the NFT + jSTX (held by core since start-withdraw), sends STX to user.
 (define-public (finalize-withdraw (nft-id uint) (vault <vault-trait>) (fees <fees-trait>))
   (let (
-    (receipt (unwrap! (unwrap-panic (contract-call? .redeem-nft get-receipt nft-id)) ERR_NO_RECEIPT))
+    (receipt (unwrap! (unwrap-panic (contract-call? .redeem-stx-nft get-receipt nft-id)) ERR_NO_RECEIPT))
     (ustx (get stx-amount receipt))
     (unlock-height (get unlock-height receipt))
-    (nft-owner (unwrap! (contract-call? .redeem-nft get-nft-owner nft-id) ERR_NOT_NFT_OWNER))
+    (nft-owner (unwrap! (contract-call? .redeem-stx-nft get-nft-owner nft-id) ERR_NOT_NFT_OWNER))
     (fee (try! (contract-call? fees pay ustx none)))
     (ustx-net (- ustx fee))
   )
@@ -265,7 +265,7 @@
     (asserts! (<= fee (/ (* ustx (var-get max-withdraw-fee)) PRECISION)) ERR_FEE_TOO_HIGH)
 
     ;; Burn the redeem NFT
-    (try! (contract-call? .redeem-nft burn nft-id))
+    (try! (contract-call? .redeem-stx-nft burn nft-id))
 
     ;; Burn jSTX held by this contract since start-withdraw
     (try! (as-contract? ((with-ft .jstx-token "jstx" ustx))

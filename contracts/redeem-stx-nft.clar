@@ -1,4 +1,4 @@
-;; Title: redeem-nft
+;; Title: redeem-stx-nft
 ;;
 ;; What this contract does:
 ;; When a user wants to withdraw STX from STX Juice, their STX is locked
@@ -14,12 +14,11 @@
 ;; pays STX now and gets the right to claim the STX later.
 ;; This is non-custodial -- the NFT stays in the seller's wallet until bought.
 ;;
-;; Inspired by: StackingDAO ststxbtc-redeem-nft.clar
-;; Source: stacking-dao/contracts/version-3/ststxbtc-redeem-nft.clar
+;; Inspired by: StackingDAO ststxbtc-withdraw-nft.clar
+;; Source: stacking-dao/contracts/core/ststxbtc-withdraw-nft.clar
 
 ;; Mainnet: (impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
-(impl-trait .sip-009-trait.sip-009-trait)
-(impl-trait .redeem-nft-trait.redeem-nft-trait)
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
 ;; ---------------------------------------------------------
 ;; Constants

@@ -44,7 +44,7 @@
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
     (if (> sbtc-amount u0)
-      (try! (as-contract (contract-call? .sbtc-mock transfer sbtc-amount tx-sender PROTOCOL_TREASURY none)))
+      (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer sbtc-amount tx-sender PROTOCOL_TREASURY none)))
       true
     )
     (print { action: "commission", amount: sbtc-amount, treasury: PROTOCOL_TREASURY })

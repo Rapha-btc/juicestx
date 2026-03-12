@@ -8,23 +8,25 @@ cache_dir = "./.cache"
 [[project.requirements]]
 contract_id = "SP000000000000000000002Q6VF78.pox-4"
 
+[[project.requirements]]
+contract_id = "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard"
+
+[[project.requirements]]
+contract_id = "SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait"
+
+[[project.requirements]]
+contract_id = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token"
+
+
 # -------------------------------------------------------
 # Traits (no dependencies)
 # -------------------------------------------------------
-[contracts.sip-010-trait]
-path = "contracts/traits/sip-010-trait.clar"
-
-[contracts.sip-009-trait]
-path = "contracts/traits/sip-009-trait.clar"
 
 [contracts.vault-trait]
 path = "contracts/traits/vault-trait.clar"
 
 [contracts.fees-trait]
 path = "contracts/traits/fees-trait.clar"
-
-[contracts.redeem-nft-trait]
-path = "contracts/traits/redeem-nft-trait.clar"
 
 [contracts.commission-trait]
 path = "contracts/traits/commission-trait.clar"
@@ -41,9 +43,6 @@ path = "contracts/traits/stacker-trait.clar"
 # -------------------------------------------------------
 # Mocks (depend on traits only)
 # -------------------------------------------------------
-[contracts.sbtc-mock]
-path = "contracts/mocks/sbtc-mock.clar"
-
 [contracts.pox-4-mock]
 path = "contracts/mocks/pox-4-mock.clar"
 
@@ -71,11 +70,11 @@ path = "contracts/registry.clar"
 [contracts.share-data]
 path = "contracts/share-data.clar"
 
-[contracts.redeem-nft]
-path = "contracts/redeem-nft.clar"
+[contracts.redeem-stx-nft]
+path = "contracts/redeem-stx-nft.clar"
 
 # -------------------------------------------------------
-# Token + Reward tracking (depends on dao, share-data, sbtc-mock)
+# Token + Reward tracking (depends on dao, share-data)
 # -------------------------------------------------------
 [contracts.jstx-token]
 path = "contracts/jstx-token.clar"

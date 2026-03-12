@@ -112,7 +112,7 @@
   (map-set authorized .share-data true)
   (map-set authorized .jstx-token true)
   (map-set authorized .yield true)
-  (map-set authorized .redeem-nft true)
+  (map-set authorized .redeem-stx-nft true)
   (map-set authorized .fees-none true)
   (map-set authorized .delegation true)
 )
