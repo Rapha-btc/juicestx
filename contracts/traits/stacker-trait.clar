@@ -8,25 +8,15 @@
 
 (define-trait stacker-trait
   (
-    ;; Delegate STX from a delegate contract to this pool for stacking.
-    ;; amount: micro-STX to delegate
-    ;; stacker: the delegate contract address holding the STX
-    (delegate-stx (uint principal) (response bool uint))
-
-    ;; Revoke a previous delegation.
-    ;; stacker: the delegate contract to revoke
-    (revoke-delegate-stx (principal) (response bool uint))
-
-    ;; Return unlocked STX from stacking back to a recipient (vault).
+    ;; Transfer unlocked STX from stacker back to a recipient (vault).
+    ;; amount: micro-STX to transfer
     ;; recipient: where to send the STX (typically the vault)
-    ;; amount: micro-STX to return
-    (return-stx (principal uint) (response bool uint))
+    (stx-transfer (uint principal) (response bool uint))
 
-    ;; Release all sBTC rewards to yield contract.
-    ;; Called by yield.sweep-stacker to pull sBTC out.
-    ;; Returns the amount transferred and the signer's fee rate
-    ;; so yield can split commission correctly.
+    ;; Release sBTC rewards: pays signer fee directly, sends net to recipient.
+    ;; Called by yield.sweep-stacker.
+    ;; Returns net amount sent, fee paid to signer, and signer principal.
     ;; recipient: the yield contract address
-    (release-rewards (principal) (response { amount: uint, fee: uint } uint))
+    (release-rewards (principal) (response { amount: uint, fee: uint, signer: principal } uint))
   )
 )

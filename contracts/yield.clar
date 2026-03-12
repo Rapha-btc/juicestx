@@ -27,11 +27,16 @@
 (define-constant ERR_UNAUTHORIZED (err u9001))
 (define-constant ERR_NOTHING_TO_VEST (err u9002))
 (define-constant ERR_ALREADY_FLUSHED (err u9003))
+(define-constant ERR_FEE_TOO_HIGH (err u9004))
 (define-constant BPS u10000)
 (define-constant INDEX_SCALE u10000000000) ;; 1e10 for reward math precision
 
 ;; Rewards vest linearly over one PoX cycle (~2100 blocks on mainnet)
 (define-constant VESTING_BLOCKS u2100)
+(define-constant MAX_PROTOCOL_FEE u1000) ;; 10% cap
+
+;; Protocol fee in basis points, set by admin independently of signer fees.
+(define-data-var protocol-fee uint u0)
 
 ;; ---------------------------------------------------------
 ;; Data
@@ -119,27 +124,24 @@
 
 ;; Keeper triggers this per stacker. Yield pulls sBTC from the stacker
 ;; via release-rewards. The stacker reports how much sBTC it had and
-;; its fee rate. Yield applies the fee, pays the operator, and adds
-;; net rewards to the current cycle's bucket.
+;; its fee rate. Two independent fees are applied:
+;; 1. Signer fee — paid directly to the signer (they set their own rate)
+;; 2. Protocol fee — set by admin, stored in bucket for flush-commission
+;; Neither party needs the other's permission to set their fee.
 ;;
 ;; Multiple stackers swept in the same cycle share one vesting window.
 ;; The cycle param groups them -- keeper passes the current PoX cycle.
 (define-public (sweep-stacker (stacker <stacker-trait>) (cycle uint))
   (let (
     (stacker-principal (contract-of stacker))
-    ;; Pull sBTC from stacker -- it transfers to us and returns amount + fee
-    (reward-data (try! (contract-call? stacker release-rewards (as-contract tx-sender))))
-    (sbtc-amount (get amount reward-data))
-    (fee-rate (get fee reward-data))
+    ;; Pull sBTC from stacker -- stacker already paid signer fee, sends net to us
+    (reward-data (try! (contract-call? stacker release-rewards current-contract)))
+    (net-from-stacker (get amount reward-data))
+    (signer-fee-paid (get fee reward-data))
 
-    ;; Commission math
-    (commission-amount (/ (* sbtc-amount fee-rate) BPS))
-    (net-rewards (- sbtc-amount commission-amount))
-
-    ;; Operator cut: who receives it and what share of commission
-    (owner-cut (contract-call? .registry get-operator-cut stacker-principal))
-    (owner-amount (/ (* commission-amount (get share owner-cut)) BPS))
-    (protocol-commission (- commission-amount owner-amount))
+    ;; Protocol fee: applied on what we received, stored for flush
+    (protocol-amount (/ (* net-from-stacker (var-get protocol-fee)) BPS))
+    (net-rewards (- net-from-stacker protocol-amount))
 
     ;; Get or create cycle bucket (start-height set on first sweep of cycle)
     (existing (default-to
@@ -147,28 +149,23 @@
       (map-get? reward-bucket cycle)
     ))
 
-    ;; Running total for this stacker
+    ;; Running total for this stacker (gross = what we got + signer fee)
+    (gross (+ net-from-stacker signer-fee-paid))
     (prev-total (default-to u0 (map-get? stacker-yield-total stacker-principal)))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
 
-    ;; Pay signer operator their cut immediately
-    (if (> owner-amount u0)
-      (try! (as-contract (contract-call? .sbtc-mock transfer owner-amount tx-sender (get receiver owner-cut) none)))
-      true
-    )
-
     ;; Accumulate net rewards + protocol commission into cycle bucket
     (map-set reward-bucket cycle {
       total-sbtc: (+ (get total-sbtc existing) net-rewards),
       vested-sbtc: (get vested-sbtc existing),
-      commission-sbtc: (+ (get commission-sbtc existing) protocol-commission),
+      commission-sbtc: (+ (get commission-sbtc existing) protocol-amount),
       start-height: (get start-height existing)
     })
 
-    ;; Track per-stacker yield attribution
-    (map-set stacker-yield-total stacker-principal (+ prev-total sbtc-amount))
+    ;; Track per-stacker yield attribution (gross, for dashboards)
+    (map-set stacker-yield-total stacker-principal (+ prev-total gross))
 
     ;; Update active cycle
     (var-set active-cycle cycle)
@@ -177,10 +174,9 @@
       action: "sweep-stacker",
       stacker: stacker-principal,
       cycle: cycle,
-      gross: sbtc-amount,
-      signer-fee: fee-rate,
-      commission: commission-amount,
-      owner-cut: owner-amount,
+      gross: gross,
+      signer-fee: signer-fee-paid,
+      protocol-fee: protocol-amount,
       net: net-rewards
     })
     (ok net-rewards)
@@ -218,7 +214,8 @@
     )
       ;; Pay out pending sBTC
       (if (> pending u0)
-        (try! (as-contract (contract-call? .sbtc-mock transfer pending tx-sender who none)))
+        (try! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" pending))
+          (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer pending tx-sender who none))))
         true
       )
       ;; Update snapshot
@@ -256,7 +253,8 @@
     )
       (asserts! (contract-call? .share-data is-defi-adapter (contract-of adapter)) ERR_UNAUTHORIZED)
       (if (> pending u0)
-        (try! (as-contract (contract-call? .sbtc-mock transfer pending tx-sender who none)))
+        (try! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" pending))
+          (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer pending tx-sender who none))))
         true
       )
       (try! (contract-call? .share-data set-wallet-snapshot who {
@@ -304,6 +302,20 @@
 
 (define-read-only (get-stacker-yield (stacker principal))
   (default-to u0 (map-get? stacker-yield-total stacker))
+)
+
+(define-read-only (get-protocol-fee)
+  (var-get protocol-fee)
+)
+
+(define-public (set-protocol-fee (rate uint))
+  (begin
+    (try! (contract-call? .dao check-is-admin tx-sender))
+    (asserts! (<= rate MAX_PROTOCOL_FEE) ERR_FEE_TOO_HIGH)
+    (var-set protocol-fee rate)
+    (print { action: "set-protocol-fee", rate: rate })
+    (ok true)
+  )
 )
 
 (define-read-only (get-unclaimed (who principal))

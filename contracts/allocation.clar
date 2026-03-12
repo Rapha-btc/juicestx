@@ -190,14 +190,11 @@
     ;; Move STX from vault to stacker contract
     (try! (contract-call? vault release deficit stacker-principal))
 
-    ;; Tell stacker it received STX
-    (try! (contract-call? stacker delegate-stx deficit stacker-principal))
-
     ;; Update allocated tracking
     (map-set stacker-allocated stacker-principal new-allocated)
     (var-set total-allocated (+ (var-get total-allocated) deficit))
 
-    (print { action: "execute-allocation", stacker: stacker-principal, amount: deficit, new-total: new-allocated })
+    (print { action: "execute-allocation", stacker: stacker-principal, vault: (contract-of vault), amount: deficit, new-total: new-allocated })
     (ok deficit)
   )
 )
@@ -223,13 +220,13 @@
     (asserts! (> excess u0) ERR_NOTHING_TO_ALLOCATE)
 
     ;; Tell stacker to return STX to vault
-    (try! (contract-call? stacker return-stx (contract-of vault) excess))
+    (try! (contract-call? stacker stx-transfer excess (contract-of vault)))
 
     ;; Update allocated tracking
     (map-set stacker-allocated stacker-principal target)
     (var-set total-allocated (- (var-get total-allocated) excess))
 
-    (print { action: "return-excess", stacker: stacker-principal, amount: excess, new-total: target })
+    (print { action: "return-excess", stacker: stacker-principal, vault: (contract-of vault), amount: excess, new-total: target })
     (ok excess)
   )
 )

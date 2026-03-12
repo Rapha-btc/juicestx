@@ -37,30 +37,96 @@ User deposits STX
        v
    [stacker.clar] -- holds STX waiting for or locked in PoX
        |
-       | operator calls lock-delegator + finalize-cycle
+       | signer calls lock-delegated-stx (cycle 1) or extend-delegated-stx (cycle 2+)
+       | signer calls increase-delegated-stx (if more STX arrived)
+       | signer calls finalize-cycle (commit with signer auth)
        v
    [PoX-4]  -- STX locked, earning sBTC yield
        |
-       | cycle ends, STX unlocks
+       | cycle ends, STX unlocks (only if not extended)
        v
    [stacker.clar] -- unlocked STX sitting in contract
        |
-       | allocation.return-excess (if needed)
+       | allocation.return-excess calls stacker.stx-transfer
        v
    [vault.clar]  -- STX available for withdrawals or re-stacking
 ```
 
-## Per-Cycle Operator Flow
+## PoX Delegation Model
 
-Each PoX cycle (~2 weeks), the operator must:
+The stacker contract is both the **STX holder** and the **pool operator** in PoX terms.
 
-1. **Register auth** -- `stacker.register-cycle-auth` with signer key + signature. Must happen before the prepare phase (~100 blocks before cycle end). Missing this = stacker misses the cycle.
+### Roles
 
-2. **Run allocation** -- `allocation.execute-allocation` for stackers that need more STX, `allocation.return-excess` for stackers that have too much. This moves STX between vault and stacker contracts.
+| PoX Role | Who | What they do |
+|----------|-----|-------------|
+| Delegator | stacker contract | Holds STX, calls `delegate-stx` to authorize itself as pool operator |
+| Pool operator | stacker contract (as-contract) | Calls `delegate-stack-stx`, `delegate-stack-extend`, `delegate-stack-increase` |
+| Signer | external principal | Registers cycle auth (keys/sigs), triggers lock/extend/finalize on the stacker |
+| Protocol | dao-authorized callers | Controls `delegate-stx` and `revoke-delegate-stx` — the signer can't self-authorize |
 
-3. **Lock STX** -- `stacker.lock-delegator` calls `pox-4.delegate-stack-stx` to lock each stacker's STX into PoX.
+### PoX-4 operations
 
-4. **Finalize** -- `stacker.finalize-cycle` calls `pox-4.stack-aggregation-commit-indexed` to commit the total stacked amount with the signer's authorization.
+| PoX-4 call | Our function | Gated by | Purpose |
+|---|---|---|---|
+| `delegate-stx` | `delegate-stx(amount)` | protocol (dao) | Authorize stacking — must be called first |
+| `revoke-delegate-stx` | `revoke-delegate-stx()` | protocol (dao) | Revoke authorization — blocks future locks |
+| `delegate-stack-stx` | `lock-delegated-stx(stacker, ustx, start, period)` | signer | Initial lock into PoX |
+| `delegate-stack-extend` | `extend-delegated-stx(stacker)` | signer | Extend existing lock by 1 cycle |
+| `delegate-stack-increase` | `increase-delegated-stx(stacker, increase-by)` | signer | Add more STX to existing lock |
+| `stack-aggregation-commit-indexed` | `finalize-cycle(cycle)` | signer | Commit aggregated stake with signer auth |
+
+### Delegation lifecycle (protocol-controlled)
+
+```
+Protocol calls delegate-stx(amount)
+  → stacker as-contract calls pox-4.delegate-stx
+  → delegate-to = stacker itself (it's its own pool operator)
+  → pox-addr = btc-address (Emily-registered, locked in)
+  → signer can now lock STX via lock-delegated-stx
+
+Protocol calls revoke-delegate-stx()
+  → stacker as-contract calls pox-4.revoke-delegate-stx
+  → signer can no longer lock or extend
+  → already-locked STX still unlocks at cycle end
+```
+
+The protocol controls delegation. The signer controls locking within that delegation.
+
+### Lock vs Extend vs Increase
+
+PoX-4 has three distinct operations for managing locked STX:
+
+| Operation | When to use | What happens |
+|-----------|------------|--------------|
+| `lock-delegated-stx` → `delegate-stack-stx` | First time, or after STX fully unlocked | Locks unlocked STX into PoX. Fails if STX is already locked. |
+| `extend-delegated-stx` → `delegate-stack-extend` | Every subsequent cycle | Extends an existing lock by 1 cycle. Works while STX is still locked — no gap, no missed yield. |
+| `increase-delegated-stx` → `delegate-stack-increase` | More STX arrives mid-cycle | Increases the locked amount without touching the lock period. Used when allocation sends more STX. |
+
+**Why extend instead of re-lock?** Once STX is locked, `delegate-stack-stx` fails — you can't lock already-locked STX. If you wait for it to unlock first, you miss a cycle of yield. `delegate-stack-extend` keeps the lock rolling with no gap.
+
+**Why increase?** `delegate-stack-stx` sets the initial amount. If more STX arrives later (e.g. new deposits allocated to this stacker), you can't re-lock at a higher amount. `delegate-stack-increase` adds to the existing lock.
+
+### Per-cycle signer flow
+
+```
+Cycle 1 (first time):
+  1. register-cycle-auth (signer key + sig)
+  2. lock-delegated-stx (initial lock via delegate-stack-stx)
+  3. finalize-cycle (commit aggregated stake)
+
+Cycle 2+ (ongoing):
+  1. register-cycle-auth (signer key + sig)
+  2. extend-delegated-stx (extend lock 1 more cycle)
+  3. increase-delegated-stx (if more STX was allocated)
+  4. finalize-cycle (commit aggregated stake)
+
+Winding down:
+  1. Protocol calls revoke-delegate-stx
+  2. Signer can't extend or lock
+  3. STX unlocks at cycle end
+  4. allocation.return-excess moves STX back to vault
+```
 
 ## Reward Flow (sBTC)
 
@@ -79,8 +145,10 @@ Rewards are swept **one cycle behind**: the keeper sweeps cycle N's sBTC during 
 ```
 Cycle N:    miners pay BTC every block → Emily mints sBTC into stacker contracts
 Cycle N+1:  keeper calls yield.sweep-stacker(stacker, N) for each stacker
-            → stacker.release-rewards transfers all sBTC to yield, reports fee rate
-            → yield deducts signer fee (operator cut + protocol commission)
+            → stacker.release-rewards transfers all sBTC to yield
+            → stacker reports { amount, fee-rate, signer-principal }
+            → yield pays signer fee directly to signer
+            → yield deducts protocol fee into bucket (for flush-commission)
             → net sBTC stored in reward-bucket[N]
             → rewards vest linearly over 2100 blocks (~1 cycle)
             → jSTX holders claim as it vests via settle-wallet
@@ -102,14 +170,24 @@ Yield tracks gross sBTC contributed per stacker in `stacker-yield-total` (on-cha
 
 ### Fee structure
 
-Each signer sets their fee rate on their stacker contract (`set-signer-fee`, in basis points). When yield sweeps:
+Two independent fees, set by different parties:
 
-1. **Signer fee** is calculated from gross sBTC (e.g. 500 bps = 5%)
-2. **Operator cut** (from registry) determines what share of the fee goes to the signer operator vs protocol treasury
-3. **Net rewards** (gross - fee) go into the vesting bucket for jSTX holders
-4. **Protocol commission** accumulates in the bucket, flushed to treasury via `flush-commission`
+| Fee | Set by | Where | Cap |
+|-----|--------|-------|-----|
+| Signer fee | Signer (`stacker.set-signer-fee`) | Paid directly to signer on sweep | 10% (1000 bps) |
+| Protocol fee | Admin (`yield.set-protocol-fee`) | Stored in bucket, flushed to treasury | 10% (1000 bps) |
 
-If signer fee is u0, users get 100% of yield. Signers can turn on fees at any time.
+When `yield.sweep-stacker` runs:
+
+```
+gross sBTC from stacker
+  - signer fee (e.g. 3%) → paid to signer immediately
+  = after-signer amount
+  - protocol fee (e.g. 5%) → stored in bucket for flush-commission
+  = net rewards → vesting bucket for jSTX holders
+```
+
+Neither party needs the other's permission. The signer sets their rate, the protocol sets its rate. Both are transparent on-chain.
 
 ### Advantage over other liquid stacking protocols
 
@@ -159,11 +237,13 @@ The multi-stacker split is invisible to users. They pick a signer; the protocol 
 
 1. **Simpler hierarchy**: StackingDAO has pool -> delegates -> PoX. We have stacker -> PoX. Each stacker handles both delegation and signer auth.
 
-2. **Allocation tracking**: StackingDAO tracks `stx-stacking` in the reserve. We track `total-allocated` in allocation.clar, keeping the vault simple.
+2. **Self-delegating**: Our stacker delegates to itself (it's its own pool operator). StackingDAO delegates to an external pool contract. Ours is simpler — fewer moving parts.
 
-3. **Outflow algorithm**: StackingDAO has an on-chain `calculate-lowest-combination` algorithm. We rely on the operator to pick which stacker to stop. On-chain algo is a future improvement.
+3. **Independent fees**: StackingDAO routes all fees through the pool. We have two independent fees (signer + protocol) — no coordination needed, both transparent on-chain.
 
-4. **Reward handling**: StackingDAO handles rewards per delegate via `delegates-handler-v1`. We handle rewards in `yield.clar` separately.
+4. **No accounting callbacks**: StackingDAO needs `delegate-stx`/`revoke-delegate-stx` callbacks on their delegates for STX accounting (because rewards come back as STX, same token as deposits). Our rewards are sBTC (different token), so no ambiguity — allocation tracks totals directly.
+
+5. **Outflow algorithm**: StackingDAO has an on-chain `calculate-lowest-combination` algorithm. We rely on the keeper to pick which stacker(s) to stop. On-chain algo is a future improvement.
 
 ## Deployment
 

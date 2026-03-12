@@ -136,7 +136,7 @@ User deposits STX
 | **sip-009-trait** | Standard NFT interface (withdrawal receipts) |
 | **commission-trait** | `(process uint)` -- swappable fee strategy |
 | **position-trait** | `(get-balance principal)` -- DeFi adapter interface |
-| **stacking-trait** | `(delegate-stx, revoke-delegate-stx, return-stx)` -- pool operator interface |
+| **stacker-trait** | `(stx-transfer, release-rewards)` -- stacker interface for allocation + yield |
 
 ### Mocks (test-only, never deployed)
 
