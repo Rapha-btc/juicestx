@@ -250,7 +250,7 @@
 (define-public (finalize-withdraw (nft-id uint) (vault <vault-trait>) (fees <fees-trait>))
   (let (
     (receipt (unwrap! (unwrap-panic (contract-call? .redeem-stx-nft get-receipt nft-id)) ERR_NO_RECEIPT))
-    (ustx (get stx-amount receipt))
+    (ustx (get ustx receipt))
     (unlock-height (get unlock-height receipt))
     (nft-owner (unwrap! (contract-call? .redeem-stx-nft get-nft-owner nft-id) ERR_NOT_NFT_OWNER))
     (fee (try! (contract-call? fees pay ustx none)))

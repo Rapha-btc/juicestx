@@ -17,6 +17,9 @@ contract_id = "SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait"
 [[project.requirements]]
 contract_id = "SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token"
 
+[[project.requirements]]
+contract_id = "SP3D6PV2ACBPEKYJTCMH7HEN02KP87QSP8KTEH335.commission-trait"
+
 
 # -------------------------------------------------------
 # Traits (no dependencies)
