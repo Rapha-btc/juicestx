@@ -157,10 +157,6 @@
   (var-get uri-root)
 )
 
-(define-read-only (get-nft-owner (id uint))
-  (nft-get-owner? redeem-nft id)
-)
-
 (define-read-only (get-receipt (id uint))
   (ok (map-get? receipt-data id))
 )

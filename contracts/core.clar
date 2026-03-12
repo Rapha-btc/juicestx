@@ -252,7 +252,7 @@
     (receipt (unwrap! (unwrap-panic (contract-call? .redeem-stx-nft get-receipt nft-id)) ERR_NO_RECEIPT))
     (ustx (get ustx receipt))
     (unlock-height (get unlock-height receipt))
-    (nft-owner (unwrap! (contract-call? .redeem-stx-nft get-nft-owner nft-id) ERR_NOT_NFT_OWNER))
+    (nft-owner (unwrap! (unwrap-panic (contract-call? .redeem-stx-nft get-owner nft-id)) ERR_NOT_NFT_OWNER))
     (fee (try! (contract-call? fees pay ustx none)))
     (ustx-net (- ustx fee))
   )
