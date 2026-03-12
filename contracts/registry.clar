@@ -16,12 +16,10 @@
 ;; - "signers" is the list of active signer pool contract addresses.
 ;; - Each signer has an "allocation" (basis points out of 10,000) controlling
 ;;   what share of total STX it receives. All allocations must sum to 10,000.
-;; - Each signer has a "fee" (basis points) -- the protocol's commission
-;;   on rewards from that signer. Can differ per signer.
-;; - Each signer sets their own fee on their stacker contract.
-;; - Signers also track their delegate contracts (thin STX-holding contracts
+;; - Each signer sets their own fee on their pool contract.
+;; - Signers also track their stacker contracts (thin STX-holding contracts
 ;;   that do the actual pox-4 delegation). Each signer can have multiple
-;;   delegates so we can rotate/stop one without unlocking all STX.
+;;   stackers so we can rotate/stop one without unlocking all STX.
 ;;
 ;; Inspired by: StackingDAO data-pools-v1.clar
 ;; Source: stacking-dao/contracts/version-2/data-pools-v1.clar

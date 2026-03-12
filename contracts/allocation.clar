@@ -95,8 +95,8 @@
       (/ (* assigned-stacker PRECISION) total-assigned)
     ))
 
-    ;; Admin-set weight from registry
-    (stacker-weight (contract-call? .registry get-signer-allocation stacker))
+    ;; Admin-set weight for this stacker within its pool
+    (stacker-weight (contract-call? .registry get-delegate-allocation stacker))
 
     ;; Split unassigned STX: (1 - user-influence) by weight, user-influence by user preference
     (admin-rate (- PRECISION (if (is-eq total-assigned u0) u0 (var-get user-influence))))
@@ -182,7 +182,7 @@
     (try! (contract-call? .dao check-is-authorized contract-caller))
 
     ;; Stacker must be registered
-    (asserts! (> (contract-call? .registry get-signer-allocation stacker-principal) u0) ERR_STACKER_NOT_ACTIVE)
+    (asserts! (> (contract-call? .registry get-delegate-allocation stacker-principal) u0) ERR_STACKER_NOT_ACTIVE)
 
     ;; Must have something to send
     (asserts! (> deficit u0) ERR_NOTHING_TO_ALLOCATE)
