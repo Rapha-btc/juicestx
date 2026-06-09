@@ -137,20 +137,37 @@ epoch = "latest"
 path = "contracts/position-zest.clar"
 
 # -------------------------------------------------------
-# PoX-5 (external WIP source) + Juice signer-manager (jBTC)
+# PoX-5 — external WIP source + Juice jBTC/jSTX stack
 # -------------------------------------------------------
 [contracts.pox-5]
 path = "contracts/external/pox-5.clar"
 clarity_version = 3
 epoch = "latest"
 
-[contracts.juice-signer-manager]
-path = "contracts/pox-5/juice-signer-manager.clar"
+# jBTC reward layer (copies of the jSTX share-data/yield/token, separate state)
+[contracts.jbtc-share-data]
+path = "contracts/pox-5/jbtc-share-data.clar"
 clarity_version = 3
 epoch = "latest"
 
+[contracts.jbtc-yield]
+path = "contracts/pox-5/jbtc-yield.clar"
+clarity_version = 3
+epoch = "latest"
+
+[contracts.jbtc-token]
+path = "contracts/pox-5/jbtc-token.clar"
+clarity_version = 3
+epoch = "latest"
+
+# Staking layer (pox-5 bonds/signers)
 [contracts.juice-staker]
 path = "contracts/pox-5/juice-staker.clar"
+clarity_version = 3
+epoch = "latest"
+
+[contracts.juice-signer-manager]
+path = "contracts/pox-5/juice-signer-manager.clar"
 clarity_version = 3
 epoch = "latest"
 
