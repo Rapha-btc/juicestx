@@ -137,6 +137,19 @@ epoch = "latest"
 path = "contracts/position-zest.clar"
 
 # -------------------------------------------------------
+# PoX-5 (external WIP source) + Juice signer-manager (jBTC)
+# -------------------------------------------------------
+[contracts.pox-5]
+path = "contracts/external/pox-5.clar"
+clarity_version = 3
+epoch = "latest"
+
+[contracts.juice-signer-manager]
+path = "contracts/pox-5/juice-signer-manager.clar"
+clarity_version = 3
+epoch = "latest"
+
+# -------------------------------------------------------
 # Analysis settings
 # -------------------------------------------------------
 [repl.analysis]
