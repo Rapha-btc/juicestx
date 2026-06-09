@@ -149,6 +149,11 @@ path = "contracts/pox-5/juice-signer-manager.clar"
 clarity_version = 3
 epoch = "latest"
 
+[contracts.juice-staker]
+path = "contracts/pox-5/juice-staker.clar"
+clarity_version = 3
+epoch = "latest"
+
 # -------------------------------------------------------
 # Analysis settings
 # -------------------------------------------------------
