@@ -192,6 +192,72 @@ Hold and do nothing? Pending just accumulates. `claim-rewards` on jstx-token
 (or any incoming transfer) pays it whenever touched. `get-unclaimed` shows the
 projected amount without settling.
 
+## How the reward bucket plays into this
+
+The bucket is the staging area between "sBTC arrived" and "sBTC is in the
+index" - it is what makes the drip possible.
+
+### What it holds
+
+One bucket per cycle (`reward-bucket` map):
+
+```
+{
+  total-sbtc:      0.90    ;; net rewards parked for this cycle
+  vested-sbtc:     0.45    ;; how much has ALREADY been pushed into the index
+  commission-sbtc: 0.05    ;; protocol fee waiting for flush-commission
+  start-height:    H       ;; burn height of the cycle's FIRST sweep
+}
+```
+
+### Its job in the flow
+
+Without a bucket, sweep would do `index += 0.90/supply` in one block -
+instant distribution, flash-mint exploitable.
+
+With the bucket, sweep just PARKS the 0.90 and records `start-height`. The
+index has not moved. Then the bucket acts as a slow-release valve
+(`apply-vested`, called at the top of every settle):
+
+```
+should-be-vested = total * (burn-height - start-height) / 2100
+newly-vested     = should-be-vested - vested-sbtc     <- the bucket's memory
+index           += newly-vested / supply
+vested-sbtc      = should-be-vested                   <- remember we applied it
+```
+
+`vested-sbtc` is the crucial field: a high-water mark of what has already
+been applied, so no matter how many times settlement fires (or how
+irregularly), each sat enters the index exactly once. Ten settles in one
+block: nine are no-ops. No settle for 500 blocks: the next one catches up
+the whole 500 blocks' worth in one bump.
+
+Division of labor:
+
+- **Bucket**   = time-release of the cycle's total (WHEN rewards enter the index)
+- **Index**    = cumulative per-share earnings (HOW they are split)
+- **Snapshot** = per-wallet paid-up-to marker (WHO has been paid)
+
+Two more roles: multiple stackers swept in the same cycle accumulate into the
+same bucket and share one vesting window (start-height sticks from the first
+sweep), and the bucket carries the commission pot until `flush-commission`
+empties it to treasury.
+
+### KNOWN GAP: stranded remainder on cycle rollover
+
+`apply-vested` only ever runs on `active-cycle` - and `sweep-stacker` MOVES
+`active-cycle` forward. If cycle N's first sweep is at height H, it fully
+vests at H+2100; but the cycle-N+1 sweep lands ~2100 blocks later too. If it
+arrives at H+2050, bucket N still has 50 blocks' worth unvested - and once
+`active-cycle` flips to N+1, nothing ever applies that remainder. It sits
+stranded in the yield contract with no recovery function. The timing is
+borderline every single cycle, so this is a real pre-deploy fix, not a
+theoretical one.
+
+Fix sketch: when a sweep starts a NEW cycle, first fully-vest-and-apply the
+old bucket (force `should-be-vested = total`), then flip `active-cycle`.
+Alternative: have apply-vested walk the previous cycle's bucket too.
+
 ## DeFi positions
 
 `settle-defi-position` is the same math, but the balance comes from a
