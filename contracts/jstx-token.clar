@@ -6,10 +6,14 @@
 ;; Your jSTX represents your share of the stacking pool and entitles you
 ;; to sBTC rewards proportional to your holdings.
 ;;
-;; Key design: EVERY transfer, mint, and burn triggers a reward refresh.
-;; Before any jSTX moves, the share contract calculates and pays out any
-;; pending sBTC rewards to the affected wallets. This ensures no one can
-;; game rewards by transferring right before a distribution.
+;; Key design: EVERY transfer, mint, and burn triggers a reward refresh
+;; in the same transaction, AFTER the balance moves (StackingDAO order).
+;; Pending rewards are computed from each wallet's STORED snapshot (their
+;; old balance), so the old period is always paid correctly -- and the new
+;; snapshot records the post-operation balance they actually hold. Settling
+;; before the move (with pre-op reads) would store stale balances: senders
+;; would keep earning on tokens they no longer own, and freshly minted
+;; tokens would earn nothing until the next touch.
 ;;
 ;; jSTX maintains a 1:1 ratio with STX (like stSTXbtc, not like stSTX).
 ;; The yield comes as separate sBTC payments, not as exchange rate changes.
@@ -40,16 +44,19 @@
 ;; ---------------------------------------------------------
 
 (define-public (transfer (amount uint) (from principal) (to principal) (memo (optional (buff 34))))
-  (let (
-    (supply (ft-get-supply jstx))
-  )
+  (begin
     (asserts! (is-eq tx-sender from) ERR_NOT_AUTHORIZED)
-    ;; Refresh rewards for both wallets BEFORE moving tokens.
-    ;; We pass each wallet's current balance + total supply so share
-    ;; doesn't need to call back to this contract (avoiding circular dep).
-    (try! (contract-call? .yield settle-wallet from (ft-get-balance jstx from) supply))
-    (try! (contract-call? .yield settle-wallet to (ft-get-balance jstx to) supply))
+    ;; Move FIRST, then settle with post-transfer balances. Pending is paid
+    ;; from each wallet's stored snapshot (old balance), so nothing is lost;
+    ;; the fresh snapshot records what they hold NOW. We pass balance +
+    ;; supply so yield doesn't call back into this contract (no circular dep).
     (try! (ft-transfer? jstx amount from to))
+    (let (
+      (supply (ft-get-supply jstx))
+    )
+      (try! (contract-call? .yield settle-wallet from (ft-get-balance jstx from) supply))
+      (try! (contract-call? .yield settle-wallet to (ft-get-balance jstx to) supply))
+    )
     (print { action: "transfer", amount: amount, from: from, to: to })
     (ok true)
   )
@@ -83,28 +90,31 @@
 ;; Protocol-only: mint and burn
 ;; ---------------------------------------------------------
 
-;; Mint jSTX to a recipient (called by core.clar on deposit)
-;; Refreshes the recipient's rewards first so their new balance
-;; doesn't dilute their pending rewards.
+;; Mint jSTX to a recipient (called by core.clar on deposit).
+;; Mint first, then settle: pending is paid from the OLD snapshot (pre-mint
+;; balance), and the fresh snapshot picks up the post-mint balance + supply
+;; so the new tokens start earning immediately.
 (define-public (mint (amount uint) (recipient principal))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (try! (contract-call? .yield settle-wallet recipient (ft-get-balance jstx recipient) (ft-get-supply jstx)))
     (try! (ft-mint? jstx amount recipient))
+    (try! (contract-call? .yield settle-wallet recipient (ft-get-balance jstx recipient) (ft-get-supply jstx)))
     (print { action: "mint", amount: amount, recipient: recipient })
     (ok true)
   )
 )
 
-;; Burn jSTX from an owner (called by core.clar on withdraw)
-;; Refreshes the owner's rewards first so they get paid before burning.
+;; Burn jSTX from an owner (called by core.clar on withdraw).
+;; Burn first, then settle: the owner is still paid their pending (snapshot
+;; covers the burned tokens through this moment), and the fresh snapshot +
+;; tracked supply reflect the post-burn state.
 (define-public (burn (amount uint) (owner principal))
   (begin
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (try! (contract-call? .yield settle-wallet owner (ft-get-balance jstx owner) (ft-get-supply jstx)))
     (try! (ft-burn? jstx amount owner))
+    (try! (contract-call? .yield settle-wallet owner (ft-get-balance jstx owner) (ft-get-supply jstx)))
     (print { action: "burn", amount: amount, owner: owner })
     (ok true)
   )

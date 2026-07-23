@@ -7,13 +7,21 @@
 ;; 2. Keeper calls sweep-stacker for each stacker that has sBTC (once per cycle)
 ;; 3. Yield pulls sBTC from stacker via release-rewards (stacker reports amount + fee)
 ;; 4. Commission is split (signer operator cut + protocol treasury)
-;; 5. Net rewards accumulate in a per-cycle bucket, vest linearly over VESTING_BLOCKS
+;; 5. Net rewards accumulate in a per-cycle bucket and vest linearly across
+;;    that cycle's own PoX burn window (StackingDAO rewards-v5 style). Past
+;;    the window's end the bucket clamps to fully vested, so a cycle's
+;;    remainder is ALWAYS reachable -- late applies pay out 100%.
 ;; 6. On any settle (transfer/mint/burn/claim), vested amount is
-;;    calculated from block height -- no keeper needed for distribution
+;;    calculated from burn height -- no keeper needed for distribution.
+;;    sweep-stacker finalizes the previous cycle's bucket before flipping
+;;    active-cycle, and apply-cycle lets anyone catch up any bucket, so
+;;    no sBTC can strand on cycle rollover.
 ;;
 ;; Anti-flash-mint: rewards vest as a function of time, not discrete
 ;; keeper-triggered drips. Minting jSTX right before a vest window
 ;; doesn't help because settle-wallet snapshots your index first.
+;; Keeper should sweep promptly at cycle start: a late sweep vests the
+;; already-elapsed window fraction immediately at the first settle.
 ;;
 ;; Data layer: share-data.clar (upgradeable logic, persistent state)
 
@@ -26,14 +34,12 @@
 ;; Constants
 ;; ---------------------------------------------------------
 (define-constant ERR_UNAUTHORIZED (err u9001))
-(define-constant ERR_NOTHING_TO_VEST (err u9002))
-(define-constant ERR_ALREADY_FLUSHED (err u9003))
+(define-constant ERR_NOTHING_TO_FLUSH (err u9003))
 (define-constant ERR_FEE_TOO_HIGH (err u9004))
+(define-constant ERR_WRONG_CYCLE (err u9005))
 (define-constant BPS u10000)
 (define-constant INDEX_SCALE u10000000000) ;; 1e10 for reward math precision
 
-;; Rewards vest linearly over one PoX cycle (~2100 blocks on mainnet)
-(define-constant VESTING_BLOCKS u2100)
 (define-constant MAX_PROTOCOL_FEE u1000) ;; 10% cap
 
 ;; Protocol fee in basis points, set by admin independently of signer fees.
@@ -44,13 +50,14 @@
 ;; ---------------------------------------------------------
 
 ;; Per-cycle reward bucket. All stackers swept in the same cycle
-;; accumulate into the same bucket and vest together.
+;; accumulate into the same bucket and vest together across that cycle's
+;; own PoX burn window (not a sweep-time clock) -- so every bucket stays
+;; addressable and clamps to fully vested once its window ends.
 (define-map reward-bucket uint
   {
     total-sbtc: uint,        ;; net sBTC for this cycle (after commission)
     vested-sbtc: uint,       ;; how much has been applied to global-index so far
-    commission-sbtc: uint,   ;; protocol commission (flush to treasury)
-    start-height: uint       ;; burn-block-height when first sweep of this cycle happened
+    commission-sbtc: uint    ;; protocol commission (flush to treasury)
   }
 )
 
@@ -65,19 +72,32 @@
 ;; Internal: compute how much of a cycle's rewards have vested
 ;; ---------------------------------------------------------
 
+;; Burn height at which a PoX cycle starts. Cycle length is derived from
+;; consecutive starts, so this tracks the real PoX calendar.
+(define-read-only (get-cycle-start (cycle uint))
+  (contract-call? 'SP000000000000000000002Q6VF78.pox-4 reward-cycle-to-burn-height cycle)
+)
+
+;; Vested amount for a cycle's bucket, measured against the cycle's OWN
+;; burn window [cycle-start, next-cycle-start). Clamps to the full total
+;; once the window has ended -- a late apply always reaches 100%, so no
+;; remainder can strand (StackingDAO rewards-v5 past-intervals pattern).
 (define-read-only (get-vested-amount (cycle uint))
   (match (map-get? reward-bucket cycle)
     bucket
       (let (
         (total (get total-sbtc bucket))
-        (start (get start-height bucket))
-        (elapsed (- burn-block-height start))
-        (vested (if (>= elapsed VESTING_BLOCKS)
-          total
-          (/ (* total elapsed) VESTING_BLOCKS)
-        ))
+        (start (get-cycle-start cycle))
+        (end (get-cycle-start (+ cycle u1)))
+        (len (- end start))
       )
-        vested
+        (if (>= burn-block-height end)
+          total
+          (if (> burn-block-height start)
+            (/ (* total (- burn-block-height start)) len)
+            u0
+          )
+        )
       )
     u0
   )
@@ -90,14 +110,8 @@
   (match (map-get? reward-bucket cycle)
     bucket
       (let (
-        (total (get total-sbtc bucket))
         (already-vested (get vested-sbtc bucket))
-        (start (get start-height bucket))
-        (elapsed (- burn-block-height start))
-        (should-be-vested (if (>= elapsed VESTING_BLOCKS)
-          total
-          (/ (* total elapsed) VESTING_BLOCKS)
-        ))
+        (should-be-vested (get-vested-amount cycle))
         (new-amount (- should-be-vested already-vested))
         (supply (contract-call? .share-data get-tracked-supply))
         (current-idx (contract-call? .share-data get-global-index))
@@ -126,12 +140,15 @@
 ;; Keeper triggers this per stacker. Yield pulls sBTC from the stacker
 ;; via release-rewards. The stacker reports how much sBTC it had and
 ;; its fee rate. Two independent fees are applied:
-;; 1. Signer fee — paid directly to the signer (they set their own rate)
-;; 2. Protocol fee — set by admin, stored in bucket for flush-commission
+;; 1. Signer fee - paid directly to the signer (they set their own rate)
+;; 2. Protocol fee - set by admin, stored in bucket for flush-commission
 ;; Neither party needs the other's permission to set their fee.
 ;;
 ;; Multiple stackers swept in the same cycle share one vesting window.
-;; The cycle param groups them -- keeper passes the current PoX cycle.
+;; The cycle param groups them -- MUST be the current PoX cycle (asserted),
+;; so active-cycle can only move forward in step with the PoX calendar.
+;; Before flipping, the previous active bucket is finalized: its window has
+;; ended, so apply-vested clamps to the full total and nothing strands.
 (define-public (sweep-stacker (stacker <stacker-trait>) (pool <pool-trait>) (cycle uint))
   (let (
     (stacker-principal (contract-of stacker))
@@ -144,26 +161,34 @@
     (protocol-amount (/ (* net-from-stacker (var-get protocol-fee)) BPS))
     (net-rewards (- net-from-stacker protocol-amount))
 
-    ;; Get or create cycle bucket (start-height set on first sweep of cycle)
-    (existing (default-to
-      { total-sbtc: u0, vested-sbtc: u0, commission-sbtc: u0, start-height: burn-block-height }
-      (map-get? reward-bucket cycle)
-    ))
-
     ;; Running total for this stacker (gross = what we got + signer fee)
     (gross (+ net-from-stacker signer-fee-paid))
     (prev-total (default-to u0 (map-get? stacker-yield-total stacker-principal)))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
+    (asserts! (is-eq cycle (contract-call? 'SP000000000000000000002Q6VF78.pox-4 current-pox-reward-cycle)) ERR_WRONG_CYCLE)
 
-    ;; Accumulate net rewards + protocol commission into cycle bucket
-    (map-set reward-bucket cycle {
-      total-sbtc: (+ (get total-sbtc existing) net-rewards),
-      vested-sbtc: (get vested-sbtc existing),
-      commission-sbtc: (+ (get commission-sbtc existing) protocol-amount),
-      start-height: (get start-height existing)
-    })
+    ;; Finalize whatever the previous active bucket still owes the index.
+    ;; Same cycle: this is just the regular lazy apply. New cycle: the old
+    ;; window has ended, so the clamp pays out its full remainder BEFORE we
+    ;; move active-cycle -- no sBTC can strand on rollover.
+    (try! (apply-vested (var-get active-cycle)))
+
+    ;; Accumulate net rewards + protocol commission into cycle bucket.
+    ;; Read AFTER apply-vested so we never clobber a fresher vested-sbtc.
+    (let (
+      (existing (default-to
+        { total-sbtc: u0, vested-sbtc: u0, commission-sbtc: u0 }
+        (map-get? reward-bucket cycle)
+      ))
+    )
+      (map-set reward-bucket cycle {
+        total-sbtc: (+ (get total-sbtc existing) net-rewards),
+        vested-sbtc: (get vested-sbtc existing),
+        commission-sbtc: (+ (get commission-sbtc existing) protocol-amount)
+      })
+    )
 
     ;; Track per-stacker yield attribution (gross, for dashboards)
     (map-set stacker-yield-total stacker-principal (+ prev-total gross))
@@ -181,6 +206,22 @@
       net: net-rewards
     })
     (ok net-rewards)
+  )
+)
+
+;; ---------------------------------------------------------
+;; Catch-up: apply any cycle's vested rewards (permissionless)
+;; ---------------------------------------------------------
+
+;; Anyone can push a bucket's newly vested sBTC into the global index --
+;; the math is deterministic, so this is safe to leave open (mirrors
+;; StackingDAO's per-cycle process-rewards). Main use: recovering a
+;; straggler bucket if sweeps ever skip a cycle; past its window end the
+;; clamp pays out the full remainder.
+(define-public (apply-cycle (cycle uint))
+  (begin
+    (try! (contract-call? .dao check-is-live))
+    (apply-vested cycle)
   )
 )
 
@@ -273,12 +314,13 @@
 
 (define-public (flush-commission (cycle uint) (commission-contract <commission-trait>))
   (let (
-    (bucket (unwrap! (map-get? reward-bucket cycle) ERR_NOTHING_TO_VEST))
+    (bucket (unwrap! (map-get? reward-bucket cycle) ERR_NOTHING_TO_FLUSH))
     (commission-amount (get commission-sbtc bucket))
   )
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
-    (asserts! (> commission-amount u0) ERR_NOTHING_TO_VEST)
+    ;; Zero also covers the already-flushed case: flushing zeroes the pot.
+    (asserts! (> commission-amount u0) ERR_NOTHING_TO_FLUSH)
 
     (try! (as-contract (contract-call? commission-contract process commission-amount)))
 
