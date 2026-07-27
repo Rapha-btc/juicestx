@@ -141,34 +141,41 @@ path = "contracts/position-zest.clar"
 # -------------------------------------------------------
 [contracts.pox-5]
 path = "contracts/external/pox-5.clar"
-clarity_version = 3
+clarity_version = 5
 epoch = "latest"
 
 # jBTC reward layer (copies of the jSTX share-data/yield/token, separate state)
 [contracts.jbtc-share-data]
 path = "contracts/pox-5/jbtc-share-data.clar"
-clarity_version = 3
+clarity_version = 4
 epoch = "latest"
 
 [contracts.jbtc-yield]
 path = "contracts/pox-5/jbtc-yield.clar"
-clarity_version = 3
+clarity_version = 4
 epoch = "latest"
 
 [contracts.jbtc-token]
 path = "contracts/pox-5/jbtc-token.clar"
-clarity_version = 3
+clarity_version = 4
 epoch = "latest"
 
 # Staking layer (pox-5 bonds/signers)
 [contracts.juice-staker]
 path = "contracts/pox-5/juice-staker.clar"
-clarity_version = 3
+clarity_version = 4
 epoch = "latest"
 
 [contracts.juice-signer-manager]
 path = "contracts/pox-5/juice-signer-manager.clar"
-clarity_version = 3
+clarity_version = 4
+epoch = "latest"
+
+# STX-only pox-5 pool: users self-stake pointing at this signer; it claims the
+# cycle pot and pays them out on its own ledger.
+[contracts.juice-pool-stx-signer]
+path = "contracts/pox-5/juice-pool-stx-signer.clar"
+clarity_version = 4
 epoch = "latest"
 
 # -------------------------------------------------------

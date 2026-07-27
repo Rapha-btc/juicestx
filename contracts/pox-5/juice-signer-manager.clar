@@ -1,11 +1,12 @@
 ;; title: juice-signer-manager
-;; version: 0.2 (scaffold)
-;; summary: Juice's PoX-5 signer. Registers as a signer, implements the pox-5
-;;   callbacks, and routes claimed bond rewards into the jBTC reward engine.
+;; version: 0.3 (scaffold, retargeted to shipped pox-5, stacks-core 4.0.1)
+;; summary: Juice's PoX-5 signer for the jSTX/jBTC protocol. Registers as a
+;;   signer, implements the pox-5 callback, and routes claimed bond rewards
+;;   into the jBTC reward engine.
 ;; description:
 ;;   Role split (see migration-jstx-to-pox5.md):
 ;;     - SIGNER  (this contract): register-signer, claim-rewards, the
-;;       signer-manager-trait callbacks. Many stakers credit one signer.
+;;       signer-manager-trait callback. Many stakers credit one signer.
 ;;     - STAKER  (juice-staker, multiple per signer): holds sBTC + STX and
 ;;       calls register-for-bond / stake. Lives in juice-staker.clar.
 ;;
@@ -14,13 +15,23 @@
 ;;   carries the split (bond-totals vs stx-rewards.earned). We forward the jBTC
 ;;   slice to jbtc-yield; the jSTX slice routes to the jSTX-pox5 engine (TODO).
 ;;
+;;   Changes vs 0.2, forced by the shipped 4.0.1 contract:
+;;     - checkpoint-staker is GONE. The 4.0.1 signer-manager-trait has exactly
+;;       one function, validate-stake!. Implementing the old two-function trait
+;;       fails impl-trait against real pox-5.
+;;     - register-signer gates on contract-caller, not tx-sender, so this
+;;       contract must be the direct caller. as-contract dropped.
+;;     - get-earned no longer exists; read through
+;;       get-signer-unclaimed-rewards-for-cycle / get-earned-staker-rewards.
+;;
 ;;   !! SCAFFOLD -- validate-stake! is permissive (admit-all, pausable). The
-;;   jSTX reward route and the bond/stx fee split are left as TODOs.
+;;   jSTX reward route and the bond/stx fee split are left as TODOs. For the
+;;   STX-only pool shape see juice-pool-stx-signer.clar.
 
-(use-trait signer-mgr .pox-5.signer-manager-trait)
-(impl-trait .pox-5.signer-manager-trait)
+(use-trait signer-mgr 'SP000000000000000000002Q6VF78.pox-5.signer-manager-trait)
+(impl-trait 'SP000000000000000000002Q6VF78.pox-5.signer-manager-trait)
 
-(define-constant POX5 .pox-5)
+(define-constant POX5 'SP000000000000000000002Q6VF78.pox-5)
 
 (define-constant ERR_UNAUTHORIZED (err u100))
 (define-constant ERR_PAUSED       (err u101))
@@ -68,35 +79,24 @@
   )
 )
 
-;; Accounting hook on exit. pox-5 calls this in a match that ignores errors.
-(define-public (checkpoint-staker
-    (staker principal)
-    (first-index uint)
-    (num-indexes uint)
-    (is-bond bool)
-  )
-  (begin
-    (asserts! (is-eq contract-caller POX5) ERR_NOT_POX5)
-    (print { topic: "checkpoint-staker", staker: staker, first-index: first-index,
-      num-indexes: num-indexes, is-bond: is-bond })
-    (ok true)
-  )
-)
-
 ;; -----------------------------------------------------------------------------
 ;; Signer registration (one-time)
 ;; -----------------------------------------------------------------------------
 
-;; Requires a prior (contract-call? .pox-5 grant-signer-key ...) recording the
-;; grant. as-contract makes tx-sender == this contract == the signer, satisfying
-;; pox-5's (is-eq tx-sender signer).
+;; Requires a prior (contract-call? 'SP000000000000000000002Q6VF78.pox-5 grant-signer-key ...) sent by the
+;; signer key's own principal -- 4.0.1 restricts grant-signer-key to the signer
+;; itself, so the grant cannot be front-run.
+;;
+;; pox-5 asserts (is-eq contract-caller signer), and signer is derived as
+;; (contract-of signer-manager). So signer-manager MUST be this contract, and
+;; this contract must be the direct caller. No as-contract needed.
 (define-public (pox-register-signer
     (signer-manager <signer-mgr>)
     (signer-key (buff 33))
   )
   (begin
     (try! (assert-admin))
-    (as-contract (contract-call? .pox-5 register-signer signer-manager signer-key))
+    (contract-call? POX5 register-signer signer-manager signer-key)
   )
 )
 
@@ -115,7 +115,7 @@
   (begin
     (try! (assert-admin))
     (let (
-        (result (try! (contract-call? .pox-5 claim-rewards bond-periods reward-cycle)))
+        (result (try! (contract-call? POX5 claim-rewards bond-periods reward-cycle)))
         (bond-sbtc (get bond-totals result))
       )
       ;; forward the jBTC slice to its reward engine
@@ -137,9 +137,20 @@
 
 (define-read-only (whoami) (as-contract tx-sender))
 
-;; sBTC this signer has earned in a given bond (not yet claimed)
-(define-read-only (get-earned-bond (bond-index uint))
-  (contract-call? .pox-5 get-earned (as-contract tx-sender) true bond-index))
+;; sBTC accrued to this signer for a cycle and not yet pulled by claim-rewards.
+;; bond-index (some i) = bond period i; none = the STX-only slice.
+(define-read-only (get-unclaimed-signer-rewards
+    (reward-cycle uint)
+    (bond-index (optional uint))
+  )
+  (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-signer-unclaimed-rewards-for-cycle
+    (as-contract tx-sender) reward-cycle bond-index))
 
-(define-read-only (get-earned-stx (index uint))
-  (contract-call? .pox-5 get-earned (as-contract tx-sender) false index))
+;; What pox-5 believes a given staker under this signer is owed.
+(define-read-only (get-staker-entitlement
+    (staker principal)
+    (reward-cycle uint)
+    (bond-index (optional uint))
+  )
+  (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-earned-staker-rewards
+    (as-contract tx-sender) reward-cycle bond-index staker))

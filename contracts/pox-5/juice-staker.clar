@@ -17,7 +17,7 @@
 ;;   !! SCAFFOLD - admin/keeper-driven; treasury funding of the two legs is out
 ;;   of scope here. Built to compile + test against the WIP pox-5 source.
 
-(use-trait signer-mgr .pox-5.signer-manager-trait)
+(use-trait signer-mgr 'SP000000000000000000002Q6VF78.pox-5.signer-manager-trait)
 
 (define-constant SBTC 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)
 
@@ -42,8 +42,8 @@
 ;; -----------------------------------------------------------------------------
 
 (define-read-only (required-stx-pairing (bond-index uint) (sats uint))
-  (match (contract-call? .pox-5 get-protocol-bond bond-index)
-    bond (ok (contract-call? .pox-5 min-ustx-for-sats-amount
+  (match (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-protocol-bond bond-index)
+    bond (ok (contract-call? 'SP000000000000000000002Q6VF78.pox-5 min-ustx-for-sats-amount
                sats (get stx-value-ratio bond) (get min-ustx-ratio bond)))
     ERR_NO_BOND))
 
@@ -64,7 +64,7 @@
     (asserts! (>= amount-ustx (try! (required-stx-pairing bond-index sats)))
       ERR_INSUFFICIENT_STX_PAIR)
     (as-contract
-      (contract-call? .pox-5 register-for-bond
+      (contract-call? 'SP000000000000000000002Q6VF78.pox-5 register-for-bond
         bond-index signer-manager amount-ustx (err sats) none))))
 
 ;; Roll the position into a later bond (typically bond-index + 6). Same call;
@@ -82,7 +82,7 @@
 (define-public (unstake-sbtc (signer-manager <signer-mgr>) (sats uint))
   (begin
     (try! (assert-admin))
-    (as-contract (contract-call? .pox-5 unstake-sbtc signer-manager sats))))
+    (as-contract (contract-call? 'SP000000000000000000002Q6VF78.pox-5 unstake-sbtc signer-manager sats))))
 
 ;; -----------------------------------------------------------------------------
 ;; jSTX - STX-only path
@@ -98,7 +98,7 @@
   (begin
     (try! (assert-admin))
     (as-contract
-      (contract-call? .pox-5 stake signer-manager amount-ustx num-cycles start-burn-ht none))))
+      (contract-call? 'SP000000000000000000002Q6VF78.pox-5 stake signer-manager amount-ustx num-cycles start-burn-ht none))))
 
 ;; -----------------------------------------------------------------------------
 ;; Read-only - this staker's pox-5 state
@@ -107,10 +107,10 @@
 (define-read-only (whoami) (as-contract tx-sender))
 
 (define-read-only (get-membership)
-  (contract-call? .pox-5 get-bond-membership (as-contract tx-sender)))
+  (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-bond-membership (as-contract tx-sender)))
 
 (define-read-only (get-custodied-sbtc)
-  (contract-call? .pox-5 get-staker-custodied-sbtc (as-contract tx-sender)))
+  (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-staker-custodied-sbtc (as-contract tx-sender)))
 
 (define-read-only (get-staker-info)
-  (contract-call? .pox-5 get-staker-info (as-contract tx-sender)))
+  (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-staker-info (as-contract tx-sender)))
