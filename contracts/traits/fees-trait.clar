@@ -1,13 +1,15 @@
 ;; Title: Fees Trait
-;; Purpose: Interface for fee collection. The fees contract knows the rate
-;;          and handles the transfer internally. Core just calls pay.
-;; Inspired by: SP3XXMS38VTAWTVPE5682XSBFXPTH7XCPEBTX8AN2.yin
+;; Purpose: Interface for fee CALCULATION only. The fees contract knows the
+;;          rate; it never moves money. Core routes the funds itself, because
+;;          only core knows where they currently sit (user wallet on deposit,
+;;          vault on withdrawal) and a trait cannot be handed vault authority
+;;          without giving arbitrary code the vault's whole balance.
 
 (define-trait fees-trait
   (
     ;; Takes the total ustx amount and optional sponsor.
-    ;; Calculates and collects the fee. Returns the fee amount that was taken.
+    ;; Returns the fee to charge. Must not transfer anything.
     ;; Sponsor can be used for referral tracking or fee splitting.
-    (pay (uint (optional principal)) (response uint uint))
+    (get-fee (uint (optional principal)) (response uint uint))
   )
 )

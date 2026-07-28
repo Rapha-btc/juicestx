@@ -136,7 +136,7 @@
 ;; Optional stacker param: pick a signer, or pass none for protocol-allocated split.
 (define-public (deposit (ustx uint) (vault <vault-trait>) (stacker (optional principal)) (sponsor (optional principal)) (fees <fees-trait>))
   (let (
-    (fee (try! (contract-call? fees pay ustx sponsor)))
+    (fee (try! (contract-call? fees get-fee ustx sponsor)))
     (ustx-net (- ustx fee))
     (cycle (get-pending-cycle))
   )
@@ -153,6 +153,13 @@
 
     ;; Transfer net STX to vault
     (try! (contract-call? vault receive ustx-net))
+
+    ;; Fee straight from the depositor to treasury. Funds are in the user's
+    ;; wallet at this point, so tx-sender is the correct source.
+    (if (> fee u0)
+      (try! (stx-transfer? fee tx-sender (var-get treasury-address)))
+      true
+    )
 
     ;; Mint jSTX to user
     (try! (contract-call? .jstx-token mint ustx-net tx-sender))
@@ -253,7 +260,7 @@
     (ustx (get ustx receipt))
     (unlock-height (get unlock-height receipt))
     (nft-owner (unwrap! (unwrap-panic (contract-call? .redeem-stx-nft get-owner nft-id)) ERR_NOT_NFT_OWNER))
-    (fee (try! (contract-call? fees pay ustx none)))
+    (fee (try! (contract-call? fees get-fee ustx none)))
     (ustx-net (- ustx fee))
   )
     (try! (contract-call? .dao check-is-live))
@@ -275,6 +282,14 @@
     ;; Release earmark and send net STX from vault to user
     (try! (contract-call? vault unreserve ustx))
     (try! (contract-call? vault release ustx-net tx-sender))
+
+    ;; Send fee to treasury. Same source as the principal -- without this the
+    ;; fee stayed stranded in the vault, silently accruing to remaining holders
+    ;; instead of being collected. Mirrors withdraw-pending.
+    (if (> fee u0)
+      (try! (contract-call? vault release fee (var-get treasury-address)))
+      true
+    )
 
     (print { action: "finalize-withdraw", user: tx-sender, nft-id: nft-id, ustx: ustx, ustx-net: ustx-net, fee: fee })
     (ok ustx-net)
