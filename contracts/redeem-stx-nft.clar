@@ -36,7 +36,7 @@
 (define-non-fungible-token redeem-nft uint)
 
 (define-data-var last-id uint u0)
-(define-data-var uri-root (string-ascii 210) "https://stxjuice.com/api/withdrawal/")
+(define-data-var uri-root (string-ascii 210) "https://www.juiceofbtc.com/")
 
 ;; ---------------------------------------------------------
 ;; Receipt data -- what each NFT represents
