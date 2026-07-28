@@ -92,6 +92,19 @@
   )
 )
 
+;; Both raw numbers in one call, so the planner can do its own arithmetic.
+;; get-pending-balance floors at zero, which hides HOW FAR short the vault is
+;; when reserved > balance. allocation needs that magnitude: without it targets
+;; stop shrinking, no stacker ever shows excess, and nothing gets pulled back.
+;; Mirrors StackingDAO reserve-v1 exposing get-stx-balance and
+;; get-stx-for-withdrawals raw, with strategy-v4 doing the subtraction.
+(define-read-only (get-stackable-inputs)
+  (ok {
+    balance: (stx-get-balance current-contract),
+    reserved: (var-get reserved-stx)
+  })
+)
+
 (define-read-only (get-reserved-stx)
   (var-get reserved-stx)
 )

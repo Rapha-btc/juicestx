@@ -9,5 +9,8 @@
     (reserve (uint) (response bool uint))
     (unreserve (uint) (response bool uint))
     (get-pending-balance () (response uint uint))
+    ;; Raw balance + reserved. Callers that need the shortfall (reserved above
+    ;; balance) must have both, because get-pending-balance floors at zero.
+    (get-stackable-inputs () (response { balance: uint, reserved: uint } uint))
   )
 )

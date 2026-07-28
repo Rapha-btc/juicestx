@@ -82,10 +82,14 @@
 ;; hold a <vault-trait> read the balance themselves and pass it down.
 ;; Same split StackingDAO uses: data-core-v2.get-stx-per-ststx (public, takes the
 ;; trait) wrapping get-stx-per-ststx-helper (read-only, takes a uint).
-(define-read-only (calculate-stacker-target-helper (stacker principal) (total-pending uint))
+(define-read-only (calculate-stacker-target-helper (stacker principal) (vault-balance uint) (vault-reserved uint))
   (let (
-    ;; Total stackable = pending in vault + already sent to stackers
-    (total-stackable (+ total-pending (var-get total-allocated)))
+    ;; Everything the protocol holds, vault + already at stackers, MINUS what is
+    ;; owed to pending withdrawals. Subtracting reserved from the combined figure
+    ;; (not just from the vault balance) is what keeps targets shrinking after
+    ;; reserved passes the vault balance. Floor at zero only once, here.
+    (gross (+ vault-balance (var-get total-allocated)))
+    (total-stackable (if (> gross vault-reserved) (- gross vault-reserved) u0))
     (total-assigned (contract-call? .delegation get-total-assigned))
     (total-unassigned (if (> total-stackable total-assigned)
       (- total-stackable total-assigned)
@@ -121,9 +125,8 @@
 ;; contract reference IS resolvable, so this is legal in a read-only; only
 ;; traits and constants are not.
 (define-read-only (calculate-stacker-target (stacker principal))
-  (calculate-stacker-target-helper
-    stacker
-    (unwrap-panic (contract-call? .vault get-pending-balance))
+  (let ((v (unwrap-panic (contract-call? .vault get-stackable-inputs))))
+    (calculate-stacker-target-helper stacker (get balance v) (get reserved v))
   )
 )
 
@@ -132,10 +135,15 @@
 ;; ---------------------------------------------------------
 
 ;; Returns total stackable STX split into assigned vs unassigned.
-(define-read-only (get-stacking-amounts-helper (total-pending uint))
+(define-read-only (get-stacking-amounts-helper (vault-balance uint) (vault-reserved uint))
   (let (
     (total-alloc (var-get total-allocated))
-    (total-stackable (+ total-pending total-alloc))
+    (gross (+ vault-balance total-alloc))
+    (total-stackable (if (> gross vault-reserved) (- gross vault-reserved) u0))
+    ;; How far the vault is short. This is the number a keeper needs: it says how
+    ;; much must come back from stackers before withdrawals can be finalised.
+    (outflow (if (> vault-reserved vault-balance) (- vault-reserved vault-balance) u0))
+    (total-pending (if (> vault-balance vault-reserved) (- vault-balance vault-reserved) u0))
     (total-assigned (contract-call? .delegation get-total-assigned))
     (total-unassigned (if (> total-stackable total-assigned)
       (- total-stackable total-assigned)
@@ -147,14 +155,15 @@
       total-allocated: total-alloc,
       total-pending: total-pending,
       total-assigned: total-assigned,
-      total-unassigned: total-unassigned
+      total-unassigned: total-unassigned,
+      outflow: outflow
     }
   )
 )
 
 (define-read-only (get-stacking-amounts)
-  (get-stacking-amounts-helper
-    (unwrap-panic (contract-call? .vault get-pending-balance))
+  (let ((v (unwrap-panic (contract-call? .vault get-stackable-inputs))))
+    (get-stacking-amounts-helper (get balance v) (get reserved v))
   )
 )
 
@@ -168,9 +177,9 @@
 )
 
 ;; How far a stacker is from its target (positive = needs more, negative = has excess)
-(define-read-only (get-stacker-delta-helper (stacker principal) (total-pending uint))
+(define-read-only (get-stacker-delta-helper (stacker principal) (vault-balance uint) (vault-reserved uint))
   (let (
-    (target (calculate-stacker-target-helper stacker total-pending))
+    (target (calculate-stacker-target-helper stacker vault-balance vault-reserved))
     (allocated (get-stacker-allocated stacker))
   )
     {
@@ -183,9 +192,8 @@
 )
 
 (define-read-only (get-stacker-delta (stacker principal))
-  (get-stacker-delta-helper
-    stacker
-    (unwrap-panic (contract-call? .vault get-pending-balance))
+  (let ((v (unwrap-panic (contract-call? .vault get-stackable-inputs))))
+    (get-stacker-delta-helper stacker (get balance v) (get reserved v))
   )
 )
 
@@ -202,8 +210,8 @@
   )
   (let (
     (stacker-principal (contract-of stacker))
-    (total-pending (try! (contract-call? vault get-pending-balance)))
-    (delta (get-stacker-delta-helper stacker-principal total-pending))
+    (v (try! (contract-call? vault get-stackable-inputs)))
+    (delta (get-stacker-delta-helper stacker-principal (get balance v) (get reserved v)))
     (deficit (get deficit delta))
     (allocated (get allocated delta))
     (new-allocated (+ allocated deficit))
@@ -245,8 +253,8 @@
   )
   (let (
     (stacker-principal (contract-of stacker))
-    (total-pending (try! (contract-call? vault get-pending-balance)))
-    (delta (get-stacker-delta-helper stacker-principal total-pending))
+    (v (try! (contract-call? vault get-stackable-inputs)))
+    (delta (get-stacker-delta-helper stacker-principal (get balance v) (get reserved v)))
     (excess (get excess delta))
     (target (get target delta))
   )

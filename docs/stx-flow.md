@@ -75,12 +75,40 @@ capped at STX that was never stacked.
 ## Targets: what each stacker should hold
 
 ```
-total-stackable = pending (free in vault) + total-allocated (already at stackers)
+gross           = vault balance + total-allocated (already at stackers)
+total-stackable = max(gross - reserved, 0)
 
 target = assigned-stacker   <- delegation: users who picked this stacker
        + from-weight        <- registry:   admin's cut of unclaimed STX
        + from-assigned      <- delegation: users' cut of unclaimed STX
 ```
+
+### Why reserved is subtracted from the combined figure
+
+This is the subtle part, and it is only an order-of-operations difference.
+
+```
+vault balance 20    reserved 100    allocated 1000
+
+clamp then add:  max(20 - 100, 0) = 0   ->  0 + 1000 = 1000   <- 80 of the reservation vanished
+add then clamp:  20 + 1000 = 1020       ->  1020 - 100 = 920  <- all 100 counted
+```
+
+Clamping first means only 20 of the 100 reservation ever had any effect: it was
+subtracted against a balance of 20 and hit the floor. The remaining 80 was
+destroyed at the vault boundary and allocation never saw it.
+
+That mattered because targets sum to `total-stackable`:
+
+```
+total-stackable 1000  ->  targets sum 1000  ->  allocated 1000  ->  excess 0   nothing returns
+total-stackable  920  ->  targets sum  920  ->  allocated 1000  ->  excess 80  exactly the shortfall
+```
+
+So the vault now exposes `get-stackable-inputs` -> `{balance, reserved}` raw, and
+`allocation` does the subtraction itself after adding `total-allocated`.
+`get-pending-balance` is unchanged and still floors at zero, for callers that only
+want "spare cash in the vault".
 
 `user-influence` (default 2000 = 20%) is the dial splitting the unclaimed pool
 between the admin bucket and the user bucket. Targets always sum to
@@ -155,17 +183,13 @@ withdrawal; if retiring a stacker for good, raise the others so weights sum back
 
 The operator decides off-chain which lever to pull.
 
+`allocation.get-stacking-amounts` reports `outflow` — how far the vault is short,
+`max(reserved - balance, 0)` — so the keeper can read the number directly rather
+than inferring it from target drift. It is a diagnostic only; the target maths does
+not consume it. Same idea as StackingDAO's `strategy-v4.get-outflow-inflow`.
+
 ## Known gaps
 
-- **No net pull-back once `reserved > balance`.** `pending` floors at 0, so targets
-  stop shrinking and `sum(targets) = total-allocated`. Every excess is matched by a
-  deficit elsewhere and the vault nets zero — exactly when it needs funding.
-  Fix: size `total-stackable` as `max(balance + total-allocated - reserved, 0)` so
-  excesses keep growing past the crossover. That is StackingDAO's `outflow`
-  (`strategy-v4.get-outflow-inflow`), which they compute in the planner, not the
-  reserve.
-- **No shortfall figure on-chain.** The keeper needs `reserved - balance` to sequence
-  work; today that is an off-chain subtraction.
 - **`execute-allocation` can release reserved STX.** `vault.release` ignores
   `reserved-stx`, so a per-stacker deficit larger than `pending` will happily spend
   withdrawal money.
