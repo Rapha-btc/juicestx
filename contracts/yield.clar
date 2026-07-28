@@ -42,6 +42,11 @@
 
 (define-constant MAX_PROTOCOL_FEE u1000) ;; 10% cap
 
+;; Both call sites are public fns. A constant target is fine in contract-call?
+;; there; it only breaks in define-read-only, where the analyzer cannot resolve
+;; the callee statically and so cannot prove the call is read-only.
+(define-constant SBTC 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)
+
 ;; Protocol fee in basis points, set by admin independently of signer fees.
 (define-data-var protocol-fee uint u0)
 
@@ -256,8 +261,8 @@
     )
       ;; Pay out pending sBTC
       (if (> pending u0)
-        (try! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" pending))
-          (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer pending tx-sender who none))))
+        (try! (as-contract? ((with-ft SBTC "sbtc-token" pending))
+          (try! (contract-call? SBTC transfer pending tx-sender who none))))
         true
       )
       ;; Update snapshot
@@ -295,8 +300,8 @@
     )
       (asserts! (contract-call? .share-data is-defi-adapter (contract-of adapter)) ERR_UNAUTHORIZED)
       (if (> pending u0)
-        (try! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" pending))
-          (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer pending tx-sender who none))))
+        (try! (as-contract? ((with-ft SBTC "sbtc-token" pending))
+          (try! (contract-call? SBTC transfer pending tx-sender who none))))
         true
       )
       (try! (contract-call? .share-data set-wallet-snapshot who {

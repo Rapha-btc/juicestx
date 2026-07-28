@@ -63,7 +63,7 @@
 )
 
 (define-read-only (get-name)
-  (ok "Juiced STX")
+  (ok "Juice STX")
 )
 
 (define-read-only (get-symbol)
@@ -83,7 +83,7 @@
 )
 
 (define-read-only (get-token-uri)
-  (ok (some u"https://stxjuice.com/api/token/jstx"))
+  (ok (some u"https://www.juiceofbtc.com/"))
 )
 
 ;; ---------------------------------------------------------
