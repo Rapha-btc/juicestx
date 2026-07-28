@@ -76,6 +76,7 @@ sBTC vests linearly over ~2100 blocks → jSTX holders claim
 See [docs/](docs/) for deep dives:
 
 - [STX Flow](docs/stx-flow.md) -- vault / registry / delegation / allocation, and how a withdrawal pulls STX back out of a stacker
+- [StackingDAO Security Ops](docs/stackingdao-security-ops.md) -- their two permission lists, the escape hatches, and the stale entry that leaves ~4M STX behind a 2-of-3 key
 - [Pool + Stacker Architecture](docs/stacker-architecture.md) -- why each signer has 1 pool + N stackers
 - [Multi-Signer](docs/multi-signer.md) -- registry, allocation weights, adding signers
 - [PoX Cycle Operations](docs/pox-cycle-operations.md) -- prepare phase, lock vs extend vs increase

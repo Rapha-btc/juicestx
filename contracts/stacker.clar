@@ -167,6 +167,27 @@
   )
 )
 
+;; Escape hatch: move sBTC out with NO fee split and NO pool involvement.
+;; Mirrors StackingDAO rewards-v5.get-sbtc (version-3/rewards-v5.clar:310).
+;;
+;; release-rewards is the only other sBTC exit, and it is unavailable if the pool
+;; contract is broken, if `pool` points at a stale principal, or while the
+;; protocol is halted. Emily keeps minting sBTC here regardless, so without this
+;; those rewards would be stranded in the stacker permanently.
+;;
+;; No STX equivalent is needed: stx-transfer-all already sweeps every unlocked
+;; sat, and no hatch can reach locked STX before the cycle ends.
+;;
+;; Same requirement as vault.get-stx -- safe only while `authorized` holds
+;; contract principals and no wallet addresses.
+(define-public (get-sbtc (amount uint) (recipient principal))
+  (begin
+    (try! (contract-call? .dao check-is-authorized contract-caller))
+    (as-contract? ((with-ft SBTC "sbtc-token" amount))
+      (try! (contract-call? SBTC transfer amount current-contract recipient none)))
+  )
+)
+
 ;; ---------------------------------------------------------
 ;; Read-only
 ;; ---------------------------------------------------------

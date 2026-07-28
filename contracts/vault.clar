@@ -53,6 +53,35 @@
   )
 )
 
+;; Escape hatch: move STX out with NO accounting, for migrations and recovery.
+;; Mirrors StackingDAO reserve-v1.get-stx (version-1/reserve-v1.clar:111).
+;;
+;; NOTE the name is a mover, not a getter -- everything else prefixed get- in
+;; this repo is read-only. Kept for parity with the reference implementation.
+;;
+;; Two deliberate differences from `release`:
+;;   - no check-is-live. A hatch that stops working when the protocol is halted
+;;     is not a hatch. reserve-v1.get-stx omits its check-is-enabled for the
+;;     same reason, unlike its other movers.
+;;   - touches no counters. reserved-stx is left alone, so after using this the
+;;     vault's accounting is deliberately out of step with its balance.
+;;
+;; Using this while withdrawals are pending will strand them. Last resort only.
+;;
+;; SAFETY DEPENDS ON THE AUTHORIZED SET CONTAINING ONLY CONTRACTS.
+;; check-is-authorized just tests membership of a principal -> bool map, and that
+;; map accepts wallet addresses. StackingDAO's own list still carries the
+;; multisig SM1SEBGTH...  that did their original wiring, so on mainnet a key can
+;; call reserve-v1.get-stx against ~4M STX today. Keep EOAs out of `authorized`
+;; and this is strictly tighter than theirs; add one and it is the whole vault.
+(define-public (get-stx (amount uint) (recipient principal))
+  (begin
+    (try! (contract-call? .dao check-is-authorized contract-caller))
+    (as-contract? ((with-stx amount))
+      (try! (stx-transfer? amount current-contract recipient)))
+  )
+)
+
 ;; Reserve STX for a pending withdrawal. No STX moves, just accounting.
 ;; Stacker should only take (balance - reserved) for delegation.
 (define-public (reserve (amount uint))

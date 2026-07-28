@@ -366,6 +366,24 @@
   )
 )
 
+;; Escape hatch: move sBTC out with NO accounting, for migrations and recovery.
+;; Mirrors StackingDAO rewards-v5.get-sbtc (version-3/rewards-v5.clar:310).
+;; They put one hatch on every asset a contract custodies; yield holds sBTC and
+;; no STX, so this is the only one it needs.
+;;
+;; This bypasses the vesting index entirely. Every unclaimed sBTC owed to jSTX
+;; holders sits in this contract, so calling this strands their claims. It exists
+;; because a bug in the index would otherwise lock those rewards here forever.
+;; Same name-is-a-mover caveat, and the same authorized-set-must-be-contracts-only
+;; requirement, as vault.get-stx.
+(define-public (get-sbtc (amount uint) (recipient principal))
+  (begin
+    (try! (contract-call? .dao check-is-authorized contract-caller))
+    (as-contract? ((with-ft SBTC "sbtc-token" amount))
+      (try! (contract-call? SBTC transfer amount current-contract recipient none)))
+  )
+)
+
 (define-read-only (get-unclaimed (who principal))
   (let (
     (cycle (var-get active-cycle))
