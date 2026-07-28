@@ -49,7 +49,7 @@
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
     (as-contract? ((with-stx amount))
-      (try! (stx-transfer? amount tx-sender recipient)))
+      (try! (stx-transfer? amount current-contract recipient)))
   )
 )
 
