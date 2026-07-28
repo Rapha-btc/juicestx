@@ -33,6 +33,11 @@
 (define-constant ERR_WRONG_POOL (err u11006))
 (define-constant PRECISION u10000)
 
+;; Used in release-rewards (public). get-sbtc-balance keeps the literal: a
+;; constant target is not statically resolvable, so define-read-only cannot
+;; prove the call writes nothing and rejects it.
+(define-constant SBTC 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)
+
 ;; ---------------------------------------------------------
 ;; Data
 ;; ---------------------------------------------------------
@@ -107,7 +112,7 @@
     (try! (contract-call? .dao check-is-authorized contract-caller))
     (asserts! (>= unlocked ustx) ERR_INSUFFICIENT_BALANCE)
     (try! (as-contract? ((with-stx ustx))
-      (try! (stx-transfer? ustx tx-sender (contract-of vault)))))
+      (try! (stx-transfer? ustx current-contract (contract-of vault)))))
     (print { action: "stx-transfer", stacker: current-contract, vault: (contract-of vault), ustx: ustx })
     (ok ustx)
   )
@@ -121,7 +126,7 @@
     (try! (contract-call? .dao check-is-live))
     (try! (contract-call? .dao check-is-authorized contract-caller))
     (try! (as-contract? ((with-stx unlocked))
-      (try! (stx-transfer? unlocked tx-sender (contract-of vault)))))
+      (try! (stx-transfer? unlocked current-contract (contract-of vault)))))
     (print { action: "stx-transfer-all", stacker: current-contract, vault: (contract-of vault), ustx: unlocked })
     (ok unlocked)
   )
@@ -137,7 +142,7 @@
 ;; Returns net amount sent, fee paid, and signer principal.
 (define-public (release-rewards (recipient principal) (pool-contract <pool-trait>))
   (let (
-    (balance (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance current-contract)))
+    (balance (unwrap-panic (contract-call? SBTC get-balance current-contract)))
     (info (try! (contract-call? pool-contract get-signer-info)))
     (signer-addr (get signer info))
     (fee-rate (get fee info))
@@ -150,13 +155,13 @@
     (asserts! (> balance u0) ERR_INSUFFICIENT_BALANCE)
     ;; Pay signer fee directly
     (if (> fee-amount u0)
-      (try! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" fee-amount))
-        (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer fee-amount tx-sender signer-addr none))))
+      (try! (as-contract? ((with-ft SBTC "sbtc-token" fee-amount))
+        (try! (contract-call? SBTC transfer fee-amount current-contract signer-addr none))))
       true
     )
     ;; Send net rewards to recipient (yield)
-    (try! (as-contract? ((with-ft 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token "sbtc-token" net-amount))
-      (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer net-amount tx-sender recipient none))))
+    (try! (as-contract? ((with-ft SBTC "sbtc-token" net-amount))
+      (try! (contract-call? SBTC transfer net-amount current-contract recipient none))))
     (print { action: "release-rewards", stacker: current-contract, gross: balance, fee: fee-amount, net: net-amount })
     (ok { amount: net-amount, fee: fee-amount, signer: signer-addr })
   )

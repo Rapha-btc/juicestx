@@ -75,10 +75,16 @@
 ;; ---------------------------------------------------------
 
 ;; Compute stacking target for a single stacker.
-(define-read-only (calculate-stacker-target (stacker principal))
+;;
+;; The vault balance is a PARAMETER, not a read, so this stays define-read-only.
+;; A read-only function cannot dispatch through a trait -- the analyzer cannot
+;; resolve the callee and so cannot prove the call writes nothing. Callers that
+;; hold a <vault-trait> read the balance themselves and pass it down.
+;; Same split StackingDAO uses: data-core-v2.get-stx-per-ststx (public, takes the
+;; trait) wrapping get-stx-per-ststx-helper (read-only, takes a uint).
+(define-read-only (calculate-stacker-target-helper (stacker principal) (total-pending uint))
   (let (
     ;; Total stackable = pending in vault + already sent to stackers
-    (total-pending (unwrap-panic (contract-call? .vault get-pending-balance)))
     (total-stackable (+ total-pending (var-get total-allocated)))
     (total-assigned (contract-call? .delegation get-total-assigned))
     (total-unassigned (if (> total-stackable total-assigned)
@@ -111,14 +117,23 @@
   )
 )
 
+;; Convenience wrapper pinned to .vault, for off-chain callers. A literal
+;; contract reference IS resolvable, so this is legal in a read-only; only
+;; traits and constants are not.
+(define-read-only (calculate-stacker-target (stacker principal))
+  (calculate-stacker-target-helper
+    stacker
+    (unwrap-panic (contract-call? .vault get-pending-balance))
+  )
+)
+
 ;; ---------------------------------------------------------
 ;; Aggregate view
 ;; ---------------------------------------------------------
 
 ;; Returns total stackable STX split into assigned vs unassigned.
-(define-read-only (get-stacking-amounts)
+(define-read-only (get-stacking-amounts-helper (total-pending uint))
   (let (
-    (total-pending (unwrap-panic (contract-call? .vault get-pending-balance)))
     (total-alloc (var-get total-allocated))
     (total-stackable (+ total-pending total-alloc))
     (total-assigned (contract-call? .delegation get-total-assigned))
@@ -137,6 +152,12 @@
   )
 )
 
+(define-read-only (get-stacking-amounts)
+  (get-stacking-amounts-helper
+    (unwrap-panic (contract-call? .vault get-pending-balance))
+  )
+)
+
 ;; How much STX has already been sent to a stacker
 (define-read-only (get-stacker-allocated (stacker principal))
   (default-to u0 (map-get? stacker-allocated stacker))
@@ -147,9 +168,9 @@
 )
 
 ;; How far a stacker is from its target (positive = needs more, negative = has excess)
-(define-read-only (get-stacker-delta (stacker principal))
+(define-read-only (get-stacker-delta-helper (stacker principal) (total-pending uint))
   (let (
-    (target (calculate-stacker-target stacker))
+    (target (calculate-stacker-target-helper stacker total-pending))
     (allocated (get-stacker-allocated stacker))
   )
     {
@@ -158,6 +179,13 @@
       deficit: (if (> target allocated) (- target allocated) u0),
       excess: (if (> allocated target) (- allocated target) u0)
     }
+  )
+)
+
+(define-read-only (get-stacker-delta (stacker principal))
+  (get-stacker-delta-helper
+    stacker
+    (unwrap-panic (contract-call? .vault get-pending-balance))
   )
 )
 
@@ -174,12 +202,18 @@
   )
   (let (
     (stacker-principal (contract-of stacker))
-    (delta (get-stacker-delta stacker-principal))
+    (total-pending (try! (contract-call? vault get-pending-balance)))
+    (delta (get-stacker-delta-helper stacker-principal total-pending))
     (deficit (get deficit delta))
     (allocated (get allocated delta))
     (new-allocated (+ allocated deficit))
   )
     (try! (contract-call? .dao check-is-authorized contract-caller))
+    ;; The vault was never validated. A fake vault's `release` can return
+    ;; (ok true) without moving STX, and nothing below fails -- so the tx commits
+    ;; and stacker-allocated credits a stacker that received nothing. Permanent
+    ;; accounting corruption, which no other assert here catches.
+    (try! (contract-call? .dao check-is-authorized (contract-of vault)))
 
     ;; Stacker must be registered
     (asserts! (> (contract-call? .registry get-delegate-allocation stacker-principal) u0) ERR_STACKER_NOT_ACTIVE)
@@ -211,11 +245,13 @@
   )
   (let (
     (stacker-principal (contract-of stacker))
-    (delta (get-stacker-delta stacker-principal))
+    (total-pending (try! (contract-call? vault get-pending-balance)))
+    (delta (get-stacker-delta-helper stacker-principal total-pending))
     (excess (get excess delta))
     (target (get target delta))
   )
     (try! (contract-call? .dao check-is-authorized contract-caller))
+    (try! (contract-call? .dao check-is-authorized (contract-of vault)))
 
     (asserts! (> excess u0) ERR_NOTHING_TO_ALLOCATE)
 

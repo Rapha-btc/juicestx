@@ -77,8 +77,19 @@
 ;; ---------------------------------------------------------
 
 ;; How much STX is sitting in the vault but not earmarked for withdrawals
+;; Floors at zero. reserved-stx is pure accounting and routinely exceeds the
+;; vault's balance, because the STX backing a pending withdrawal is still locked
+;; in a stacker until cycle end. An unguarded subtraction underflows, and in
+;; Clarity that ABORTS -- which would brick allocation.return-excess, the only
+;; path that brings STX back. Same guard StackingDAO uses in
+;; strategy-v4.get-outflow-inflow.
 (define-read-only (get-pending-balance)
-  (ok (- (stx-get-balance current-contract) (var-get reserved-stx)))
+  (let (
+    (balance (stx-get-balance current-contract))
+    (reserved (var-get reserved-stx))
+  )
+    (ok (if (> balance reserved) (- balance reserved) u0))
+  )
 )
 
 (define-read-only (get-reserved-stx)
