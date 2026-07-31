@@ -7,6 +7,11 @@ the **shared infra** is reused in place, and `delegation` is retired.
 
 Legend: ✅ scaffolded + `clarinet check` · ⛳ TODO (next) · ♻️ reused as-is (not forked) · ❌ retired
 
+> **Live on mainnet:** `juice-pool-stx-signer` — the STX-only pox-5 pool, deployed and
+> stacking from cycle 141. Everything below is the jBTC/bond build-out, which is still
+> scaffolding. See [`juice-pool-stx-signer.md`](./juice-pool-stx-signer.md) for the pox-5
+> functions it uses, what it deliberately skips and why, key rotation, and fee governance.
+
 ## Reward / token layer  → in this folder (copies, separate state)
 
 | pox-4 (jSTX) | role | pox-5 | status |
