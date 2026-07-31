@@ -178,13 +178,6 @@ path = "contracts/pox-5/juice-pool-stx-signer.clar"
 clarity_version = 4
 epoch = "latest"
 
-# Lets already-deployed fak.fun smart wallets (v6-v8) stake on pox-5 through
-# their extension-call escape hatch, with no wallet redeploy.
-[contracts.juice-pox5-stake-ext]
-path = "contracts/pox-5/juice-pox5-stake-ext.clar"
-clarity_version = 4
-epoch = "latest"
-
 # -------------------------------------------------------
 # Analysis settings
 # -------------------------------------------------------
