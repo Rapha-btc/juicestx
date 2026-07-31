@@ -1,3 +1,10 @@
+// stxer GUARDS sim -- the safety mechanisms the lifecycle sim never exercises.
+//   1. ERR_TRANCHE_TOO_SOON  the anti-griefing gate (claim twice in one
+//                            distribution cycle must fail)
+//   2. ERR_PAUSED            set-paused must block NEW stakes at pox-5,
+//                            via validate-stake! reverting the user's tx
+//   3. ERR_NOT_POX5          validate-stake! called directly must be refused
+// Original header follows.
 // stxer mainnet-fork END-TO-END lifecycle sim for juice-pool-stx-signer.
 // Run: node simulations/pool-stx-signer-lifecycle-sim.mjs
 //
@@ -139,7 +146,10 @@ for (const s of STAKERS.filter((s) => s.og)) {
 
 // 5. stakers stake into OUR signer
 const stakeArgs = (amt) => [poolCV(), uintCV(amt), uintCV(NUM_CYCLES), uintCV(START_BURN_HT), noneCV()];
-for (const s of STAKERS) {
+// Hold the LAST staker back -- used below to prove the pause gate blocks new
+// stakes and that unpausing lets them straight back in.
+const HELD_BACK = STAKERS[STAKERS.length - 1];
+for (const s of STAKERS.slice(0, -1)) {
   call(`STAKE ${s.a.slice(0, 8)} ${(s.stx / 1e6).toLocaleString()} STX`,
     "stake", stakeArgs(s.stx), s.a, POX5_ID);
 }
@@ -168,65 +178,50 @@ evalCode("tranche 0 pot", `(get-stx-pot u${CYCLE} u0)`);
 evalCode("effective fee, non-OG -> expect u500", `(get-effective-fee-bips '${STAKERS[1].a})`);
 evalCode("effective fee, OG -> expect u0", `(get-effective-fee-bips '${STAKERS[0].a})`);
 
-// 8. pay tranche 0 -- but deliberately WITHHOLD one staker
-const paid0 = STAKERS.filter((s) => s.a !== WITHHELD).map((s) => principalCV(s.a));
-call(`pay-stx-stakers TRANCHE 0 (${paid0.length}/8, withholding ${WITHHELD.slice(0, 8)})`,
-  "pay-stx-stakers", [listCV(paid0), uintCV(CYCLE), uintCV(0)]);
-evalCode("tranche 0 fully paid? -> expect FALSE", `(is-tranche-fully-paid u${CYCLE} u0)`);
-evalCode("earned-fees after tranche 0 (non-OGs paid 5%)", `(get-earned-fees)`);
-evalCode("OG payout (tranche 0)", `(get-stx-paid u${CYCLE} u0 '${STAKERS[0].a})`);
-evalCode("non-OG payout (tranche 0)", `(get-stx-paid u${CYCLE} u0 '${STAKERS[1].a})`);
-evalCode("withheld staker (tranche 0) -> expect none", `(get-stx-paid u${CYCLE} u0 '${WITHHELD})`);
-call("sweep-tranche-dust tranche 0 -> EXPECT ERR_TRANCHE_UNPAID u104",
-  "sweep-tranche-dust", [uintCV(CYCLE), uintCV(0)]);
+// --- GUARD 1: the anti-griefing gate --------------------------------------
+// Tranche 0 was just opened in this distribution cycle. A second claim for the
+// same reward cycle, in the same distribution cycle, MUST be refused -- that is
+// the whole purpose of last-claim-dist-cycle. Without it anyone could open
+// unbounded dust tranches, each costing a full payout pass over every staker.
+evalCode("bookmark after tranche 0", `(get-last-claim-dist-cycle u${CYCLE})`);
+call("pox-claim-rewards AGAIN, same dist cycle -> EXPECT ERR_TRANCHE_TOO_SOON u112",
+  "pox-claim-rewards", [listCV([]), uintCV(CYCLE)]);
+evalCode("tranche-count still u1 (no second tranche opened)",
+  `(get-tranche-count u${CYCLE})`);
 
-// 9. TRANCHE 1 -- the question: does the tranche-0 hole poison this?
-call("WHALE sends 1 sBTC again", "transfer",
+// Even with MORE rewards waiting, the gate still holds within the same
+// distribution cycle -- it is a rate limit, not a "nothing to claim" check.
+call("WHALE sends another 1 sBTC", "transfer",
   [uintCV(REWARD_SATS), principalCV(WHALE), principalCV(POX5_ID), noneCV()], WHALE, SBTC_ID);
-steps.push("ADVANCE 1050 blocks -> past dist boundary 964250 (still cycle 141)");
-sim.addAdvanceBlocks({ bitcoin_blocks: 1050, stacks_blocks_per_bitcoin: 1 });
-call("pox-5 calculate-rewards (2nd)", "calculate-rewards", [listCV([])], DEPLOYER, POX5_ID);
-call("pox-claim-rewards -> TRANCHE 1", "pox-claim-rewards", [listCV([]), uintCV(CYCLE)]);
-evalCode("get-tranche-count -> expect u2", `(get-tranche-count u${CYCLE})`);
-evalCode("tranche 1 pot", `(get-stx-pot u${CYCLE} u1)`);
-call("pay-stx-stakers TRANCHE 1 (ALL 8)", "pay-stx-stakers",
-  [listCV(STAKERS.map((s) => principalCV(s.a))), uintCV(CYCLE), uintCV(1)]);
-evalCode("tranche 1 fully paid? -> expect TRUE", `(is-tranche-fully-paid u${CYCLE} u1)`);
-evalCode("withheld staker got paid in TRANCHE 1", `(get-stx-paid u${CYCLE} u1 '${WITHHELD})`);
-evalCode("tranche 0 STILL not fully paid", `(is-tranche-fully-paid u${CYCLE} u0)`);
+call("pox-claim-rewards with rewards waiting -> STILL ERR_TRANCHE_TOO_SOON u112",
+  "pox-claim-rewards", [listCV([]), uintCV(CYCLE)]);
+evalCode("tranche-count STILL u1", `(get-tranche-count u${CYCLE})`);
 
-// 10. back-fill the tranche-0 hole afterwards -- must still work
-call("pay-stx-stakers TRANCHE 0 (the withheld one, late)", "pay-stx-stakers",
-  [listCV([principalCV(WITHHELD)]), uintCV(CYCLE), uintCV(0)]);
-evalCode("tranche 0 fully paid NOW? -> expect TRUE", `(is-tranche-fully-paid u${CYCLE} u0)`);
-evalCode("re-paying is a no-op (idempotent)", `(get-stx-paid u${CYCLE} u0 '${WITHHELD})`);
-call("pay-stx-stakers TRANCHE 0 again (all) -> must not double-pay",
-  "pay-stx-stakers", [listCV(STAKERS.map((s) => principalCV(s.a))), uintCV(CYCLE), uintCV(0)]);
-evalCode("tranche 0 residue (dust only)", `(get-tranche-residue u${CYCLE} u0)`);
+// --- GUARD 2: the pause switch --------------------------------------------
+// validate-stake! is pox-5's admission callback. Returning err reverts the
+// staker's transaction inside pox-5 itself, which is the only way to stop new
+// inflow. Untested until now.
+evalCode("is-paused -> false", `(is-paused)`);
+call("set-paused true", "set-paused", [boolCV(true)]);
+evalCode("is-paused -> true", `(is-paused)`);
+call(`STAKE ${HELD_BACK.a.slice(0, 8)} WHILE PAUSED -> EXPECT ERR_PAUSED u101`,
+  "stake", [poolCV(), uintCV(HELD_BACK.stx), uintCV(NUM_CYCLES), uintCV(963_220), noneCV()],
+  HELD_BACK.a, POX5_ID);
+evalCode("signer shares unchanged (the stake really was rejected)",
+  `(get-signer-shares-staked-for-cycle '${POOL_ID} u142 none)`, POX5_ID);
 
-// 11. SWEEP THE DUST -- the success path. Refused earlier with u104 while a
-// staker was unpaid; now that tranche 0 is complete the residue really is dust
-// (a few sats of floor-truncation) and the sweep must go through.
-call("sweep-tranche-dust tranche 0 -> NOW expect ok", "sweep-tranche-dust",
-  [uintCV(CYCLE), uintCV(0)]);
-evalCode("tranche 0 residue after sweep -> expect u0",
-  `(get-tranche-residue u${CYCLE} u0)`);
-call("sweep-tranche-dust tranche 0 again -> EXPECT ERR_NO_DUST u105",
-  "sweep-tranche-dust", [uintCV(CYCLE), uintCV(0)]);
-call("sweep-tranche-dust tranche 1 -> expect ok (also fully paid)",
-  "sweep-tranche-dust", [uintCV(CYCLE), uintCV(1)]);
+call("set-paused false", "set-paused", [boolCV(false)]);
+call(`STAKE ${HELD_BACK.a.slice(0, 8)} after unpause -> expect ok`,
+  "stake", [poolCV(), uintCV(HELD_BACK.stx), uintCV(NUM_CYCLES), uintCV(963_220), noneCV()],
+  HELD_BACK.a, POX5_ID);
 
-// 12. Fees. Withdraw a partial amount, then prove the bound holds: earned-fees
-// caps the withdrawal even though fees and unpaid pots share one sBTC balance.
-evalCode("earned-fees before withdrawal", `(get-earned-fees)`);
-call("withdraw-fees 1 sBTC -> EXPECT ERR_INSUFFICIENT_FEES u111 (bound holds)",
-  "withdraw-fees", [uintCV(100_000_000), principalCV(DEPLOYER)]);
-evalCode("earned-fees unchanged after the refusal", `(get-earned-fees)`);
-call("withdraw-ALL-fees -> expect ok, drains whatever accrued",
-  "withdraw-all-fees", [principalCV(DEPLOYER)]);
-evalCode("earned-fees after draining -> expect u0", `(get-earned-fees)`);
-call("withdraw-all-fees again -> ok u0 (nothing left, harmless)",
-  "withdraw-all-fees", [principalCV(DEPLOYER)]);
+// --- GUARD 3: only pox-5 may call the callback ----------------------------
+// Anyone can invoke a public function. If this guard were missing, a forged
+// admission could be recorded and our indexer would see a phantom staker.
+call("validate-stake! called DIRECTLY -> EXPECT ERR_NOT_POX5 u102",
+  "validate-stake!",
+  [principalCV(DEPLOYER), uintCV(CYCLE), uintCV(1), uintCV(1_000_000), uintCV(0),
+   boolCV(false), noneCV()]);
 
 // --- run ---------------------------------------------------------------------
 const id = await sim.run();
@@ -236,5 +231,5 @@ const result = await getSimulationResult(id);
 console.log("epoch:", result.metadata?.epoch, "| burn:", result.metadata?.burn_block_height);
 result.steps.forEach((s, i) => {
   console.log("---", steps[i] ?? `step ${i}`);
-  console.log(JSON.stringify(s.Result).slice(0, 300));
+  console.log(JSON.stringify(s.Result).slice(0, 260));
 });

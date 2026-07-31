@@ -160,15 +160,25 @@
 
 ;; Bounded by earned-fees, so this can never reach into stakers' unpaid pots
 ;; even though both live in one commingled sBTC balance.
-(define-public (withdraw-fees (amount uint) (recipient principal))
+(define-private (do-withdraw-fees (amount uint) (recipient principal))
   (let ((available (var-get earned-fees)))
-    (try! (assert-admin))
     (asserts! (<= amount available) ERR_INSUFFICIENT_FEES)
     (try! (as-contract? ((with-ft SBTC "sbtc-token" amount))
       (try! (contract-call? SBTC transfer amount current-contract recipient none))))
     (var-set earned-fees (- available amount))
     (print { topic: "withdraw-fees", amount: amount, recipient: recipient })
     (ok amount)))
+
+(define-public (withdraw-fees (amount uint) (recipient principal))
+  (begin (try! (assert-admin)) (do-withdraw-fees amount recipient)))
+
+;; Drain whatever has accrued, without having to read the balance first. Reading
+;; earned-fees and then passing it back in races any payout that lands in
+;; between: the read would be stale and the withdrawal would leave a remainder,
+;; or overshoot and fail. Taking the amount from the var inside the same
+;; transaction cannot be stale.
+(define-public (withdraw-all-fees (recipient principal))
+  (begin (try! (assert-admin)) (do-withdraw-fees (var-get earned-fees) recipient)))
 
 ;; -----------------------------------------------------------------------------
 ;; signer-manager-trait -- the single callback invoked BY pox-5

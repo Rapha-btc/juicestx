@@ -12,9 +12,11 @@ no shim, no injected code.
 
 | Sim | stxer |
 |---|---|
-| lifecycle | https://stxer.xyz/simulations/mainnet/fa2a2ad771044759283343f3e89c8385 |
+| lifecycle (incl. dust sweep + full fee drain) | https://stxer.xyz/simulations/mainnet/af4d7530ea3a20f8b8ebca40a435c2ff |
+| guards (pause / anti-griefing / callback) | https://stxer.xyz/simulations/mainnet/33220f5d58aa0b2e19dd1e2d3c7a775e |
 | late-claim | https://stxer.xyz/simulations/mainnet/57fb44a0b6e16b51d13f62cca3e13116 |
 | lifecycle vs the **comment-stripped deploy template** | https://stxer.xyz/simulations/mainnet/ea7acfecf95c988b8561bcc9ddca9305 |
+| lifecycle (earlier run, before sweep coverage) | https://stxer.xyz/simulations/mainnet/fa2a2ad771044759283343f3e89c8385 |
 
 The third matters most before a deploy: it runs the full lifecycle against the
 exact comment-stripped source shipped in
@@ -50,7 +52,24 @@ skimmed to reserve (`RESERVE_RATIO u1500`).
 | tranche 1 paid 8/8 | true — withheld staker paid normally |
 | withheld staker back-filled in tranche 0 | paid; tranche 0 now complete |
 | re-run payout over all 8 | no transfers — no double-pay |
-| tranche 0 residue | 3 sats of dust |
+| tranche 0 residue | 4 sats of dust |
+| `sweep-tranche-dust` t0, now fully paid | **ok — 4 sats to admin** |
+| residue after sweep | u0 |
+| `sweep-tranche-dust` t0 again | **err u105 `ERR_NO_DUST`** |
+| `sweep-tranche-dust` t1 | ok — 4 sats |
+| `withdraw-fees` 1 sBTC | **err u111 `ERR_INSUFFICIENT_FEES`**, fees unchanged |
+| `withdraw-all-fees` | ok — drained 184,774 |
+| earned-fees after drain | u0 |
+
+**The dust guard discriminates in both directions.** Earlier in the same run it
+refused to sweep tranche 0 with `err u104` while a staker was unpaid — the
+residue was 325,487 sats, of which 325,483 belonged to that staker and only 4
+were genuine rounding dust. After the back-fill it swept exactly those 4.
+
+> **Finding:** `withdraw-all-fees` on an empty balance returns **`err u3`** (the
+> sBTC token rejecting a zero-amount transfer), not a clean `ok u0`. Nothing
+> moves and nothing breaks, but a retry-on-failure cron would read it as a real
+> error. Worth an `(is-eq amount u0)` early return.
 
 **Tranches are independent.** A staker left unpaid in tranche 0 does not affect
 tranche 1, is repairable later, and the only thing the hole blocks is that
@@ -118,6 +137,38 @@ Correct pattern: read `get-tranche-count`, iterate `0 .. count-1`, and check
 `is-tranche-fully-paid` for each. Right whether the cycle ended with one tranche or
 two. Never hardcode 2 — even though pox-5 credits a cycle exactly twice, the
 contract does not enforce that and does not depend on it.
+
+---
+
+## `pool-stx-signer-guards-sim.mjs` — safety mechanisms
+
+The lifecycle sim proves the happy path. This one proves the things that must
+*refuse*. Every one of these was untested until 2026-07-30.
+
+### Result: PASS
+
+| Guard | Result |
+|---|---|
+| claim twice in the SAME distribution cycle | **err u112 `ERR_TRANCHE_TOO_SOON`**, `tranche-count` stays u1 |
+| ...even with fresh rewards waiting | **still err u112** — it is a rate limit, not a "nothing to claim" check |
+| `set-paused true`, then a new `stake` | **err u101 `ERR_PAUSED`** — the staker's pox-5 tx reverts |
+| signer shares after the paused attempt | unchanged — the stake really was rejected |
+| `set-paused false`, same staker retries | ok, `validate-stake!` fires |
+| `validate-stake!` called directly | **err u102 `ERR_NOT_POX5`** |
+
+**Why the anti-griefing test matters.** `ERR_TRANCHE_TOO_SOON` is the entire
+point of `last-claim-dist-cycle`. Dropping the old cycle-ended gate is what
+enables weekly payouts, but it left claiming callable at any moment by anyone;
+without this limit a griefer could open dozens of dust tranches, each costing a
+full payout pass over every staker. The second case is the meaningful one — the
+gate holds *even when there is money waiting*, confirming it limits frequency
+rather than merely rejecting empty claims.
+
+**Why the pause test matters.** `validate-stake!` is pox-5's admission callback,
+and returning `err` from it reverts the staker's transaction **inside pox-5**.
+That is the only mechanism you have to stop new inflow. The sim confirms the
+error propagates all the way out to the user's `stake` call rather than being
+swallowed, and that shares genuinely do not move.
 
 ---
 
@@ -218,3 +269,30 @@ legitimate; only the second one is what a payout job wants.
 - or infer it from the clock: compare pox-5's `current-distribution-cycle`
   against our `get-last-claim-dist-cycle` for that reward cycle. If the global
   clock has moved past the bookmark, a claim is due.
+
+---
+
+## Coverage: what is still NOT simulated
+
+Tier 1 (safety) is now covered by the guards sim. These remain open:
+
+**Money-correctness claims asserted but not demonstrated**
+
+- a staker who **unstakes mid-cycle** still being paid that cycle's tranches
+  (reasoned from pox-5 source — `unstake` only removes shares from
+  `current-cycle + 1` — but never simulated)
+- the **same staker appearing twice in one `pay-stx-stakers` list** (idempotency
+  is proven *across* calls, not *within* one)
+- a **zero-share principal** in the list, which must be skipped rather than paid
+- **`set-admin` rotation** — old admin losing power, new one gaining it
+
+**Completeness**
+
+- `cancel-fee-bips`
+- `ERR_NO_PENDING_FEE` (confirm with nothing pending)
+- `pox-settle-stakers`
+- a cycle with **zero total shares** (the `total-shares = u0` divide guard in
+  `pay-one`)
+
+Note `validate-stake!` fires on every stake in all sims; what the guards sim adds
+is coverage of its two *refusal* paths.
