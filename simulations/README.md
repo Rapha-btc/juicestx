@@ -164,7 +164,57 @@ use the lifecycle sim instead.
 - **`serializeCV` returns a hex string** in `@stacks/transactions` v7, not bytes.
 - **`addAdvanceBlocks` takes an object**:
   `{ bitcoin_blocks, stacks_blocks_per_bitcoin }`.
-- **`get-unclaimed-signer-rewards` reads u0 even when rewards are claimable.** It
-  reflects pox-5's *settled* snapshot, not what a claim would pull. Do not drive a
-  "rewards pending" UI or a claim-trigger cron off it — it reported u0 immediately
-  before a claim that pulled 4.4M sats.
+- **`addAdvanceBlocks` takes an object** (see above).
+
+---
+
+## `get-unclaimed-signer-rewards` reads u0 while rewards ARE claimable
+
+Seen live at **step 25 of the lifecycle sim**: the read-only returned `u0`, and
+the very next step claimed ~4.8M sats. This is not a bug in either contract, and
+it is the single most likely thing to mislead whoever writes the payout cron.
+
+### Why
+
+`get-unclaimed-signer-rewards` passes through to pox-5's
+`get-signer-unclaimed-rewards-for-cycle`, which reads a **map**. That map is only
+ever written by `update-claimable-rewards` and `settle-rewards`.
+
+`calculate-rewards` writes **neither**. It only advances the pool-wide
+rewards-per-token accumulator. So after it runs, your entitlement exists as
+*"accumulator minus your last settled watermark"* — a computation, not a stored
+number. Nothing has written your row yet, so the map still reads zero.
+
+The claim then works because pox-5's `claim-rewards` materialises the row as its
+very first binding, before paying:
+
+```clarity
+(signer contract-caller)
+(stx-rewards (update-claimable-rewards signer reward-cycle none))
+```
+
+So the read-only says zero right up to the instant the claim computes the real
+figure.
+
+### What it actually answers
+
+> "How much has been **settled** and not yet claimed?"
+
+Which is a different question from "what would a claim pull right now?". Both are
+legitimate; only the second one is what a payout job wants.
+
+### Do not
+
+- render a "rewards pending" badge from it — it shows nothing while money waits
+- gate a claim-trigger cron on `> u0` — **the cron would never fire**, because
+  the value only becomes non-zero *after* a claim has already settled the row
+
+### Instead
+
+- **just attempt the claim.** It fails harmlessly with pox-5's `err u32`
+  (`ERR_NO_CLAIMABLE_REWARDS`) when there is genuinely nothing, and a failed
+  attempt does not consume the distribution cycle's slot — the bookmark is only
+  written on success.
+- or infer it from the clock: compare pox-5's `current-distribution-cycle`
+  against our `get-last-claim-dist-cycle` for that reward cycle. If the global
+  clock has moved past the bookmark, a claim is due.

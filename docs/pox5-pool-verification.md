@@ -101,6 +101,13 @@ full; only `is-tranche-fully-paid` does, per tranche. Tooling must read
 "wait for 2 tranches" job hangs forever on a forgotten cycle. See
 `simulations/README.md` for the full table.
 
+**Operational trap found while simulating.**
+`get-unclaimed-signer-rewards` returns `u0` even when rewards are claimable — it
+reads pox-5's settled map, which `calculate-rewards` never writes. Seen at step 25
+of the lifecycle sim, immediately before a claim that pulled ~4.8M sats. A
+claim-trigger cron gated on `> u0` would never fire. Full explanation and the two
+correct alternatives are in `simulations/README.md`.
+
 ### Not covered
 
 Adversarial call *ordering* — interleaving `set-paused`, `set-admin`,
