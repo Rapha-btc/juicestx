@@ -206,7 +206,7 @@
 )
 
 ;; -----------------------------------------------------------------------------
-;; Signer registration (one-time)
+;; Signer registration
 ;; -----------------------------------------------------------------------------
 
 ;; Grant the key to this contract AND register, in one transaction.
@@ -224,8 +224,17 @@
 ;; requires the recovered pubkey to equal signer-key, so the grant cannot be
 ;; forged or front-run by anyone who lacks the key.
 ;;
-;; auth-id makes each grant single-use: (signer-key, signer-manager, auth-id) is
-;; recorded in used-signer-key-grants and a repeat is rejected.
+;; auth-id makes each GRANT single-use: (signer-key, signer-manager, auth-id) is
+;; recorded in used-signer-key-grants and a repeat is rejected. That is per
+;; grant, not per registration -- this function is NOT one-shot.
+;;
+;; KEY ROTATION. pox-5's register-signer ends in (map-set signers signer
+;; signer-key), a map-set and not a map-insert, and nothing here guards against
+;; a second call. So calling register-self again with a NEW signer-key, a fresh
+;; auth-id, and a signature from the new key rotates this pool's signer key.
+;; That path matters precisely when it is least convenient to discover: pox-5
+;; requires contract-caller to be the signer contract, so no EOA can register or
+;; rotate on our behalf, and this function is the only route to it.
 ;;
 ;; signer-manager MUST be this contract -- pox-5 derives the signer as
 ;; (contract-of signer-manager) for the registration and compares the grant
