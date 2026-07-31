@@ -223,6 +223,27 @@ call("validate-stake! called DIRECTLY -> EXPECT ERR_NOT_POX5 u102",
   [principalCV(DEPLOYER), uintCV(CYCLE), uintCV(1), uintCV(1_000_000), uintCV(0),
    boolCV(false), noneCV()]);
 
+// --- GUARD 4: admin gates on the fee/sweep paths --------------------------
+// withdraw-fees was refactored into a wrapper + private helper when
+// withdraw-all-fees was added, which MOVED assert-admin. A refactor that moves
+// an auth check is exactly the kind that drops it on the new path, and the
+// lifecycle sim only ever calls these as the admin. So test the refusals.
+const NOT_ADMIN = "SP1Y6ZAD2ZZFKNWN58V8EA42R3VRWFJSGWFAD9C36";
+call("withdraw-fees from NON-admin -> EXPECT ERR_UNAUTHORIZED u100",
+  "withdraw-fees", [uintCV(1), principalCV(NOT_ADMIN)], NOT_ADMIN);
+call("withdraw-all-fees from NON-admin -> EXPECT ERR_UNAUTHORIZED u100",
+  "withdraw-all-fees", [principalCV(NOT_ADMIN)], NOT_ADMIN);
+call("sweep-tranche-dust from NON-admin -> EXPECT ERR_UNAUTHORIZED u100",
+  "sweep-tranche-dust", [uintCV(CYCLE), uintCV(0)], NOT_ADMIN);
+call("set-og from NON-admin -> EXPECT ERR_UNAUTHORIZED u100",
+  "set-og", [principalCV(NOT_ADMIN), boolCV(true)], NOT_ADMIN);
+call("set-paused from NON-admin -> EXPECT ERR_UNAUTHORIZED u100",
+  "set-paused", [boolCV(true)], NOT_ADMIN);
+call("set-admin from NON-admin -> EXPECT ERR_UNAUTHORIZED u100",
+  "set-admin", [principalCV(NOT_ADMIN)], NOT_ADMIN);
+evalCode("admin unchanged after all refusals", `(get-admin)`);
+evalCode("earned-fees unchanged after the refused withdrawals", `(get-earned-fees)`);
+
 // --- run ---------------------------------------------------------------------
 const id = await sim.run();
 console.log("simulation id:", id);

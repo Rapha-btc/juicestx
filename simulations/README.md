@@ -13,7 +13,7 @@ no shim, no injected code.
 | Sim | stxer |
 |---|---|
 | lifecycle (incl. dust sweep + full fee drain) | https://stxer.xyz/simulations/mainnet/af4d7530ea3a20f8b8ebca40a435c2ff |
-| guards (pause / anti-griefing / callback) | https://stxer.xyz/simulations/mainnet/33220f5d58aa0b2e19dd1e2d3c7a775e |
+| guards (pause / anti-griefing / callback / admin gates) | https://stxer.xyz/simulations/mainnet/27987e188876ab5b0f0117b89adaa6b0 |
 | late-claim | https://stxer.xyz/simulations/mainnet/57fb44a0b6e16b51d13f62cca3e13116 |
 | lifecycle vs the **comment-stripped deploy template** | https://stxer.xyz/simulations/mainnet/ea7acfecf95c988b8561bcc9ddca9305 |
 | lifecycle (earlier run, before sweep coverage) | https://stxer.xyz/simulations/mainnet/fa2a2ad771044759283343f3e89c8385 |
@@ -155,6 +155,19 @@ The lifecycle sim proves the happy path. This one proves the things that must
 | signer shares after the paused attempt | unchanged — the stake really was rejected |
 | `set-paused false`, same staker retries | ok, `validate-stake!` fires |
 | `validate-stake!` called directly | **err u102 `ERR_NOT_POX5`** |
+| `withdraw-fees` from non-admin | **err u100 `ERR_UNAUTHORIZED`** |
+| `withdraw-all-fees` from non-admin | **err u100 `ERR_UNAUTHORIZED`** |
+| `sweep-tranche-dust` from non-admin | **err u100** |
+| `set-og` / `set-paused` / `set-admin` from non-admin | **err u100** |
+| admin + earned-fees after all refusals | unchanged |
+
+**Why the admin gates are tested here specifically.** `withdraw-fees` was
+refactored into a wrapper plus a private `do-withdraw-fees` when
+`withdraw-all-fees` was added, which **moved `assert-admin`**. A refactor that
+relocates an auth check is exactly the kind that drops it on the new path, and
+every other sim calls these as the deployer — who *is* the admin — so the
+refusal path would never have been exercised. It holds: both entry points
+refuse, and neither the admin nor `earned-fees` moves.
 
 **Why the anti-griefing test matters.** `ERR_TRANCHE_TOO_SOON` is the entire
 point of `last-claim-dist-cycle`. Dropping the old cycle-ended gate is what
