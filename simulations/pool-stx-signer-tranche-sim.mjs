@@ -119,7 +119,7 @@ sim.addContractCall({
 
 const id = await sim.run();
 console.log("simulation id:", id);
-console.log(`https://explorer.stxer.xyz/simulation/${id}`);
+console.log(`https://stxer.xyz/simulations/mainnet/${id}`);
 
 const result = await getSimulationResult(id);
 console.log("epoch:", result.metadata?.epoch, "| burn:", result.metadata?.burn_block_height);

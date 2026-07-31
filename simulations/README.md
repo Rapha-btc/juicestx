@@ -2,7 +2,7 @@
 
 Each script forks mainnet at the current tip and replays a scenario against **real
 deployed contracts**. Run with `node simulations/<file>.mjs`; each prints a
-`https://explorer.stxer.xyz/simulation/<id>` link.
+`https://stxer.xyz/simulations/mainnet/<id>` link.
 
 Results below are from **2026-07-30**, the day epoch 4.0 activated (burn 960,230),
 against `SP000000000000000000002Q6VF78.pox-5` as a genuine mainnet boot contract —
@@ -12,9 +12,9 @@ no shim, no injected code.
 
 | Sim | stxer |
 |---|---|
-| lifecycle | https://explorer.stxer.xyz/simulation/fa2a2ad771044759283343f3e89c8385 |
-| late-claim | https://explorer.stxer.xyz/simulation/57fb44a0b6e16b51d13f62cca3e13116 |
-| lifecycle vs the **comment-stripped deploy template** | https://explorer.stxer.xyz/simulation/ea7acfecf95c988b8561bcc9ddca9305 |
+| lifecycle | https://stxer.xyz/simulations/mainnet/fa2a2ad771044759283343f3e89c8385 |
+| late-claim | https://stxer.xyz/simulations/mainnet/57fb44a0b6e16b51d13f62cca3e13116 |
+| lifecycle vs the **comment-stripped deploy template** | https://stxer.xyz/simulations/mainnet/ea7acfecf95c988b8561bcc9ddca9305 |
 
 The third matters most before a deploy: it runs the full lifecycle against the
 exact comment-stripped source shipped in
