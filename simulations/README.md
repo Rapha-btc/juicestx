@@ -14,8 +14,9 @@ no shim, no injected code.
 |---|---|
 | lifecycle (incl. dust sweep + full fee drain) | https://stxer.xyz/simulations/mainnet/af4d7530ea3a20f8b8ebca40a435c2ff |
 | guards (pause / anti-griefing / callback / admin gates) | https://stxer.xyz/simulations/mainnet/27987e188876ab5b0f0117b89adaa6b0 |
+| coverage (tier 2 + 3) | https://stxer.xyz/simulations/mainnet/9270a2d58fb72cb86d0aa228a0bc6fe5 |
 | late-claim | https://stxer.xyz/simulations/mainnet/57fb44a0b6e16b51d13f62cca3e13116 |
-| lifecycle vs the **comment-stripped deploy template** | https://stxer.xyz/simulations/mainnet/ea7acfecf95c988b8561bcc9ddca9305 |
+| lifecycle vs the **comment-stripped deploy template** | https://stxer.xyz/simulations/mainnet/b6c92c03ea444126c1b3d1842b297593 |
 | lifecycle (earlier run, before sweep coverage) | https://stxer.xyz/simulations/mainnet/fa2a2ad771044759283343f3e89c8385 |
 
 The third matters most before a deploy: it runs the full lifecycle against the
@@ -185,6 +186,58 @@ swallowed, and that shares genuinely do not move.
 
 ---
 
+## `pool-stx-signer-coverage-sim.mjs` — tier 2 + 3
+
+The money-correctness claims we had asserted from reading pox-5 but never
+demonstrated, plus the remaining unexercised entry points.
+
+### Result: PASS
+
+**A staker who unstakes mid-cycle still gets paid for that cycle.** The claim in
+the late-claim section, now demonstrated rather than reasoned:
+
+| | |
+|---|---|
+| leaver's cycle-141 shares before `unstake` | 112,612,000,000 |
+| ...after `unstake` | **112,612,000,000 — unchanged** |
+| leaver's cycle-**142** shares | u0 — gone from future cycles |
+| paying the leaver for cycle 141 afterwards | ok — **813,979 sats transferred** |
+
+So `unstake` only strips shares from `current-cycle + 1` onward, exactly as
+pox-5's source implies. A departed staker keeps every tranche of the cycle they
+were in, and your payout list must still include them.
+
+**Bad lists are handled safely:**
+
+| Case | Result |
+|---|---|
+| same staker twice in ONE list `[alice, alice, X]` | paid **once** (1,813,128), one transfer |
+| `tranche-paid-shares` after that call | counted alice **once** |
+| principal that never staked | **none** — skipped, not paid |
+
+Idempotency was already proven *across* calls; this proves it *within* one.
+
+**Remaining entry points:**
+
+| Check | Result |
+|---|---|
+| `cancel-fee-bips` after a proposal | ok — pending cleared to `none` |
+| `confirm-fee-bips` with nothing pending | **err u113 `ERR_NO_PENDING_FEE`** |
+| live fee after a cancelled proposal | unchanged at u500 |
+| `pox-settle-stakers` (all 8) | ok |
+| `get-cycle-total-shares` on an unstaked cycle | u0 |
+| `pay-stx-stakers` on that cycle | ok — no divide-by-zero |
+| `set-admin` rotation | new admin set |
+| OLD admin calls `set-og` after rotation | **err u100 `ERR_UNAUTHORIZED`** |
+| NEW admin calls `set-og` | ok — write landed |
+
+> **Minor finding:** `is-tranche-fully-paid` returns **true** for a cycle nobody
+> staked (`0 >= 0`). Correct in the sense that nobody is owed, but it means the
+> function alone cannot distinguish "settled" from "never existed". Tooling
+> should check `get-tranche-count > 0` first.
+
+---
+
 ## `pool-stx-signer-tranche-sim.mjs` — deploy + guards
 
 Deploy and error-path checks with empty pots. Confirms the contract compiles and
@@ -287,25 +340,18 @@ legitimate; only the second one is what a payout job wants.
 
 ## Coverage: what is still NOT simulated
 
-Tier 1 (safety) is now covered by the guards sim. These remain open:
+Tiers 1-3 are now covered by the guards and coverage sims. What remains:
 
-**Money-correctness claims asserted but not demonstrated**
-
-- a staker who **unstakes mid-cycle** still being paid that cycle's tranches
-  (reasoned from pox-5 source — `unstake` only removes shares from
-  `current-cycle + 1` — but never simulated)
-- the **same staker appearing twice in one `pay-stx-stakers` list** (idempotency
-  is proven *across* calls, not *within* one)
-- a **zero-share principal** in the list, which must be skipped rather than paid
-- **`set-admin` rotation** — old admin losing power, new one gaining it
-
-**Completeness**
-
-- `cancel-fee-bips`
-- `ERR_NO_PENDING_FEE` (confirm with nothing pending)
-- `pox-settle-stakers`
-- a cycle with **zero total shares** (the `total-shares = u0` divide guard in
-  `pay-one`)
+- **`ERR_SETTLE_FAILED`** — requires pox-5's `claim-staker-rewards-for-signer`
+  to fail for a staker in the batch, which needs a state we have not found a way
+  to produce against the real contract.
+- **Batch limits.** Every payout runs well under the 100-staker list bound; the
+  block-cost ceiling at a full 100 is untested, and the contract's own comment
+  says the bound is "a starting point, NOT a measured limit".
+- **Multi-signer interference** — another signer claiming and paying in the same
+  blocks. All sims run our signer in isolation.
+- **`withdraw-all-fees` on an empty balance** returns `err u3` rather than a
+  clean `ok u0` (see the lifecycle finding). Recorded, not fixed.
 
 Note `validate-stake!` fires on every stake in all sims; what the guards sim adds
 is coverage of its two *refusal* paths.
