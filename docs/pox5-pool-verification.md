@@ -108,10 +108,75 @@ of the lifecycle sim, immediately before a claim that pulled ~4.8M sats. A
 claim-trigger cron gated on `> u0` would never fire. Full explanation and the two
 correct alternatives are in `simulations/README.md`.
 
+### Guards (`pool-stx-signer-guards-sim.mjs`)
+
+The mechanisms that must *refuse*. All were untested until 2026-07-30.
+
+| Guard | Result |
+|---|---|
+| claim twice in one distribution cycle | **err u112 `ERR_TRANCHE_TOO_SOON`**, tranche-count stays u1 |
+| ...even with fresh rewards waiting | still u112 — a rate limit, not a "nothing to claim" check |
+| `set-paused`, then a new `stake` | **err u101 `ERR_PAUSED`** — reverts the staker's pox-5 tx, shares unmoved |
+| `validate-stake!` called directly | **err u102 `ERR_NOT_POX5`** |
+| all six admin-gated entry points from a non-admin | **err u100**, admin and earned-fees unchanged |
+
+The admin-gate row matters because `withdraw-fees` was later refactored into a
+wrapper plus a private helper when `withdraw-all-fees` was added, which **moved
+`assert-admin`**. Every other sim calls those as the deployer, who *is* the
+admin, so the refusal path would never have been exercised. It holds.
+
+### Dust sweep and fee withdrawal
+
+`sweep-tranche-dust`'s success path had no coverage anywhere — all earlier calls
+expected errors, and RV never reached it (admin-gated). It now demonstrates both
+directions in one run: refused with `err u104` while a staker was owed (residue
+325,487 sats, of which 325,483 was his money and only 4 were genuine rounding
+dust), then swept exactly those 4 after the back-fill.
+
+`withdraw-all-fees` was added so the drain does not require reading the balance
+first — reading `earned-fees` and passing it back races any payout landing in
+between. It drained 184,774 to zero, and the bound still refused 1 sBTC.
+
+### Tier 2 + 3 (`pool-stx-signer-coverage-sim.mjs`)
+
+**A staker who unstakes mid-cycle still gets paid for that cycle** — previously
+asserted from reading pox-5, now demonstrated:
+
+```
+leaver's cycle-141 shares before unstake   112,612,000,000
+                          after unstake    112,612,000,000   <- unchanged
+leaver's cycle-142 shares                              u0    <- gone
+paying them for 141 afterwards             813,979 sats transferred
+```
+
+Also: the same staker twice in ONE list is paid once and counted once; a
+principal who never staked is skipped; `cancel-fee-bips` and
+`ERR_NO_PENDING_FEE`; `pox-settle-stakers`; a zero-total-shares cycle (no
+divide-by-zero); and `set-admin` rotation, where the old admin gets `u100` and
+the new admin's write lands.
+
+**Usage note, not a defect.** `is-tranche-fully-paid` returns `true` for a cycle
+nobody staked (`0 >= 0`). It answers "is anyone still owed?", and for such a
+cycle the honest answer is no one. It is not the same question as "did this
+cycle happen and settle?", which needs `get-tranche-count > 0` alongside it. No
+money path is affected: `sweep-tranche-dust` also requires `dust > u0`, which is
+zero for a cycle that never existed, so `ERR_NO_DUST` blocks it regardless.
+
 ### Not covered
 
-Adversarial call *ordering* — interleaving `set-paused`, `set-admin`,
-`withdraw-fees` and partial payouts in sequences the script does not try.
+- **`ERR_SETTLE_FAILED`** — needs pox-5's `claim-staker-rewards-for-signer` to
+  fail for a staker mid-batch; no way found to produce that against the real
+  contract.
+- **Batch limits.** Every payout runs well under the 100-staker bound. The
+  contract's own comment says that bound is "a starting point, NOT a measured
+  limit", and the block-cost ceiling at a full 100 remains untested.
+- **Multi-signer interference** — another signer claiming and paying in the same
+  blocks. All sims run our signer in isolation.
+- **`withdraw-all-fees` on an empty balance** returns `err u3` (sBTC rejecting a
+  zero-amount transfer) rather than a clean `ok u0`. Harmless, but a
+  retry-on-failure cron would misread it. Recorded, not fixed.
+
+Run links for every simulation are in `simulations/README.md`.
 
 ## 2. Rendezvous invariant fuzzing
 

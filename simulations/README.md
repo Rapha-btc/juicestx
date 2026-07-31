@@ -231,10 +231,13 @@ Idempotency was already proven *across* calls; this proves it *within* one.
 | OLD admin calls `set-og` after rotation | **err u100 `ERR_UNAUTHORIZED`** |
 | NEW admin calls `set-og` | ok — write landed |
 
-> **Minor finding:** `is-tranche-fully-paid` returns **true** for a cycle nobody
-> staked (`0 >= 0`). Correct in the sense that nobody is owed, but it means the
-> function alone cannot distinguish "settled" from "never existed". Tooling
-> should check `get-tranche-count > 0` first.
+> **Usage note, not a defect.** `is-tranche-fully-paid` returns **true** for a
+> cycle nobody staked (`0 >= 0`). It answers *"is anyone still owed?"* — and for
+> such a cycle, no one is. That is a different question from *"did this cycle
+> happen and settle?"*, which needs `get-tranche-count > 0` alongside it.
+> **No money path is affected:** `sweep-tranche-dust` also requires `dust > u0`,
+> which is zero for a cycle that never existed, so `ERR_NO_DUST` blocks it
+> regardless. The vacuous `true` can never let sats out.
 
 ---
 
