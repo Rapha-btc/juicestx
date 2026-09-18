@@ -4,7 +4,7 @@ Each script forks mainnet at the current tip and replays a scenario against **re
 deployed contracts**. Run with `node simulations/<file>.mjs`; each prints a
 `https://stxer.xyz/simulations/mainnet/<id>` link.
 
-Results below are from **2026-07-30**, the day epoch 4.0 activated (burn 960,230),
+The original signer results in the first sections are from **2026-07-30**, the day epoch 4.0 activated (burn 960,230),
 against `SP000000000000000000002Q6VF78.pox-5` as a genuine mainnet boot contract —
 no shim, no injected code.
 
@@ -358,3 +358,17 @@ Tiers 1-3 are now covered by the guards and coverage sims. What remains:
 
 Note `validate-stake!` fires on every stake in all sims; what the guards sim adds
 is coverage of its two *refusal* paths.
+
+## Juice STX reward pool and swap vault
+
+Latest reviewed-code runs: **263/263 checks passed**.
+
+| Scenario | Passed | Stxer |
+| --- | --- | --- |
+| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/1f0b057a825cecb7ccb51cac99a3b593) |
+| Maker fill during resting window | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/fda8d36ef8d440cdf306f89fd350947a) |
+| Reclaim and smart-router liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/e036509b1b13ff7e6768b2873b70cbd5) |
+| Recovery → recovery → normal → recovery | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/10e4772ef6fba8fee2ba5a2d85c72fc5) |
+
+Commands and recovery behavior: [pool/vault simulations](README-pool-vault-stx.md).
+Raw reports, fixtures and earlier run links: [pool/vault results](results/pool-vault-stx/README.md).

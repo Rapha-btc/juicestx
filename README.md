@@ -101,3 +101,23 @@ Contracts scaffolded and compiling. Next steps:
 ## License
 
 TBD
+
+## PoX-5 pool rewards converted to STX
+
+The Juice pool variant in [juice-pool-stx-signer-stx-rewards.clar](contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar)
+routes claimed sBTC through [juice-pool-swap-vault.clar](contracts/pox-5/juice-pool-swap-vault.clar)
+before paying stakers native STX. After 4,320 Bitcoin blocks, admin recovery can
+return the remaining sBTC and converted STX to their original tranche. The vault
+can then fund another batch, even while earlier recovered payouts are uncollected.
+
+Latest-code Stxer validation: **263/263 checks passed**.
+
+| Scenario | Passed | Stxer |
+| --- | --- | --- |
+| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/1f0b057a825cecb7ccb51cac99a3b593) |
+| Maker fill during resting window | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/fda8d36ef8d440cdf306f89fd350947a) |
+| Reclaim and smart-router liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/e036509b1b13ff7e6768b2873b70cbd5) |
+| Recovery → recovery → normal → recovery | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/10e4772ef6fba8fee2ba5a2d85c72fc5) |
+
+See [simulation commands and recovery behavior](simulations/README-pool-vault-stx.md)
+and [all run links, raw reports and fixture scope](simulations/results/pool-vault-stx/README.md).

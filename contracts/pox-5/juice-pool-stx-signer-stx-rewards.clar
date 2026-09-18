@@ -39,10 +39,18 @@
   (ok (asserts! (is-eq contract-caller (var-get admin)) ERR_UNAUTHORIZED)))
 
 (define-public (set-admin (new-admin principal))
-  (begin (try! (assert-admin)) (ok (var-set admin new-admin))))
+  (begin
+    (try! (assert-admin))
+    (var-set admin new-admin)
+    (print { topic: "set-admin", old-admin: contract-caller, new-admin: new-admin })
+    (ok true)))
 
 (define-public (set-paused (p bool))
-  (begin (try! (assert-admin)) (ok (var-set paused p))))
+  (begin
+    (try! (assert-admin))
+    (var-set paused p)
+    (print { topic: "set-paused", paused: p })
+    (ok true)))
 
 (define-data-var fee-bips uint u0)
 (define-data-var earned-fees uint u0)
@@ -143,7 +151,10 @@
     (try! (assert-admin))
     (try! (contract-call? POX5 grant-signer-key signer-key current-contract
       auth-id signer-sig))
-    (contract-call? POX5 register-signer signer-manager signer-key)
+    (let ((result (try! (contract-call? POX5 register-signer signer-manager signer-key))))
+      (print { topic: "register-self", signer-manager: (contract-of signer-manager),
+        signer-key: signer-key, auth-id: auth-id })
+      (ok result))
   )
 )
 
