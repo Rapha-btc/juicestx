@@ -1,86 +1,154 @@
-# Juice pool / swap-vault Stxer simulations
+# Juice pool / swap-vault verification
 
-The scripts deploy juice-pool-stx-signer-stx-rewards and juice-pool-swap-vault together
-in mainnet forks; they send no live transactions.
+Current-source validation on **2026-09-18**: **471/471 Stxer checks passed** in
+10 mainnet forks. Every run deploys the local Clarity 6 pool and vault before
+calling real mainnet dependencies. No live transactions are submitted.
 
-From this repo, install dependencies with `npm ci`, then run:
+The local runtime suite reaches **129/129 instrumented branch outcomes** and
+**286/288 line counters** for `contracts/pox-5/juice-pool-swap-vault.clar`.
+The two zero-hit counters are the `mins` tuple binding and the native contract
+literal (lines 272/336); tests execute both paths. Rendezvous checked eight
+invariants over two seeds: **2,000/2,000 invariant checks passed**, no runtime
+exceptions, and **60 successful batch round trips**. This is measured vault
+coverage with declared fixtures, not proof that every possible transaction or
+all external contract code is bug-free.
+
+Vault SHA-256: `ab3e77289a9692ba5d217451177766ee1bf88aeeacc5f211d136bf4afd9677d7`.
+Pool SHA-256: `3df2ddc15523fc00850fcbd28f9b6a38672e14cfc5c69bca5f4df73978def350`.
+The pool hash includes the emergency admin wrappers in the local working tree;
+those pool source amendments remain uncommitted separately from this test work.
+Do not assume a previously deployed pool has these new methods.
+
+## Current Stxer runs
+
+| Scenario | Passed | Stxer | Raw report |
+| --- | --- | --- | --- |
+| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/a802afe1e2560bfe2c3b7d892b538666) | [juice-deployment-guards.json](results/pool-vault-stx/juice-deployment-guards.json) |
+| Maker fill during patience | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/575d7961086357312e7a464a543fdb98) | [juice-maker.json](results/pool-vault-stx/juice-maker.json) |
+| Smart-router AMM liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/ca99c1e1ea2564f52e2867ee00cef13a) | [juice-liquidation.json](results/pool-vault-stx/juice-liquidation.json) |
+| Smart-router Jing fills | 39/39 | [simulation](https://stxer.xyz/simulations/mainnet/805d3ef5744496d654b69c6c259fddc4) | [juice-jing-router.json](results/pool-vault-stx/juice-jing-router.json) |
+| Owner-only direct Jing take | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/a1f6901f1527cd7407beeb9d395a3bf1) | [juice-jing-take.json](results/pool-vault-stx/juice-jing-take.json) |
+| Required-Pyth manual split | 35/35 | [simulation](https://stxer.xyz/simulations/mainnet/d68fa679b74688e94fd2df8a1f922191) | [juice-split-pyth.json](results/pool-vault-stx/juice-split-pyth.json) |
+| Four-batch recovery continuity | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/e662fbe736f230e530fc31cfc53a37a9) | [juice-recovery-continuity.json](results/pool-vault-stx/juice-recovery-continuity.json) |
+| Timed admin handover | 52/52 | [simulation](https://stxer.xyz/simulations/mainnet/9010c0341aa816fad433d5bf4e0134fc) | [juice-admin-handover.json](results/pool-vault-stx/juice-admin-handover.json) |
+| Emergency DIA swap | 19/19 | [simulation](https://stxer.xyz/simulations/mainnet/f1aee856d660d58e8709ccd279fa296f) | [juice-emergency-dia.json](results/pool-vault-stx/juice-emergency-dia.json) |
+| Emergency native fallback | 29/29 | [simulation](https://stxer.xyz/simulations/mainnet/bcc54d2a6ad69210bd7a91c44b08be72) | [juice-emergency-native.json](results/pool-vault-stx/juice-emergency-native.json) |
+
+## Run the fork cases
 
 ```sh
+npm ci
 node simulations/pool-vault-stx-stxer.mjs
 node simulations/pool-vault-stx-stxer.mjs --maker
 node simulations/pool-vault-stx-stxer.mjs --lifecycle
+node simulations/pool-vault-stx-stxer.mjs --jing-router
+node simulations/pool-vault-stx-stxer.mjs --jing-take
+node simulations/pool-vault-stx-stxer.mjs --split-pyth
 node simulations/pool-vault-recovery-stxer.mjs
 node simulations/pool-admin-handover-stxer.mjs
+node simulations/pool-vault-emergency-stxer.cjs
+node simulations/pool-vault-emergency-stxer.cjs --native
 ```
 
-The shared runner and signed-update helper are local to this simulations directory;
-no sibling repo is required. STACKS_API_URL and STXER_API_URL override the default
-node and simulation service. PYTH_API_KEY is optional; without it the scripts use
-the public Jing backend for a signed BTC/STX update.
+`STACKS_API_URL` and `STXER_API_URL` override the node and fork service.
+Signed-update cases use the local `_pool-vault-lazer.mjs` helper; `PYTH_API_KEY`
+is optional. Emergency cases never fetch or supply a Pyth update. The common
+and emergency runners capture source hashes at deployment. Older runner reports
+also carry explicitly labeled offline current-source hash verification.
 
-## Successful swap and recovery runs (before timed admin handover)
+## Fork fixtures and scope
 
-| Scenario | Passed | Stxer |
-| --- | --- | --- |
-| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/1f0b057a825cecb7ccb51cac99a3b593) |
-| Maker fill during resting window | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/fda8d36ef8d440cdf306f89fd350947a) |
-| Reclaim and smart-router liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/e036509b1b13ff7e6768b2873b70cbd5) |
-| Recovery → recovery → normal → recovery | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/10e4772ef6fba8fee2ba5a2d85c72fc5) |
+Lifecycle/recovery cases use the real PoX-5 claim path, token ledger, Jing market,
+router, and AMMs. Crystallized earned rewards and 1:3 staker shares are explicit
+fork-only Eval fixtures backed by real fork sBTC transfers. Existing live Jing
+orders are canceled only inside the fork to isolate fills. These cases test
+claims, swaps, recovery, attribution, payouts and replay; they do not test new
+STX lock admission, signer registration, or newly accrued mining rewards.
+Fees are zero in the fork lifecycle cases; local tests exercise 5% fees/OG exemptions.
 
-See [raw reports, fixture details and every earlier Juice swap-vault run](results/pool-vault-stx/README.md).
+Maker fills complete inside the patience window. Router cases advance 288+1
+Bitcoin blocks with compressed one-second timestamps, keeping the production
+signed-feed freshness checks enabled. Recovery fixtures age clocks to test the
+4,319/4,320-block boundary without waiting a month. A four-batch sequence tests
+resting recovery, mixed STX/sBTC recovery, normal liquidation and another recovery.
+Replays, outstanding payout reserves and next-batch isolation are checked.
 
-## Recovery behavior
+Emergency cases explicitly transfer 100,000 sats from a real whale to the draft
+pool inside the fork. A pool Eval funds the vault through `as-contract?` with an
+FT allowance; this isolates the swap path rather than testing PoX accounting.
+Native-error tests mutate DIA timestamps/values and RFQ coinbase only in the fork.
+The last negative swap disables cooldown through the admin wrapper to isolate
+unusable-price rejection. Native runs do not synthesize blocks: a longer exploratory
+case hit Stxer's `BlockingError` when native pricing read synthetic tenure data.
+The successful parent-chain cases above replace that incomplete run.
 
-Pool admin can call emergency-recover after 4,320 Bitcoin blocks from funding
-(approximately one month). The vault reclaims resting/parked sBTC and returns
-all remaining sBTC and already-earned STX only to the pool. The pool records both
-pots against the pending tranche and clears the pending batch atomically.
-Recovered STX uses the normal pay-stx-stakers entry point; recovered sBTC has
-pay-recovered-sbtc-stakers, sweep-recovered-sbtc-dust and withdraw-sbtc-fees.
-The normal STX fee/dust ledgers are unchanged. Payouts are permissionless and
-apply the existing OG exemptions and live fee rate, capped at 5%.
+## Emergency price and output examples
 
-All runs deploy the production Juice signer and swap-vault sources unchanged,
-using Clarity 6, and run only in independent mainnet forks. They use the real
-PoX-5 claim path, sBTC ledger, Jing v6 market, smart router and available AMM state.
-Signed BTC/STX Lazer updates use the public Jing backend; no private Pyth key is required.
+`router-swap-split-dia(amount, dlmm, xyk, velar)` has no Jing or update arguments.
+It forwards Jing `u0` and update `none`. The restored `router-swap-split` requires
+a Pyth buffer, and retains its normal 1% floor and separate 0.6% Velar floor.
 
-Lifecycle and recovery runs seed crystallized PoX rewards and fixed 1:3 staker
-shares with explicit fork-only Eval writes. Real sBTC transfers back those rewards.
-These runs test claims, swaps, recovery, accounting, payouts and replay protection;
-they do not test signer registration, STX lock admission, or rewards calculated from new stakes.
-Pool fees are zero in these Stxer cases; 5% fees and OG exemptions are covered by local runtime tests.
+The current emergency DIA run returned:
 
-The maker case completes within the resting window. Liquidation advances 288 + 1
-Bitcoin blocks using one-second synthetic intervals. Production 80-second oracle
-freshness remains enabled. Existing live Jing orders are canceled only inside the fork.
+- STX/USD `(ok {value: u28252561, timestamp: u1789764657889})`: $0.28252561/STX.
+- BTC/USD `(ok {value: u8110528212401, timestamp: u1789764657889})`: $81,105.28212401/BTC.
+- `get-dia-value` returns only `(ok value)` after positive-value/freshness checks.
+- `floor(BTC-USD * 100000000 / STX-USD) = u28707231929880`, or
+  **287,072.31929880 STX/BTC**. The identical USD scales cancel.
 
-Recovery continuity executes four batches: resting sBTC recovery, partial-conversion
-recovery with both STX and sBTC, a normal router batch, then another sBTC recovery.
-It verifies admin authorization, the 4,319/4,320-block age boundary, recovery while
-Jing is paused, clock/pending reset, separate per-batch entitlements and replay safety.
-Old tranches are paid while the next batch is active, proving payout reserves stay separate.
-Recovered STX uses pay-stx-stakers; remaining sBTC uses pay-recovered-sbtc-stakers.
-Funding clocks are aged by explicit vault Eval fixtures (288, 4,319 and 4,320 blocks)
-to keep signed updates valid for the following swaps. This is a state-transition test,
-not a real month of chain time. Two additional one-second Bitcoin blocks exercise router cooldown.
+The feed timestamp truncates to `1789764657` seconds. Previous Stacks block time
+was `1789765458`: **801 seconds old**. Its expiry is
+`1789764657 + 7200 = 1789771857 >= 1789765458`, so the freshness guard passes.
+Local runtime tests verify age exactly 7,200 seconds passes and 7,201 seconds fails.
+
+| Emergency case | Allocation, sats | Minimum total STX | Received STX | Unsold sats |
+| --- | --- | --- | --- | --- |
+| Valid DIA, default 10% tolerance | DLMM 10,000 | 25.836508 | 28.707443 | 0 |
+| Stale DIA, native fallback | DLMM 4,000 / XYK 3,000 / Velar 3,000 | 15.204315 | 28.645061 | 0 |
+
+DIA errors use a direct call to
+`SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3 get-native-price`.
+It returned `(ok u30408631185875)`, or **304,086.31185875 STX/BTC**.
+`limit = floor(native/2) = u15204315592937`, the lower edge of the 0.5x–2x
+band. For this sBTC sale, there is no upper cap on favorable STX output.
+The configurable DIA tolerance is default 10%, bounded at 50%, and applies to
+all emergency AMMs. It is not applied again to the native half-price floor.
+
+Prints report the reference `mid`, enforced `limit-price`, `price-source`, original
+`dia-error`, output and unsold sats. `mid` is diagnostic; `limit` enforces min-out.
+All transfers and failed-call state rollbacks are tested. Both sources unusable
+rejects; no zero-price escape is used. Emergency swaps remain admin-only and keep
+window, amount, chunk-size and cooldown guards. A zero window is allowed only
+between batches in the Juice vault.
 
 ## Timed admin handover
 
-The current admin calls `propose-admin`; only the proposed principal can call
-`accept-admin`, after 144 Bitcoin blocks. The current admin remains in charge
-until acceptance and can call `cancel-admin-proposal`. Replacing a proposal
-restarts the full 144-block delay. `get-pending-admin` exposes the nominee,
-proposal height and acceptance height. Each successful action emits a pool print.
+Only the current admin proposes/cancels a successor. Only the nominee accepts,
+no earlier than 144 Bitcoin blocks after the latest proposal. Replacement resets
+the delay; former-admin authority is revoked at acceptance. Fork and local tests
+cover 143/144-block boundaries, cancellation, replacement, repeat handover and
+committed prints. Current handover results are linked in the table above.
 
-```sh
-node simulations/pool-admin-handover-stxer.mjs
-```
+## Local runtime and Rendezvous
 
-Stxer: [0bb89b79924e5dac7fc81f96decec1f8](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8) — **52/52 checks passed**.
-The simulation checks 143/144-block boundaries, nominee-only acceptance,
-cancellation, replacement resetting the delay, former-admin authority revocation,
-a second successful handover, and decoded committed proposal/accept/cancel prints.
-It deploys both contract sources unchanged and advances actual fork Bitcoin blocks
-with one-second synthetic timestamps; it uses no reward, share or storage fixtures.
-Earlier swap/recovery runs below predate this admin-interface amendment.
+See [the self-contained harness README](../tests/vault/README.md) for every
+fixture/rewrite, coverage artifacts, seeds and replay commands. Runtime tests keep
+the real pool authorization wrappers and full vault source; external dependencies
+are local fixtures. RV alone binds the vault's POOL principal to the deployer
+actor and appends test-only progress/actor wrappers to make successful calls reachable.
+Production source files are never rewritten by the fixture builder.
+
+The confirmed defect was in the JavaScript Jing-router assertion, not the contract:
+decoded Clarity boolean true has `type: "true"`, not `.value === true`.
+The archived report's two false failures were corrected by rechecking the original
+committed events, and the current run passes all 39 assertions using the corrected
+checker. No new contract defect was found by these runs.
+
+## Historical reports
+
+Earlier results are preserved under [history](results/pool-vault-stx/history),
+with filenames equal to Stxer IDs. These document prior source versions and are
+not current-source coverage. In particular
+[ed4d8d4d0bb0698f50d4e059a811f026](https://stxer.xyz/simulations/mainnet/ed4d8d4d0bb0698f50d4e059a811f026)
+is the superseded optional-Pyth split prototype; its `err u16047` and interface no
+longer apply. The emergency function's separate interface is verified by current runs.

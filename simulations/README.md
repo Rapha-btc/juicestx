@@ -361,26 +361,10 @@ is coverage of its two *refusal* paths.
 
 ## Juice STX reward pool and swap vault
 
-Swap/recovery validation before the timed admin amendment: **263/263 checks passed**.
+Current-source verification on 2026-09-18: **471/471 Stxer checks passed** in 10
+forks, **129/129 local branch outcomes**, and **2,000 RV invariant checks** with
+no falsified invariant or runtime exception (60 completed fuzz batches).
 
-| Scenario | Passed | Stxer |
-| --- | --- | --- |
-| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/1f0b057a825cecb7ccb51cac99a3b593) |
-| Maker fill during resting window | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/fda8d36ef8d440cdf306f89fd350947a) |
-| Reclaim and smart-router liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/e036509b1b13ff7e6768b2873b70cbd5) |
-| Recovery → recovery → normal → recovery | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/10e4772ef6fba8fee2ba5a2d85c72fc5) |
-
-Commands and recovery behavior: [pool/vault simulations](README-pool-vault-stx.md).
-Raw reports, fixtures and earlier run links: [pool/vault results](results/pool-vault-stx/README.md).
-
-### Timed admin handover
-
-`node simulations/pool-admin-handover-stxer.mjs` — **52/52 checks passed**:
-[0bb89b79924e5dac7fc81f96decec1f8](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8).
-
-Tests nominee-only acceptance at 144 Bitcoin blocks (rejected at 143), proposal
-replacement/cancellation, revocation of the former admin, repeated handover and
-proposal/accept/cancel print events. Both sources are unchanged; this scenario
-uses actual fork-block advances with synthetic timestamps and no storage fixtures.
-See [handover behavior and commands](README-pool-vault-stx.md#timed-admin-handover)
-and [raw report](results/pool-vault-stx/juice-admin-handover.json).
+See [all current links, numeric examples, commands and coverage limits](README-pool-vault-stx.md),
+[raw fork reports](results/pool-vault-stx/README.md), and
+[the runtime/Rendezvous harness](../tests/vault/README.md).

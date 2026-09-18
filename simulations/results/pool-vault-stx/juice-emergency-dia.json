@@ -1,179 +1,166 @@
 {
-  "id": "575d7961086357312e7a464a543fdb98",
-  "url": "https://stxer.xyz/simulations/mainnet/575d7961086357312e7a464a543fdb98",
-  "kind": "juice",
-  "mode": "real-token-venue-maker",
-  "block": 9020569,
-  "burn": 967610,
-  "proofTimestamp": 1789765460,
-  "productionSourcesUnmodified": true,
+  "id": "f1aee856d660d58e8709ccd279fa296f",
+  "url": "https://stxer.xyz/simulations/mainnet/f1aee856d660d58e8709ccd279fa296f",
+  "tip": {
+    "canonical": true,
+    "height": 9020570,
+    "hash": "0x49c1754affca96439a2e8e532a55d8dc48bbee606320c081c7593e9846d9e6e5",
+    "block_time": 1789765458,
+    "block_time_iso": "2026-09-18T21:04:18.000Z",
+    "tenure_height": 256335,
+    "index_block_hash": "0x38f63604b96bbc98d5f57d41e1f2af1347f04d38b77c7014a3ca48c1e8d51f2a",
+    "parent_block_hash": "0x787911e7a45dfbbfc2c4a14c64c6243f5d742da964d0a2fb94f49d1c0d6f05c7",
+    "burn_block_time": 1789764046,
+    "burn_block_time_iso": "2026-09-18T20:40:46.000Z",
+    "burn_block_hash": "0x00000000000000000002206296fa331b4fba3dac92f222b40a2939550d35254a",
+    "burn_block_height": 967610,
+    "miner_txid": "0x7ae25c6e5e1c31b74070e0959f8d3c27cdbbacc3bef9cd531e992b8683354e7e",
+    "execution_cost_read_count": 0,
+    "execution_cost_read_length": 0,
+    "execution_cost_runtime": 0,
+    "execution_cost_write_count": 0,
+    "execution_cost_write_length": 0,
+    "txs": [
+      "0xf529f5df5f792b18573059c5a987694283dd0f993474c875bf24981c0615959f",
+      "0xfb8f007cd2642d50d51cdf04a8f3a71066285743fde1631f60bc8fd1cd15fa30"
+    ],
+    "parent_microblock_hash": "",
+    "parent_microblock_sequence": -1,
+    "microblocks_accepted": [],
+    "microblocks_streamed": [],
+    "microblock_tx_count": {}
+  },
+  "mode": "emergency-dia",
   "fixtures": [
-    "PoX earned rewards and 1:3 shares seeded with Eval; no STX lock admission tested",
-    "maker fill completes without advancing burn blocks",
-    "existing Jing orders canceled only in fork"
+    "Real whale transfer and pool Eval funding on fork only",
+    "Admin zero window; no Pyth fetched or supplied"
   ],
   "checks": [
     {
-      "label": "deploy unchanged juice-pool-swap-vault",
-      "passed": true,
-      "actual": "(ok true)"
+      "label": "deploy exact local juice-pool-swap-vault",
+      "kind": "tx",
+      "value": "(ok true)",
+      "passed": true
     },
     {
-      "label": "deploy unchanged juice-pool-stx-signer-stx-rewards",
-      "passed": true,
-      "actual": "(ok true)"
+      "label": "deploy exact local juice-pool-stx-signer-stx-rewards",
+      "kind": "tx",
+      "value": "(ok true)",
+      "passed": true
     },
     {
-      "label": "fund real PoX sBTC balance (fork only)",
-      "passed": true,
-      "actual": "(ok true)"
+      "label": "raw DIA STX/USD",
+      "kind": "eval",
+      "value": "(ok (tuple (timestamp u1789764657889) (value u28252561)))",
+      "passed": true
     },
     {
-      "label": "fixture: crystallized PoX rewards and 1:3 shares",
-      "passed": true,
-      "actual": "(ok true)"
+      "label": "raw DIA BTC/USD",
+      "kind": "eval",
+      "value": "(ok (tuple (timestamp u1789764657889) (value u8110528212401)))",
+      "passed": true
     },
     {
-      "label": "fixture persisted in unchanged PoX",
-      "passed": true,
-      "actual": "u100000"
+      "label": "DIA freshness arithmetic",
+      "kind": "eval",
+      "value": "(tuple (btc-ts-seconds u1789764657) (btc-valid true) (max-age u7200) (previous-block-time u1789765458) (stx-ts-seconds u1789764657) (stx-valid true))",
+      "passed": true
     },
     {
-      "label": "real PoX claim flows to vault",
-      "passed": true,
-      "actual": "(ok (tuple (bond-rewards (list )) (bond-totals u0) (stx-rewards (tuple (earned u100000) (rewards-per-token u909456324512))) (total-rewards u100000)))"
+      "label": "validated STX/USD integer",
+      "kind": "eval",
+      "value": "(ok u28252561)",
+      "passed": true
     },
     {
-      "label": "vault received all real sBTC",
-      "passed": true,
-      "actual": "(ok u100000)"
+      "label": "validated BTC/USD integer",
+      "kind": "eval",
+      "value": "(ok u8110528212401)",
+      "passed": true
     },
     {
-      "label": "fork cleanup existing x maker SPW81Q8C",
-      "passed": true,
-      "actual": "(ok u101279)"
+      "label": "legacy output guards for 10000 sats",
+      "kind": "eval",
+      "value": "(ok (tuple (mid u28707231929880) (normal-limit u28420159610581) (normal-min-ustx u28420159) (velar-min-ustx u28534988)))",
+      "passed": true
     },
     {
-      "label": "fork cleanup existing x maker SP1BP036",
-      "passed": true,
-      "actual": "(ok u278426)"
+      "label": "real deployed RFQ native price",
+      "kind": "eval",
+      "value": "(ok u30408631185875)",
+      "passed": true
     },
     {
-      "label": "fork cleanup existing x maker SP1JAG6T",
-      "passed": true,
-      "actual": "(ok u6978)"
+      "label": "emergency DIA price and limit",
+      "kind": "eval",
+      "value": "(ok (tuple (dia-error none) (limit u25836508736892) (mid u28707231929880) (source \"dia\")))",
+      "passed": true
     },
     {
-      "label": "fork cleanup existing y maker SP1BP036",
-      "passed": true,
-      "actual": "(ok u300000000)"
+      "label": "admin sets DIA emergency tolerance to 10 percent",
+      "kind": "tx",
+      "value": "(ok true)",
+      "passed": true
     },
     {
-      "label": "real Jing maker placement",
-      "passed": true,
-      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u100000) (floor u27260960124753)))))"
+      "label": "tolerance above 50 percent rejected",
+      "kind": "tx",
+      "value": "(err u16033)",
+      "passed": true
     },
     {
-      "label": "router forbidden during patience",
-      "passed": true,
-      "actual": "(err u16031)"
+      "label": "admin sets zero-block window",
+      "kind": "tx",
+      "value": "(ok true)",
+      "passed": true
     },
     {
-      "label": "cannot finalize while reward is resting",
-      "passed": true,
-      "actual": "(err u16043)"
+      "label": "fixture: real whale sBTC funds draft pool on fork",
+      "kind": "tx",
+      "value": "(ok true)",
+      "passed": true
     },
     {
-      "label": "additional real maker depth behind vault",
-      "passed": true,
-      "actual": "(ok u100000)"
+      "label": "fixture: pool funds exact draft vault",
+      "kind": "eval",
+      "value": "(ok u100000)",
+      "passed": true
     },
     {
-      "label": "real STX taker fills vault at verified oracle mid",
-      "passed": true,
-      "actual": "(ok (tuple (rebate-refunded u578) (token-x-received u149058) (token-x-rolled u0) (token-y-received u0) (token-y-rolled u2669)))"
+      "label": "zero window immediately elapsed",
+      "kind": "eval",
+      "value": "(tuple (batch-start (some u967610)) (burn-height u967610) (window-elapsed true) (window-ends (some u967610)) (window-open false))",
+      "passed": true
     },
     {
-      "label": "vault completely sold in patience phase",
-      "passed": true,
-      "actual": "true"
+      "label": "real DIA emergency DLMM swap",
+      "kind": "tx",
+      "value": "(ok (tuple (notification \"router-swap-split-dia\") (payload (tuple (amount u10000) (dia-error none) (dlmm u10000) (limit-price u25836508736892) (mid u28707231929880) (out u28707443) (price-source \"dia\") (unsold u0) (velar u0) (xyk u0)))))",
+      "passed": true
     },
     {
-      "label": "maker fill did not expire patience window",
-      "passed": true,
-      "actual": "(tuple (batch-start (some u967610)) (burn-height u967610) (window-elapsed false) (window-ends (some u967898)) (window-open true))"
+      "label": "balances after DIA emergency",
+      "kind": "eval",
+      "value": "(tuple (sbtc u90000) (stx u28707443))",
+      "passed": true
     },
     {
-      "label": "attribute real native STX back to pool",
-      "passed": true,
-      "actual": "(ok u287245581)"
-    },
-    {
-      "label": "Alice STX before payout",
-      "passed": true,
-      "actual": "u0"
-    },
-    {
-      "label": "Bob STX before payout",
-      "passed": true,
-      "actual": "u0"
-    },
-    {
-      "label": "pay 1:3 shares in real native STX",
-      "passed": true,
-      "actual": "(ok u287245580)"
-    },
-    {
-      "label": "Alice STX after payout",
-      "passed": true,
-      "actual": "u71811395"
-    },
-    {
-      "label": "Bob STX after payout",
-      "passed": true,
-      "actual": "u215434185"
-    },
-    {
-      "label": "repeating batch payout is safe",
-      "passed": true,
-      "actual": "(ok u0)"
-    },
-    {
-      "label": "Alice unchanged on replay",
-      "passed": true,
-      "actual": "u71811395"
-    },
-    {
-      "label": "vault clears clock after attribution",
-      "passed": true,
-      "actual": "(tuple (batch-start none) (burn-height u967610) (window-elapsed false) (window-ends none) (window-open false))"
-    },
-    {
-      "label": "Alice native STX matches pro-rata entitlement",
-      "passed": true,
-      "actual": "71811395, expected 71811395"
-    },
-    {
-      "label": "Bob native STX matches pro-rata entitlement",
-      "passed": true,
-      "actual": "215434185, expected 215434185"
-    },
-    {
-      "label": "payout replay does not transfer more STX",
-      "passed": true,
-      "actual": "compared Alice balance before/after replay"
+      "label": "router reports Jing skipped and no unsold sats",
+      "kind": "event",
+      "value": "(tuple (amount u10000) (dlmm-in u10000) (dlmm-out u28707443) (jing-in u0) (jing-ok false) (jing-out u0) (out u28707443) (topic \"swap-sbtc-for-stx\") (unsold u0) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault) (velar-in u0) (velar-out u0) (xyk-in u0) (xyk-out u0))",
+      "passed": true
     }
   ],
   "result": {
     "metadata": {
-      "block_hash": "787911e7a45dfbbfc2c4a14c64c6243f5d742da964d0a2fb94f49d1c0d6f05c7",
-      "block_height": 9020569,
+      "block_hash": "49c1754affca96439a2e8e532a55d8dc48bbee606320c081c7593e9846d9e6e5",
+      "block_height": 9020570,
       "burn_block_hash": "00000000000000000002206296fa331b4fba3dac92f222b40a2939550d35254a",
       "burn_block_height": 967610,
       "consensus_hash": "cf2f1329b31a1324cf614ed90c0ed2b93e22ffe8",
       "epoch": "4.0",
-      "index_block_hash": "f142ff4303399001961fc5eb452dd9ac716295aefb1b388d0bf6c0a0f66383cc",
-      "skip_tracing": true,
+      "index_block_hash": "38f63604b96bbc98d5f57d41e1f2af1347f04d38b77c7014a3ca48c1e8d51f2a",
+      "skip_tracing": false,
       "sortition_id": "ea4bff8c0218e213529132c0380eff27b51d41bb74057d3f23d6a73869b91a4c"
     },
     "steps": [
@@ -188,7 +175,7 @@
         "Result": {
           "Transaction": {
             "Ok": {
-              "costs": 61,
+              "costs": 30,
               "events": [],
               "execution_cost": {
                 "read_count": 30,
@@ -219,7 +206,7 @@
         "Result": {
           "Transaction": {
             "Ok": {
-              "costs": 49,
+              "costs": 24,
               "events": [],
               "execution_cost": {
                 "read_count": 31,
@@ -240,19 +227,220 @@
         "TxId": "784d288714ab673661c4a05383c8747e752b91fe1a079602586ca328a9a857de"
       },
       {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(contract-call? 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle get-value \"STX/USD\")"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "070c000000020974696d657374616d70010000000000000000000001a0b64962e10576616c75650100000000000000000000000001af1991"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(contract-call? 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle get-value \"BTC/USD\")"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "070c000000020974696d657374616d70010000000000000000000001a0b64962e10576616c75650100000000000000000000076061272db1"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(let ((now (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1))))\n(stx (unwrap-panic (contract-call? 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle get-value \"STX/USD\")))\n(btc (unwrap-panic (contract-call? 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle get-value \"BTC/USD\"))))\n{previous-block-time: now, max-age: MAX_DIA_AGE, stx-ts-seconds: (/ (get timestamp stx) u1000), btc-ts-seconds: (/ (get timestamp btc) u1000),\nstx-valid: (>= (+ (/ (get timestamp stx) u1000) MAX_DIA_AGE) now), btc-valid: (>= (+ (/ (get timestamp btc) u1000) MAX_DIA_AGE) now)})"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "0c000000060e6274632d74732d7365636f6e6473010000000000000000000000006aada431096274632d76616c696403076d61782d6167650100000000000000000000000000001c201370726576696f75732d626c6f636b2d74696d65010000000000000000000000006aada7520e7374782d74732d7365636f6e6473010000000000000000000000006aada431097374782d76616c696403"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(get-dia-value \"STX/USD\")"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "070100000000000000000000000001af1991"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(get-dia-value \"BTC/USD\")"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "070100000000000000000000076061272db1"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(let ((mid (try! (get-dia-price)))) (ok {mid: mid, normal-limit: (floor-of mid), normal-min-ustx: (floor-out u10000 (floor-of mid)), velar-min-ustx: (floor-out u10000 (/ (* mid (- BPS_PRECISION VELAR_SLIPPAGE_BPS)) BPS_PRECISION))}))"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "070c00000004036d696401000000000000000000001a1bec5c96180c6e6f726d616c2d6c696d6974010000000000000000000019d915849ed50f6e6f726d616c2d6d696e2d757374780100000000000000000000000001b1a83f0e76656c61722d6d696e2d757374780100000000000000000000000001b368cc"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3 get-native-price)"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "0701000000000000000000001ba80fa8f1d3"
+          }
+        }
+      },
+      {
+        "Eval": [
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
+          "",
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
+          "(get-no-pyth-price)"
+        ],
+        "Result": {
+          "Eval": {
+            "Ok": "070c00000004096469612d6572726f7209056c696d69740100000000000000000000177f87eced7c036d696401000000000000000000001a1bec5c961806736f757263650d00000003646961"
+          }
+        }
+      },
+      {
         "ExecutionCost": {
-          "read_count": 66,
-          "read_length": 6589,
-          "runtime": 2454006,
-          "write_count": 56,
-          "write_length": 50403
+          "read_count": 274,
+          "read_length": 84306,
+          "runtime": 2988602,
+          "write_count": 55,
+          "write_length": 50420
         },
         "Result": {
           "Transaction": {
             "Ok": {
-              "costs": 8,
+              "costs": 7,
               "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"100000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SP000000000000000000002Q6VF78.pox-5\",\"sender\":\"SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1\"},\"txid\":\"0xf5c4a1ec6b3e5da478920a25725dfb24348b628bd7bf0120519dce932169b13a\",\"type\":\"ft_transfer_event\"}"
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"raw_value\":\"0x0c000000020c6e6f74696669636174696f6e0d000000187365742d6e6f2d707974682d736c6970706167652d627073077061796c6f61640c000000010576616c756501000000000000000000000000000003e8\",\"topic\":\"print\"},\"event_index\":0,\"txid\":\"0x55f958d196e33a489afe6f491961d407f4898088b95396daabc825cdddaab4a4\",\"type\":\"contract_event\"}"
+              ],
+              "execution_cost": {
+                "read_count": 8,
+                "read_length": 44701,
+                "runtime": 46636,
+                "write_count": 1,
+                "write_length": 18
+              },
+              "post_condition_aborted": false,
+              "result": "0703",
+              "stx_burned": 0,
+              "tx_index": 0,
+              "vm_error": null
+            }
+          }
+        },
+        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f54000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264731e7365742d7661756c742d6e6f2d707974682d736c6970706167652d6270730000000101000000000000000000000000000003e8",
+        "TxId": "55f958d196e33a489afe6f491961d407f4898088b95396daabc825cdddaab4a4"
+      },
+      {
+        "ExecutionCost": {
+          "read_count": 281,
+          "read_length": 129007,
+          "runtime": 3034926,
+          "write_count": 55,
+          "write_length": 50420
+        },
+        "Result": {
+          "Transaction": {
+            "Ok": {
+              "costs": 2,
+              "events": [],
+              "execution_cost": {
+                "read_count": 7,
+                "read_length": 44701,
+                "runtime": 46324,
+                "write_count": 0,
+                "write_length": 0
+              },
+              "post_condition_aborted": false,
+              "result": "080100000000000000000000000000003ea1",
+              "stx_burned": 0,
+              "tx_index": 0,
+              "vm_error": null
+            }
+          }
+        },
+        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f55000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264731e7365742d7661756c742d6e6f2d707974682d736c6970706167652d627073000000010100000000000000000000000000001389",
+        "TxId": "57ac39fc791b94e0d65a0c46ff9c02644ee003f8eb00f7fc084477c3be7c1a9b"
+      },
+      {
+        "ExecutionCost": {
+          "read_count": 290,
+          "read_length": 173710,
+          "runtime": 3081813,
+          "write_count": 56,
+          "write_length": 50438
+        },
+        "Result": {
+          "Transaction": {
+            "Ok": {
+              "costs": 2,
+              "events": [
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"raw_value\":\"0x0c000000020c6e6f74696669636174696f6e0d000000117365742d77696e646f772d626c6f636b73077061796c6f61640c000000010576616c75650100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":0,\"txid\":\"0xb8db3a9099c0b2f91a4cea55ad5f3da18e286fd5c83c4265f2d9dfba2baa8a4d\",\"type\":\"contract_event\"}"
+              ],
+              "execution_cost": {
+                "read_count": 9,
+                "read_length": 44703,
+                "runtime": 46887,
+                "write_count": 1,
+                "write_length": 18
+              },
+              "post_condition_aborted": false,
+              "result": "0703",
+              "stx_burned": 0,
+              "tx_index": 0,
+              "vm_error": null
+            }
+          }
+        },
+        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f56000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d72657761726473177365742d7661756c742d77696e646f772d626c6f636b73000000010100000000000000000000000000000000",
+        "TxId": "b8db3a9099c0b2f91a4cea55ad5f3da18e286fd5c83c4265f2d9dfba2baa8a4d"
+      },
+      {
+        "ExecutionCost": {
+          "read_count": 295,
+          "read_length": 178520,
+          "runtime": 3088763,
+          "write_count": 58,
+          "write_length": 50439
+        },
+        "Result": {
+          "Transaction": {
+            "Ok": {
+              "costs": 5,
+              "events": [
+                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"100000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"sender\":\"SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1\"},\"txid\":\"0x18d7e8c738bc38b65045cf2381cd5a2db05db90a476cf1d714217e0291b61418\",\"type\":\"ft_transfer_event\"}"
               ],
               "execution_cost": {
                 "read_count": 5,
@@ -269,78 +457,15 @@
             }
           }
         },
-        "Transaction": "00000000010401b187d491eeb2777ac8a463e9e750085191c6706e000000000000000400000000000000000000000000000301000000000214f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e087472616e736665720000000401000000000000000000000000000186a00514b187d491eeb2777ac8a463e9e750085191c6706e0616000000000000000000000000000000000000000005706f782d3509",
-        "TxId": "f5c4a1ec6b3e5da478920a25725dfb24348b628bd7bf0120519dce932169b13a"
+        "Transaction": "00000000010401b187d491eeb2777ac8a463e9e750085191c6706e000000000000000400000000000000000000000000000301000000000214f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e087472616e736665720000000401000000000000000000000000000186a00514b187d491eeb2777ac8a463e9e750085191c6706e06163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d7265776172647309",
+        "TxId": "18d7e8c738bc38b65045cf2381cd5a2db05db90a476cf1d714217e0291b61418"
       },
       {
         "Eval": [
           "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
           "",
-          "SP000000000000000000002Q6VF78.pox-5",
-          "(begin\n  (map-set signer-shares-staked-for-cycle { reward-cycle: u142, bond-index: none, signer: 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards } u4)\n  (map-set signer-pending-staked-ustx-per-cycle { signer: 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards, cycle: u142 } u4)\n  (map-set signer-rewards-per-token-settled-for-cycle { reward-cycle: u142, bond-index: none, signer: 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards } (get-rewards-per-token-for-cycle u142 none))\n  (map-set signer-unclaimed-rewards-for-cycle { reward-cycle: u142, bond-index: none, signer: 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards } u100000)\n  (map-set staker-shares-staked-for-cycle { reward-cycle: u142, bond-index: none, signer: 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards, staker: 'SP61B953X60G9BXZEZYQQ4JP2S6M3MYFWHJ8AAVJ } u1)\n  (map-set staker-shares-staked-for-cycle { reward-cycle: u142, bond-index: none, signer: 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards, staker: 'SP3YEJ0JYJM1KVNJ94HCVTMA8GF7KJ4FEDSK4BPCN } u3)\n  (var-set last-accounted-rewards-only (+ (var-get last-accounted-rewards-only) u100000))\n  (try! (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards validate-stake! 'SP61B953X60G9BXZEZYQQ4JP2S6M3MYFWHJ8AAVJ u142 u1 u1 u0 false none))\n  (try! (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards validate-stake! 'SP3YEJ0JYJM1KVNJ94HCVTMA8GF7KJ4FEDSK4BPCN u142 u1 u3 u0 false none))\n  (ok true))"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "0703"
-          }
-        }
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SP000000000000000000002Q6VF78.pox-5",
-          "(get-signer-unclaimed-rewards-for-cycle 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards u142 none)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "01000000000000000000000000000186a0"
-          }
-        }
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 132,
-          "read_length": 385313,
-          "runtime": 2915131,
-          "write_count": 76,
-          "write_length": 51923
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 21,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"100000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"sender\":\"SP000000000000000000002Q6VF78.pox-5\"},\"txid\":\"0x0c5253e6f9d6b7250a933bcabd42075e01aabb8a27f794835c2496d4bae53288\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SP000000000000000000002Q6VF78.pox-5\",\"raw_value\":\"0x0c000000070c626f6e642d726577617264730b000000000b626f6e642d746f74616c7301000000000000000000000000000000000c7265776172642d6379636c65010000000000000000000000000000008e0e7369676e65722d6d616e6167657206163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264730b7374782d726577617264730c00000002066561726e656401000000000000000000000000000186a011726577617264732d7065722d746f6b656e010000000000000000000000d3bfd237a005746f7069630d0000000d636c61696d2d726577617264730d746f74616c2d7265776172647301000000000000000000000000000186a0\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0x0c5253e6f9d6b7250a933bcabd42075e01aabb8a27f794835c2496d4bae53288\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"event_index\":2,\"ft_transfer_event\":{\"amount\":\"100000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\"},\"txid\":\"0x0c5253e6f9d6b7250a933bcabd42075e01aabb8a27f794835c2496d4bae53288\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"raw_value\":\"0x0c000000020c6e6f74696669636174696f6e0d0000000466756e64077061796c6f61640c0000000206616d6f756e7401000000000000000000000000000186a00b62617463682d737461727401000000000000000000000000000ec3ba\",\"topic\":\"print\"},\"event_index\":3,\"txid\":\"0x0c5253e6f9d6b7250a933bcabd42075e01aabb8a27f794835c2496d4bae53288\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"raw_value\":\"0x0c0000000607636c61696d656401000000000000000000000000000186a00a646973742d6379636c65010000000000000000000000000000011f086665652d6269707301000000000000000000000000000000000c7265776172642d6379636c65010000000000000000000000000000008e05746f7069630d0000000d636c61696d2d72657761726473077472616e6368650100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":4,\"txid\":\"0x0c5253e6f9d6b7250a933bcabd42075e01aabb8a27f794835c2496d4bae53288\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 48,
-                "read_length": 329009,
-                "runtime": 356372,
-                "write_count": 13,
-                "write_length": 689
-              },
-              "post_condition_aborted": false,
-              "result": "070c000000040c626f6e642d726577617264730b000000000b626f6e642d746f74616c7301000000000000000000000000000000000b7374782d726577617264730c00000002066561726e656401000000000000000000000000000186a011726577617264732d7065722d746f6b656e010000000000000000000000d3bfd237a00d746f74616c2d7265776172647301000000000000000000000000000186a0",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f54000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d7265776172647311706f782d636c61696d2d72657761726473000000020b00000000010000000000000000000000000000008e",
-        "TxId": "0c5253e6f9d6b7250a933bcabd42075e01aabb8a27f794835c2496d4bae53288"
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
-          "(contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance current-contract)"
+          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards",
+          "(as-contract? ((with-ft SBTC \"sbtc-token\" u100000)) (try! (contract-call? SWAP_VAULT fund u100000)))"
         ],
         "Result": {
           "Eval": {
@@ -349,338 +474,6 @@
         }
       },
       {
-        "ExecutionCost": {
-          "read_count": 170,
-          "read_length": 527965,
-          "runtime": 3114568,
-          "write_count": 85,
-          "write_length": 52330
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 29,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"101279\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPW81Q8C7S1ZD0ZDRF50TZ4RA32A1FADPHXMACF7\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0x7bc7f0f1adcf57cd2845b798b6ce48be3a836ef9f112d43de50e599be3440bd2\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000806616d6f756e740100000000000000000000000000018b9f056379636c650100000000000000000000000000000000096465706f7369746f7205163880dd0c3e43f683edc3ca0d7c9850c4a0bd4db4086571756974792d780100000000000000000000000000000000056576656e740d00000008726566756e642d78066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0x7bc7f0f1adcf57cd2845b798b6ce48be3a836ef9f112d43de50e599be3440bd2\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 33,
-                "read_length": 137841,
-                "runtime": 190155,
-                "write_count": 9,
-                "write_length": 407
-              },
-              "post_condition_aborted": false,
-              "result": "070100000000000000000000000000018b9f",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "000000000104003880dd0c3e43f683edc3ca0d7c9850c4a0bd4db4000000000000000a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76361663616e63656c2d746f6b656e2d782d6465706f736974000000020614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e0d0000000a736274632d746f6b656e",
-        "TxId": "7bc7f0f1adcf57cd2845b798b6ce48be3a836ef9f112d43de50e599be3440bd2"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 202,
-          "read_length": 665761,
-          "runtime": 3303932,
-          "write_count": 94,
-          "write_length": 52715
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 28,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"278426\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SP1BP036PHHJMZG6G2YYVKW4GH15KRD7YNKT6VW8Q\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0x6af837877d075bc499093661f42a50dac309a55c30677688d1b6f0caf664e4ec\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000806616d6f756e740100000000000000000000000000043f9a056379636c650100000000000000000000000000000000096465706f7369746f72051657600cd68c654fc0d017bdb9f090884b3c34feac086571756974792d780100000000000000000000000000000000056576656e740d00000008726566756e642d78066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0x6af837877d075bc499093661f42a50dac309a55c30677688d1b6f0caf664e4ec\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 32,
-                "read_length": 137796,
-                "runtime": 189364,
-                "write_count": 9,
-                "write_length": 385
-              },
-              "post_condition_aborted": false,
-              "result": "070100000000000000000000000000043f9a",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "0000000001040057600cd68c654fc0d017bdb9f090884b3c34feac0000000000000048000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76361663616e63656c2d746f6b656e2d782d6465706f736974000000020614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e0d0000000a736274632d746f6b656e",
-        "TxId": "6af837877d075bc499093661f42a50dac309a55c30677688d1b6f0caf664e4ec"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 233,
-          "read_length": 803512,
-          "runtime": 3492505,
-          "write_count": 103,
-          "write_length": 53078
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 27,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"6978\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SP1JAG6TV2XRYFGJN7CAAN6Z3CEW2YMZWMHJAJV91\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0x5b26fcbcd8d3c6bfc9799ff7b12b56f2257c2a3d5e9995a3ac833c41d0dc8cc3\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000806616d6f756e740100000000000000000000000000001b42056379636c650100000000000000000000000000000000096465706f7369746f72051664a81b5b1771e7c2553b14aa9be363b82f53fca4086571756974792d780100000000000000000000000000000000056576656e740d00000008726566756e642d78066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0x5b26fcbcd8d3c6bfc9799ff7b12b56f2257c2a3d5e9995a3ac833c41d0dc8cc3\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 31,
-                "read_length": 137751,
-                "runtime": 188573,
-                "write_count": 9,
-                "write_length": 363
-              },
-              "post_condition_aborted": false,
-              "result": "070100000000000000000000000000001b42",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "0000000001040064a81b5b1771e7c2553b14aa9be363b82f53fca4000000000000024a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76361663616e63656c2d746f6b656e2d782d6465706f736974000000020614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e0d0000000a736274632d746f6b656e",
-        "TxId": "5b26fcbcd8d3c6bfc9799ff7b12b56f2257c2a3d5e9995a3ac833c41d0dc8cc3"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 260,
-          "read_length": 936469,
-          "runtime": 3664812,
-          "write_count": 111,
-          "write_length": 53451
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 23,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"stx_transfer_event\":{\"amount\":\"300000000\",\"memo\":\"\",\"recipient\":\"SP1BP036PHHJMZG6G2YYVKW4GH15KRD7YNKT6VW8Q\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xc3005fa2f66a28e1683b2de89846482407774979183ec579fdbed8b0e077de6a\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000806616d6f756e740100000000000000000000000011e1a300056379636c650100000000000000000000000000000000096465706f7369746f72051657600cd68c654fc0d017bdb9f090884b3c34feac086571756974792d790100000000000000000000000000000000056576656e740d00000008726566756e642d79066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0xc3005fa2f66a28e1683b2de89846482407774979183ec579fdbed8b0e077de6a\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 27,
-                "read_length": 132957,
-                "runtime": 172307,
-                "write_count": 8,
-                "write_length": 373
-              },
-              "post_condition_aborted": false,
-              "result": "070100000000000000000000000011e1a300",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "0000000001040057600cd68c654fc0d017bdb9f090884b3c34feac0000000000000049000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76361663616e63656c2d746f6b656e2d792d6465706f7369740000000206144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d320d0000000477737478",
-        "TxId": "c3005fa2f66a28e1683b2de89846482407774979183ec579fdbed8b0e077de6a"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 362,
-          "read_length": 1287931,
-          "runtime": 4961422,
-          "write_count": 119,
-          "write_length": 53975
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 54,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"100000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\"},\"txid\":\"0xb56d47ae6d3253f95465c91c4f18fa90916b2d9f836c5fc9160ea6cbf9c8af62\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000d06616d6f756e7401000000000000000000000000000186a0056379636c6501000000000000000000000000000000000564656c746101000000000000000000000000000186a0096465706f7369746f7206163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c74086571756974792d7801000000000000000000000000000186a0056576656e740d000000096465706f7369742d78056c696d6974010000000000000000000018cb2fd82f51066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d7636067061726b6564090d7061726b65642d616d6f756e7401000000000000000000000000000000000f7061726b65642d6571756974792d780907746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0xb56d47ae6d3253f95465c91c4f18fa90916b2d9f836c5fc9160ea6cbf9c8af62\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c00000008056379636c650100000000000000000000000000000000096465706f7369746f7206163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c74056576656e740d000000057065672d7805666c6f6f72010000000000000000000018cb2fd82f51066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76360a7370726561642d627073010000000000000000000000000000000007746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":2,\"txid\":\"0xb56d47ae6d3253f95465c91c4f18fa90916b2d9f836c5fc9160ea6cbf9c8af62\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"raw_value\":\"0x0c000000020c6e6f74696669636174696f6e0d0000000a6a696e672d706c616365077061796c6f61640c0000000206616d6f756e7401000000000000000000000000000186a005666c6f6f72010000000000000000000018cb2fd82f51\",\"topic\":\"print\"},\"event_index\":3,\"txid\":\"0xb56d47ae6d3253f95465c91c4f18fa90916b2d9f836c5fc9160ea6cbf9c8af62\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 102,
-                "read_length": 351462,
-                "runtime": 1296610,
-                "write_count": 8,
-                "write_length": 524
-              },
-              "post_condition_aborted": false,
-              "result": "070c000000020c6e6f74696669636174696f6e0d0000000a6a696e672d706c616365077061796c6f61640c0000000206616d6f756e7401000000000000000000000000000186a005666c6f6f72010000000000000000000018cb2fd82f51",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "00000000010400402da2c079e5d31d58b9cfc7286d1b1eb2f7834e0000000000000174000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c740a6a696e672d706c6163650000000102000000a32a22999a72839ab6202d5a1349cb67f66751bdbaa3705305179f0ca9e6e48159532f31ec2c6f7dc74bead29a1dd912f496ba5529a92697c4da5178c0c39abaf8342f496401005c93c7d37500065bc83e797d000402000000010500000007619b0b697904fff80500000000504a86e703001a0c0100065bc83e797d000000002d05000000000001af8d6c04fff80500000000000027940300110c0100065bc83e797d00",
-        "TxId": "b56d47ae6d3253f95465c91c4f18fa90916b2d9f836c5fc9160ea6cbf9c8af62"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 412,
-          "read_length": 1560049,
-          "runtime": 5960082,
-          "write_count": 119,
-          "write_length": 53975
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 31,
-              "events": [],
-              "execution_cost": {
-                "read_count": 50,
-                "read_length": 272118,
-                "runtime": 998660,
-                "write_count": 0,
-                "write_length": 0
-              },
-              "post_condition_aborted": false,
-              "result": "080100000000000000000000000000003e9f",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "00000000010400402da2c079e5d31d58b9cfc7286d1b1eb2f7834e0000000000000175000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c740b726f757465722d7377617000000002010000000000000000000000000000c35002000000a32a22999a72839ab6202d5a1349cb67f66751bdbaa3705305179f0ca9e6e48159532f31ec2c6f7dc74bead29a1dd912f496ba5529a92697c4da5178c0c39abaf8342f496401005c93c7d37500065bc83e797d000402000000010500000007619b0b697904fff80500000000504a86e703001a0c0100065bc83e797d000000002d05000000000001af8d6c04fff80500000000000027940300110c0100065bc83e797d00",
-        "TxId": "04c4163a93f83749191a9a5f3deccd72078b3c0523f3d41d4ec28eb7f3b5842f"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 434,
-          "read_length": 1810407,
-          "runtime": 6219459,
-          "write_count": 119,
-          "write_length": 53975
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 16,
-              "events": [],
-              "execution_cost": {
-                "read_count": 22,
-                "read_length": 250358,
-                "runtime": 259377,
-                "write_count": 0,
-                "write_length": 0
-              },
-              "post_condition_aborted": false,
-              "result": "080100000000000000000000000000003eab",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f55000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264730d66696e616c697a652d7377617000000000",
-        "TxId": "f3f65d16060524d8bdfe6839b5d9d483c69c7d26c3d32c25f1e3d23960eb3754"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 474,
-          "read_length": 1948362,
-          "runtime": 6570440,
-          "write_count": 127,
-          "write_length": 54438
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 28,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"100000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\",\"sender\":\"SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1\"},\"txid\":\"0x721671fd0724b3b97708b1610833de58a67da2114d7ded4285a2fbb7bc03ef80\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000d06616d6f756e7401000000000000000000000000000186a0056379636c6501000000000000000000000000000000000564656c746101000000000000000000000000000186a0096465706f7369746f720514b187d491eeb2777ac8a463e9e750085191c6706e086571756974792d7801000000000000000000000000000186a0056576656e740d000000096465706f7369742d78056c696d697401000000000000000000001a5c0fd5ab91066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d7636067061726b6564090d7061726b65642d616d6f756e7401000000000000000000000000000000000f7061726b65642d6571756974792d780907746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0x721671fd0724b3b97708b1610833de58a67da2114d7ded4285a2fbb7bc03ef80\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 40,
-                "read_length": 137955,
-                "runtime": 350981,
-                "write_count": 8,
-                "write_length": 463
-              },
-              "post_condition_aborted": false,
-              "result": "0701000000000000000000000000000186a0",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "00000000010401b187d491eeb2777ac8a463e9e750085191c6706e0000000000000005000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76360f6465706f7369742d746f6b656e2d780000000601000000000000000000000000000186a001000000000000000000001a5c0fd5ab910902000000a32a22999a72839ab6202d5a1349cb67f66751bdbaa3705305179f0ca9e6e48159532f31ec2c6f7dc74bead29a1dd912f496ba5529a92697c4da5178c0c39abaf8342f496401005c93c7d37500065bc83e797d000402000000010500000007619b0b697904fff80500000000504a86e703001a0c0100065bc83e797d000000002d05000000000001af8d6c04fff80500000000000027940300110c0100065bc83e797d000614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e0d0000000a736274632d746f6b656e",
-        "TxId": "721671fd0724b3b97708b1610833de58a67da2114d7ded4285a2fbb7bc03ef80"
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 795,
-          "read_length": 2346328,
-          "runtime": 8191560,
-          "write_count": 216,
-          "write_length": 57625
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 107,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"stx_transfer_event\":{\"amount\":\"860872\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\",\"sender\":\"SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":1,\"stx_transfer_event\":{\"amount\":\"429575339\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\",\"sender\":\"SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000d06616d6f756e7401000000000000000000000000199accab056379636c6501000000000000000000000000000000000564656c746101000000000000000000000000199accab096465706f7369746f72051612bb12d539195c17ba3b28aa2eca0438c4c68b32086571756974792d7901000000000000000000000000199accab056576656e740d000000096465706f7369742d79056c696d697401000000000000000000001b674fd3fe67066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d7636067061726b6564090d7061726b65642d616d6f756e7401000000000000000000000000000000000f7061726b65642d6571756974792d790907746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":2,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000906616d6f756e7401000000000000000000000000000186a008636c656172696e6701000000000000000000001a193fd616dc056379636c650100000000000000000000000000000000096465706f7369746f720514b187d491eeb2777ac8a463e9e750085191c6706e056576656e740d0000000c6c696d69742d726f6c6c2d78056c696d697401000000000000000000001a5c0fd5ab91066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":3,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"event_index\":4,\"stx_transfer_event\":{\"amount\":\"286957\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":5,\"ft_transfer_event\":{\"amount\":\"100\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c000000100c62696e64696e672d736964650d00000001780e636c656172696e672d707269636501000000000000000000001a193fd616dc056379636c650100000000000000000000000000000000056576656e740d0000000a736574746c656d656e74066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76360c6f7261636c652d707269636501000000000000000000001a193fd616dc07746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d3209782d636c656172656401000000000000000000000000000186a005782d666565010000000000000000000000000000006408782d72656261746501000000000000000000000000000000000a782d756e66696c6c6564010000000000000000000000000000000009792d636c656172656401000000000000000000000000111a9fa205792d66656501000000000000000000000000000460ed08792d726562617465010000000000000000000000000008c6580a792d756e66696c6c65640100000000000000000000000008802d09\",\"topic\":\"print\"},\"event_index\":6,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"event_index\":7,\"ft_transfer_event\":{\"amount\":\"99900\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000b056379636c650100000000000000000000000000000000096465706f7369746f72051612bb12d539195c17ba3b28aa2eca0438c4c68b32086571756974792d780100000000000000000000000000000000086571756974792d790100000000000000000000000008802d09056576656e740d00000016646973747269627574652d792d6465706f7369746f72066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d320a782d7265636569766564010000000000000000000000000001863c09792d636c656172656401000000000000000000000000111a9fa208792d726f6c6c65640100000000000000000000000008802d09\",\"topic\":\"print\"},\"event_index\":8,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"event_index\":9,\"stx_transfer_event\":{\"amount\":\"287245581\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000b056379636c650100000000000000000000000000000000096465706f7369746f7206163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c74086571756974792d780100000000000000000000000000000000086571756974792d790100000000000000000000000000000000056576656e740d00000016646973747269627574652d782d6465706f7369746f72066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d3209782d636c656172656401000000000000000000000000000186a008782d726f6c6c656401000000000000000000000000000000000a792d726563656976656401000000000000000000000000111f050d\",\"topic\":\"print\"},\"event_index\":10,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000c056576656e740d0000000a73776565702d64757374066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d763607746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d3206782d6475737401000000000000000000000000000000000d782d7061796f75742d6475737401000000000000000000000000000000000b782d726f6c6c2d6475737401000000000000000000000000000000000a782d756e66696c6c6564010000000000000000000000000000000006792d6475737401000000000000000000000000000000000d792d7061796f75742d6475737401000000000000000000000000000000000b792d726f6c6c2d6475737401000000000000000000000000000000000a792d756e66696c6c65640100000000000000000000000008802d09\",\"topic\":\"print\"},\"event_index\":11,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"event_index\":12,\"stx_transfer_event\":{\"amount\":\"142757811\",\"memo\":\"\",\"recipient\":\"SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":13,\"stx_transfer_event\":{\"amount\":\"142615\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":14,\"ft_transfer_event\":{\"amount\":\"49158\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":15,\"ft_transfer_event\":{\"amount\":\"49\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"ft_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.jing-core-v5\",\"raw_value\":\"0x0c0000000c056379636c650100000000000000000000000000000000056576656e740d000000056d61746368056d616b65720514b187d491eeb2777ac8a463e9e750085191c6706e066d61726b657406163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d7636036d696401000000000000000000001a193fd616dc05707269636501000000000000000000001a5c0fd5ab910574616b6572051612bb12d539195c17ba3b28aa2eca0438c4c68b3207746f6b656e2d780614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e07746f6b656e2d7906144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d3208782d747261646564010000000000000000000000000000c0370a792d69732d74616b65720308792d747261646564010000000000000000000000000880229c\",\"topic\":\"print\"},\"event_index\":16,\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"event_index\":17,\"stx_transfer_event\":{\"amount\":\"578\",\"memo\":\"\",\"recipient\":\"SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":18,\"stx_transfer_event\":{\"amount\":\"2669\",\"memo\":\"\",\"recipient\":\"SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6\"},\"txid\":\"0xd773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8\",\"type\":\"stx_transfer_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 321,
-                "read_length": 397966,
-                "runtime": 1621120,
-                "write_count": 89,
-                "write_length": 3187
-              },
-              "post_condition_aborted": false,
-              "result": "070c000000050f7265626174652d726566756e646564010000000000000000000000000000024210746f6b656e2d782d726563656976656401000000000000000000000000000246420e746f6b656e2d782d726f6c6c6564010000000000000000000000000000000010746f6b656e2d792d726563656976656401000000000000000000000000000000000e746f6b656e2d792d726f6c6c65640100000000000000000000000000000a6d",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "0000000001040012bb12d539195c17ba3b28aa2eca0438c4c68b3200000000000007c1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e186d61726b6574732d736274632d7374782d6a696e672d76360473776170000000080100000000000000000000000019a7ef7301000000000000000000001b674fd3fe6702000000a32a22999a72839ab6202d5a1349cb67f66751bdbaa3705305179f0ca9e6e48159532f31ec2c6f7dc74bead29a1dd912f496ba5529a92697c4da5178c0c39abaf8342f496401005c93c7d37500065bc83e797d000402000000010500000007619b0b697904fff80500000000504a86e703001a0c0100065bc83e797d000000002d05000000000001af8d6c04fff80500000000000027940300110c0100065bc83e797d000614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e0d0000000a736274632d746f6b656e06144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d320d000000047773747804",
-        "TxId": "d773d1fe7b872e782fcf3bf47a28e8c3c18bcbf28fd54bab2eeb3841cb25a3b8"
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
-          "(is-empty)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "03"
-          }
-        }
-      },
-      {
         "Eval": [
           "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
           "",
@@ -689,188 +482,60 @@
         ],
         "Result": {
           "Eval": {
-            "Ok": "0c000000050b62617463682d73746172740a01000000000000000000000000000ec3ba0b6275726e2d68656967687401000000000000000000000000000ec3ba0e77696e646f772d656c6170736564040b77696e646f772d656e64730a01000000000000000000000000000ec4da0b77696e646f772d6f70656e03"
+            "Ok": "0c000000050b62617463682d73746172740a01000000000000000000000000000ec3ba0b6275726e2d68656967687401000000000000000000000000000ec3ba0e77696e646f772d656c6170736564030b77696e646f772d656e64730a01000000000000000000000000000ec3ba0b77696e646f772d6f70656e04"
           }
         }
       },
       {
         "ExecutionCost": {
-          "read_count": 852,
-          "read_length": 3003124,
-          "runtime": 8871292,
-          "write_count": 221,
-          "write_length": 57772
+          "read_count": 402,
+          "read_length": 535679,
+          "runtime": 7100922,
+          "write_count": 67,
+          "write_length": 50655
         },
         "Result": {
           "Transaction": {
             "Ok": {
-              "costs": 21,
+              "costs": 60,
               "events": [
-                "{\"committed\":true,\"event_index\":0,\"stx_transfer_event\":{\"amount\":\"287245581\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\"},\"txid\":\"0x87a9b29047845091c66d1caccd8460f8af39d688dcfe033df37c7de9e56806a5\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"raw_value\":\"0x0c000000020c6e6f74696669636174696f6e0d0000000666696e697368077061796c6f61640c0000000106616d6f756e7401000000000000000000000000111f050d\",\"topic\":\"print\"},\"event_index\":1,\"txid\":\"0x87a9b29047845091c66d1caccd8460f8af39d688dcfe033df37c7de9e56806a5\",\"type\":\"contract_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"raw_value\":\"0x0c0000000406616d6f756e7401000000000000000000000000111f050d0c7265776172642d6379636c65010000000000000000000000000000008e05746f7069630d0000000d66696e616c697a652d73776170077472616e6368650100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":2,\"txid\":\"0x87a9b29047845091c66d1caccd8460f8af39d688dcfe033df37c7de9e56806a5\",\"type\":\"contract_event\"}"
+                "{\"committed\":true,\"event_index\":0,\"ft_transfer_event\":{\"amount\":\"10000\",\"asset_identifier\":\"SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token::sbtc-token\",\"recipient\":\"SM1FKXGNZJWSTWDWXQZJNF7B5TV5ZB235JTCXYXKD.dlmm-pool-stx-sbtc-v-2-bps-15\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\"},\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"ft_transfer_event\"}",
+                "{\"committed\":true,\"event_index\":1,\"stx_transfer_event\":{\"amount\":\"28707443\",\"memo\":\"\",\"recipient\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"sender\":\"SM1FKXGNZJWSTWDWXQZJNF7B5TV5ZB235JTCXYXKD.dlmm-pool-stx-sbtc-v-2-bps-15\"},\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"stx_transfer_event\"}",
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2\",\"raw_value\":\"0x0c0000000306616374696f6e0d000000087472616e736665720663616c6c657206145f3ec2bf9733ae379dbfe5579d65d6cbf58865961d646c6d6d2d706f6f6c2d7374782d736274632d762d322d6270732d313504646174610c0000000406616d6f756e740100000000000000000000000001b60a73046d656d6f0909726563697069656e7406163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c740673656e64657206145f3ec2bf9733ae379dbfe5579d65d6cbf58865961d646c6d6d2d706f6f6c2d7374782d736274632d762d322d6270732d3135\",\"topic\":\"print\"},\"event_index\":2,\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"contract_event\"}",
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SM1FKXGNZJWSTWDWXQZJNF7B5TV5ZB235JTCXYXKD.dlmm-pool-stx-sbtc-v-2-bps-15\",\"raw_value\":\"0x0c0000000206616374696f6e0d0000000d706f6f6c2d7472616e7366657204646174610c0000000306616d6f756e740100000000000000000000000001b60a7309726563697069656e7406163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c7405746f6b656e06144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d32\",\"topic\":\"print\"},\"event_index\":3,\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"contract_event\"}",
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SM1FKXGNZJWSTWDWXQZJNF7B5TV5ZB235JTCXYXKD.dlmm-pool-stx-sbtc-v-2-bps-15\",\"raw_value\":\"0x0c0000000206616374696f6e0d000000137570646174652d62696e2d62616c616e63657304646174610c000000030662696e2d6964010000000000000000000000000000037009782d62616c616e63650100000000000000000000000702fbbc7509792d62616c616e63650100000000000000000000000000083337\",\"topic\":\"print\"},\"event_index\":4,\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"contract_event\"}",
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SP1PFR4V08H1RAZXREBGFFQ59WB739XM8VVGTFSEA.dlmm-core-v-1-1\",\"raw_value\":\"0x0c0000000306616374696f6e0d0000000c737761702d792d666f722d780663616c6c657206163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c7404646174610c000000180d6163746976652d62696e2d6964000000000000000000000000000000017c0662696e2d6964000000000000000000000000000000017c0962696e2d707269636501000000000000000000000000000087640862696e2d73746570010000000000000000000000000000000f0264780100000000000000000000000001b60a7302647901000000000000000000000000000026de1a696e697469616c2d62696e2d62616c616e6365732d656d707479040d696e697469616c2d70726963650100000000000000000000000000004c9a0d706f6f6c2d636f6e747261637406145f3ec2bf9733ae379dbfe5579d65d6cbf58865961d646c6d6d2d706f6f6c2d7374782d736274632d762d322d6270732d313507706f6f6c2d6964010000000000000000000000000000000f09706f6f6c2d6e616d650d0000000b5354582d734254432d4c5012737761702d6665652d6578656d7074696f6e040f756e7369676e65642d62696e2d6964010000000000000000000000000000037015757064617465642d6163746976652d62696e2d6964000000000000000000000000000000017c14757064617465642d6d61782d792d616d6f756e740100000000000000000000000000a0389911757064617465642d782d62616c616e63650100000000000000000000000702fbbc7510757064617465642d792d616d6f756e74010000000000000000000000000000271011757064617465642d792d62616c616e6365010000000000000000000000000008333707782d746f6b656e06144e91b0982dbe4ae49bb9394b1f339fb7144beee60f746f6b656e2d7374782d762d312d3208792d616d6f756e74010000000000000000000000000000271016792d616d6f756e742d666565732d70726f746f636f6c010000000000000000000000000000001916792d616d6f756e742d666565732d70726f7669646572010000000000000000000000000000001916792d616d6f756e742d666565732d7661726961626c65010000000000000000000000000000000007792d746f6b656e0614f6decc7cfff2a413bd7cd4f53c25ad7fd1899acc0a736274632d746f6b656e\",\"topic\":\"print\"},\"event_index\":5,\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"contract_event\"}",
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5\",\"raw_value\":\"0x0c0000000e06616d6f756e74010000000000000000000000000000271007646c6d6d2d696e010000000000000000000000000000271008646c6d6d2d6f75740100000000000000000000000001b60a73076a696e672d696e0100000000000000000000000000000000076a696e672d6f6b04086a696e672d6f75740100000000000000000000000000000000036f75740100000000000000000000000001b60a7305746f7069630d00000011737761702d736274632d666f722d73747806756e736f6c640100000000000000000000000000000000047573657206163699883a5bd5324eb8975e56bec8a9f843409b4e156a756963652d706f6f6c2d737761702d7661756c740876656c61722d696e01000000000000000000000000000000000976656c61722d6f757401000000000000000000000000000000000678796b2d696e01000000000000000000000000000000000778796b2d6f75740100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":6,\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"contract_event\"}",
+                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault\",\"raw_value\":\"0x0c000000020c6e6f74696669636174696f6e0d00000015726f757465722d737761702d73706c69742d646961077061796c6f61640c0000000a06616d6f756e740100000000000000000000000000002710096469612d6572726f720904646c6d6d01000000000000000000000000000027100b6c696d69742d70726963650100000000000000000000177f87eced7c036d696401000000000000000000001a1bec5c9618036f75740100000000000000000000000001b60a730c70726963652d736f757263650d0000000364696106756e736f6c6401000000000000000000000000000000000576656c617201000000000000000000000000000000000378796b0100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":7,\"txid\":\"0xc1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727\",\"type\":\"contract_event\"}"
               ],
               "execution_cost": {
-                "read_count": 31,
-                "read_length": 350720,
-                "runtime": 367679,
-                "write_count": 5,
-                "write_length": 147
+                "read_count": 86,
+                "read_length": 332297,
+                "runtime": 3977064,
+                "write_count": 6,
+                "write_length": 196
               },
               "post_condition_aborted": false,
-              "result": "0701000000000000000000000000111f050d",
+              "result": "070c000000020c6e6f74696669636174696f6e0d00000015726f757465722d737761702d73706c69742d646961077061796c6f61640c0000000a06616d6f756e740100000000000000000000000000002710096469612d6572726f720904646c6d6d01000000000000000000000000000027100b6c696d69742d70726963650100000000000000000000177f87eced7c036d696401000000000000000000001a1bec5c9618036f75740100000000000000000000000001b60a730c70726963652d736f757263650d0000000364696106756e736f6c6401000000000000000000000000000000000576656c617201000000000000000000000000000000000378796b0100000000000000000000000000000000",
               "stx_burned": 0,
               "tx_index": 0,
               "vm_error": null
             }
           }
         },
-        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f56000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264730d66696e616c697a652d7377617000000000",
-        "TxId": "87a9b29047845091c66d1caccd8460f8af39d688dcfe033df37c7de9e56806a5"
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards",
-          "(stx-get-balance 'SP61B953X60G9BXZEZYQQ4JP2S6M3MYFWHJ8AAVJ)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "0100000000000000000000000000000000"
-          }
-        }
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards",
-          "(stx-get-balance 'SP3YEJ0JYJM1KVNJ94HCVTMA8GF7KJ4FEDSK4BPCN)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "0100000000000000000000000000000000"
-          }
-        }
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 888,
-          "read_length": 3440192,
-          "runtime": 9362660,
-          "write_count": 229,
-          "write_length": 58306
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 20,
-              "events": [
-                "{\"committed\":true,\"event_index\":0,\"stx_transfer_event\":{\"amount\":\"71811395\",\"memo\":\"\",\"recipient\":\"SP61B953X60G9BXZEZYQQ4JP2S6M3MYFWHJ8AAVJ\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\"},\"txid\":\"0x61fad1a74cb2899b727113d0a73ca22abe727326785da7b989242b13f7ed0f68\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"event_index\":1,\"stx_transfer_event\":{\"amount\":\"215434185\",\"memo\":\"\",\"recipient\":\"SP3YEJ0JYJM1KVNJ94HCVTMA8GF7KJ4FEDSK4BPCN\",\"sender\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\"},\"txid\":\"0x61fad1a74cb2899b727113d0a73ca22abe727326785da7b989242b13f7ed0f68\",\"type\":\"stx_transfer_event\"}",
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"raw_value\":\"0x0c0000000605636f756e740100000000000000000000000000000002046665657301000000000000000000000000000000000c7265776172642d6379636c65010000000000000000000000000000008e05746f7069630d0000000f7061792d7374782d7374616b65727305746f74616c01000000000000000000000000111f050c077472616e6368650100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":2,\"txid\":\"0x61fad1a74cb2899b727113d0a73ca22abe727326785da7b989242b13f7ed0f68\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 34,
-                "read_length": 437066,
-                "runtime": 479229,
-                "write_count": 8,
-                "write_length": 534
-              },
-              "post_condition_aborted": false,
-              "result": "0701000000000000000000000000111f050c",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f57000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264730f7061792d7374782d7374616b657273000000030b0000000205160c15a4a3e98104afbf77fd7b9256164d41d3cfe40516fce9025e95033dd6492459bd514883cf3911ee6e010000000000000000000000000000008e0100000000000000000000000000000000",
-        "TxId": "61fad1a74cb2899b727113d0a73ca22abe727326785da7b989242b13f7ed0f68"
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards",
-          "(stx-get-balance 'SP61B953X60G9BXZEZYQQ4JP2S6M3MYFWHJ8AAVJ)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "010000000000000000000000000447c143"
-          }
-        }
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards",
-          "(stx-get-balance 'SP3YEJ0JYJM1KVNJ94HCVTMA8GF7KJ4FEDSK4BPCN)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "010000000000000000000000000cd743c9"
-          }
-        }
-      },
-      {
-        "ExecutionCost": {
-          "read_count": 912,
-          "read_length": 3877014,
-          "runtime": 9834656,
-          "write_count": 229,
-          "write_length": 58306
-        },
-        "Result": {
-          "Transaction": {
-            "Ok": {
-              "costs": 11,
-              "events": [
-                "{\"committed\":true,\"contract_event\":{\"contract_identifier\":\"SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards\",\"raw_value\":\"0x0c0000000605636f756e740100000000000000000000000000000002046665657301000000000000000000000000000000000c7265776172642d6379636c65010000000000000000000000000000008e05746f7069630d0000000f7061792d7374782d7374616b65727305746f74616c0100000000000000000000000000000000077472616e6368650100000000000000000000000000000000\",\"topic\":\"print\"},\"event_index\":0,\"txid\":\"0x2c0e5648e41fa416099c4ca85c5d5e3e58b3ce2bbfd04a4bf02ea98fc8038849\",\"type\":\"contract_event\"}"
-              ],
-              "execution_cost": {
-                "read_count": 22,
-                "read_length": 436820,
-                "runtime": 459857,
-                "write_count": 0,
-                "write_length": 0
-              },
-              "post_condition_aborted": false,
-              "result": "070100000000000000000000000000000000",
-              "stx_burned": 0,
-              "tx_index": 0,
-              "vm_error": null
-            }
-          }
-        },
-        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f58000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d726577617264730f7061792d7374782d7374616b657273000000030b0000000205160c15a4a3e98104afbf77fd7b9256164d41d3cfe40516fce9025e95033dd6492459bd514883cf3911ee6e010000000000000000000000000000008e0100000000000000000000000000000000",
-        "TxId": "2c0e5648e41fa416099c4ca85c5d5e3e58b3ce2bbfd04a4bf02ea98fc8038849"
-      },
-      {
-        "Eval": [
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
-          "",
-          "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer-stx-rewards",
-          "(stx-get-balance 'SP61B953X60G9BXZEZYQQ4JP2S6M3MYFWHJ8AAVJ)"
-        ],
-        "Result": {
-          "Eval": {
-            "Ok": "010000000000000000000000000447c143"
-          }
-        }
+        "Transaction": "000000000104003699883a5bd5324eb8975e56bec8a9f843409b4e0000000000001f57000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003010000000002163699883a5bd5324eb8975e56bec8a9f843409b4e216a756963652d706f6f6c2d7374782d7369676e65722d7374782d7265776172647315726f757465722d737761702d73706c69742d646961000000040100000000000000000000000000002710010000000000000000000000000000271001000000000000000000000000000000000100000000000000000000000000000000",
+        "TxId": "c1a95089db091a13102ff3e4a6ee1eba572706a3a1ee1b801d401bca3fe9d727"
       },
       {
         "Eval": [
           "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22",
           "",
           "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-swap-vault",
-          "(get-clock)"
+          "{sbtc: (sbtc-balance), stx: (stx-get-balance current-contract)}"
         ],
         "Result": {
           "Eval": {
-            "Ok": "0c000000050b62617463682d7374617274090b6275726e2d68656967687401000000000000000000000000000ec3ba0e77696e646f772d656c6170736564040b77696e646f772d656e6473090b77696e646f772d6f70656e04"
+            "Ok": "0c0000000204736274630100000000000000000000000000015f90037374780100000000000000000000000001b60a73"
           }
         }
       }

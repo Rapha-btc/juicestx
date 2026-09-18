@@ -1,0 +1,84 @@
+EXECUTION STATISTICS
+
+│ PUBLIC FUNCTION CALLS
+│
+├─ + SUCCESSFUL
+│    ├─ emergency-recover: x0
+│    ├─ finish: x0
+│    ├─ fund: x0
+│    ├─ jing-place: x0
+│    ├─ jing-reclaim: x0
+│    ├─ jing-refloor: x0
+│    ├─ jing-take: x0
+│    ├─ router-swap: x0
+│    ├─ router-swap-split: x0
+│    ├─ router-swap-split-dia: x0
+│    ├─ rv-admin: x16
+│    ├─ rv-batch: x31
+│    ├─ rv-donate: x247
+│    ├─ rv-fund-router: x288
+│    ├─ rv-release-window: x31
+│    ├─ rv-world: x294
+│    ├─ set-dia-band-bps: x2
+│    ├─ set-leeway-bps: x6
+│    ├─ set-max-chunk-sats: x7
+│    ├─ set-no-pyth-slippage-bps: x6
+│    ├─ set-router-cooldown: x8
+│    ├─ set-slippage-bps: x6
+│    └─ set-window-blocks: x4
+│
+├─ - IGNORED
+│    ├─ emergency-recover: x268
+│    ├─ finish: x249
+│    ├─ fund: x312
+│    ├─ jing-place: x280
+│    ├─ jing-reclaim: x249
+│    ├─ jing-refloor: x259
+│    ├─ jing-take: x310
+│    ├─ router-swap: x290
+│    ├─ router-swap-split: x268
+│    ├─ router-swap-split-dia: x296
+│    ├─ rv-admin: x246
+│    ├─ rv-batch: x243
+│    ├─ rv-donate: x0
+│    ├─ rv-fund-router: x0
+│    ├─ rv-release-window: x222
+│    ├─ rv-world: x0
+│    ├─ set-dia-band-bps: x238
+│    ├─ set-leeway-bps: x261
+│    ├─ set-max-chunk-sats: x234
+│    ├─ set-no-pyth-slippage-bps: x281
+│    ├─ set-router-cooldown: x261
+│    ├─ set-slippage-bps: x280
+│    └─ set-window-blocks: x265
+│
+│ INVARIANT CHECKS
+│
+├─ + PASSED
+│    ├─ invariant-clock-not-future: x122
+│    ├─ invariant-config-bounded: x139
+│    ├─ invariant-cooldown-not-future: x123
+│    ├─ invariant-emergency-price-floor: x125
+│    ├─ invariant-ft-conservation: x130
+│    ├─ invariant-no-clock-no-market-position: x118
+│    ├─ invariant-no-clock-no-window: x115
+│    └─ invariant-window-exclusive: x128
+│
+└─ - FAILED
+     ├─ invariant-clock-not-future: x0
+     ├─ invariant-config-bounded: x0
+     ├─ invariant-cooldown-not-future: x0
+     ├─ invariant-emergency-price-floor: x0
+     ├─ invariant-ft-conservation: x0
+     ├─ invariant-no-clock-no-market-position: x0
+     ├─ invariant-no-clock-no-window: x0
+     └─ invariant-window-exclusive: x0
+
+LEGEND:
+
+  SUCCESSFUL calls executed and advanced the test
+  IGNORED    calls failed but did not affect the test
+  PASSED     invariants maintained system integrity
+  FAILED     invariants indicate contract vulnerabilities
+
+

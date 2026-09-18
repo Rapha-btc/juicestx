@@ -1,0 +1,8 @@
+{
+  "sourceHashes": {
+    "juice-pool-stx-signer-stx-rewards": "3df2ddc15523fc00850fcbd28f9b6a38672e14cfc5c69bca5f4df73978def350",
+    "juice-pool-swap-vault": "ab3e77289a9692ba5d217451177766ee1bf88aeeacc5f211d136bf4afd9677d7"
+  },
+  "status": "passed",
+  "scope": "full-source local runtime with fixture dependencies; fork runs validate real dependency behavior"
+}

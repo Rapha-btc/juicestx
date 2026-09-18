@@ -1,0 +1,15 @@
+{
+  "sourceHashes": {
+    "juice-pool-stx-signer-stx-rewards": "3df2ddc15523fc00850fcbd28f9b6a38672e14cfc5c69bca5f4df73978def350",
+    "juice-pool-swap-vault": "ab3e77289a9692ba5d217451177766ee1bf88aeeacc5f211d136bf4afd9677d7"
+  },
+  "branchTotal": 129,
+  "branchHits": 129,
+  "lineTotal": 288,
+  "lineHits": 286,
+  "zeroHitLines": [
+    272,
+    336
+  ],
+  "notes": "Two zero-hit literal/binding lines execute semantically (mins tuple/native literal); all instrumented branch outcomes reached. Dependency addresses/assets rebound to fixtures, with declared fault injection. This is local vault coverage, not exhaustive mainnet dependency coverage."
+}

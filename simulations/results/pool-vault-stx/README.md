@@ -1,62 +1,21 @@
 # Juice swap-vault Stxer results
 
-## Successful swap and recovery validation before timed admin handover
+Current-source runs: **471/471 checks passed**, 2026-09-18.
 
-All **263/263 checks passed** across these four runs. They predate the timed admin handover; the new admin validation is documented below.
-
-| Scenario | Passed | Stxer | Raw results |
+| Scenario | Passed | Stxer | Raw report |
 | --- | --- | --- | --- |
-| Deployment and guards | 14/14 | [1f0b057a825cecb7ccb51cac99a3b593](https://stxer.xyz/simulations/mainnet/1f0b057a825cecb7ccb51cac99a3b593) | [juice-deployment-guards.json](juice-deployment-guards.json) |
-| Maker fill during resting window | 30/30 | [fda8d36ef8d440cdf306f89fd350947a](https://stxer.xyz/simulations/mainnet/fda8d36ef8d440cdf306f89fd350947a) | [juice-maker.json](juice-maker.json) |
-| Reclaim and smart-router liquidation | 34/34 | [e036509b1b13ff7e6768b2873b70cbd5](https://stxer.xyz/simulations/mainnet/e036509b1b13ff7e6768b2873b70cbd5) | [juice-liquidation.json](juice-liquidation.json) |
-| Recovery → recovery → normal → recovery | 185/185 | [10e4772ef6fba8fee2ba5a2d85c72fc5](https://stxer.xyz/simulations/mainnet/10e4772ef6fba8fee2ba5a2d85c72fc5) | [juice-recovery-continuity.json](juice-recovery-continuity.json) |
+| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/a802afe1e2560bfe2c3b7d892b538666) | [juice-deployment-guards.json](juice-deployment-guards.json) |
+| Maker fill during patience | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/575d7961086357312e7a464a543fdb98) | [juice-maker.json](juice-maker.json) |
+| Smart-router AMM liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/ca99c1e1ea2564f52e2867ee00cef13a) | [juice-liquidation.json](juice-liquidation.json) |
+| Smart-router Jing fills | 39/39 | [simulation](https://stxer.xyz/simulations/mainnet/805d3ef5744496d654b69c6c259fddc4) | [juice-jing-router.json](juice-jing-router.json) |
+| Owner-only direct Jing take | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/a1f6901f1527cd7407beeb9d395a3bf1) | [juice-jing-take.json](juice-jing-take.json) |
+| Required-Pyth manual split | 35/35 | [simulation](https://stxer.xyz/simulations/mainnet/d68fa679b74688e94fd2df8a1f922191) | [juice-split-pyth.json](juice-split-pyth.json) |
+| Four-batch recovery continuity | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/e662fbe736f230e530fc31cfc53a37a9) | [juice-recovery-continuity.json](juice-recovery-continuity.json) |
+| Timed admin handover | 52/52 | [simulation](https://stxer.xyz/simulations/mainnet/9010c0341aa816fad433d5bf4e0134fc) | [juice-admin-handover.json](juice-admin-handover.json) |
+| Emergency DIA swap | 19/19 | [simulation](https://stxer.xyz/simulations/mainnet/f1aee856d660d58e8709ccd279fa296f) | [juice-emergency-dia.json](juice-emergency-dia.json) |
+| Emergency native fallback | 29/29 | [simulation](https://stxer.xyz/simulations/mainnet/bcc54d2a6ad69210bd7a91c44b08be72) | [juice-emergency-native.json](juice-emergency-native.json) |
 
-## Scope and fixtures
-
-All runs deploy the production Juice signer and swap-vault sources unchanged,
-using Clarity 6, and run only in independent mainnet forks. They use the real
-PoX-5 claim path, sBTC ledger, Jing v6 market, smart router and available AMM state.
-Signed BTC/STX Lazer updates use the public Jing backend; no private Pyth key is required.
-
-Lifecycle and recovery runs seed crystallized PoX rewards and fixed 1:3 staker
-shares with explicit fork-only Eval writes. Real sBTC transfers back those rewards.
-These runs test claims, swaps, recovery, accounting, payouts and replay protection;
-they do not test signer registration, STX lock admission, or rewards calculated from new stakes.
-Pool fees are zero in these Stxer cases; 5% fees and OG exemptions are covered by local runtime tests.
-
-The maker case completes within the resting window. Liquidation advances 288 + 1
-Bitcoin blocks using one-second synthetic intervals. Production 80-second oracle
-freshness remains enabled. Existing live Jing orders are canceled only inside the fork.
-
-Recovery continuity executes four batches: resting sBTC recovery, partial-conversion
-recovery with both STX and sBTC, a normal router batch, then another sBTC recovery.
-It verifies admin authorization, the 4,319/4,320-block age boundary, recovery while
-Jing is paused, clock/pending reset, separate per-batch entitlements and replay safety.
-Old tranches are paid while the next batch is active, proving payout reserves stay separate.
-Recovered STX uses pay-stx-stakers; remaining sBTC uses pay-recovered-sbtc-stakers.
-Funding clocks are aged by explicit vault Eval fixtures (288, 4,319 and 4,320 blocks)
-to keep signed updates valid for the following swaps. This is a state-transition test,
-not a real month of chain time. Two additional one-second Bitcoin blocks exercise router cooldown.
-
-## Earlier runs
-
-These links document earlier contract versions; use the latest runs above for the final amendments.
-
-| Earlier scenario | Passed | Stxer |
-| --- | --- | --- |
-| Initial deployment and guards | 14/14 | [0bf6a0a5b41f12a380793620e48dcebb](https://stxer.xyz/simulations/mainnet/0bf6a0a5b41f12a380793620e48dcebb) |
-| Initial maker lifecycle | 30/30 | [b05bffa7d714f6a497c79bf311a56ed6](https://stxer.xyz/simulations/mainnet/b05bffa7d714f6a497c79bf311a56ed6) |
-| Initial liquidation lifecycle | 34/34 | [f7c21a3e95ddf16c45df3d5cab22dccd](https://stxer.xyz/simulations/mainnet/f7c21a3e95ddf16c45df3d5cab22dccd) |
-| Recovery continuity before final print/layout amendments | 185/185 | [fda41364996150a91b14a9e50f66e34e](https://stxer.xyz/simulations/mainnet/fda41364996150a91b14a9e50f66e34e) |
-
-## Timed admin handover
-
-**52/52 checks passed** on the signer with the new propose/accept interface:
-[0bb89b79924e5dac7fc81f96decec1f8](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8). [Raw results](juice-admin-handover.json).
-
-Both production sources were deployed unchanged. The test uses actual fork
-Bitcoin-block advances, with one-second synthetic timestamps, at 143/144-block
-boundaries; no storage seeds or oracle proofs are involved. It verifies nominee-only
-acceptance, current-admin authority while pending, cancellation, replacement
-resetting the timer, cleared pending state, former-admin role revocation, repeated
-handover, and committed print events for proposals, acceptance and cancellation.
+See [verification, numeric examples, fixture scope, commands and runtime/RV results](../../README-pool-vault-stx.md).
+Historical JSON reports are preserved in [history](history), named by simulation ID.
+The superseded optional-update split and older recovery/admin reports are historical,
+not proofs of coverage for the current emergency interface.

@@ -10,3 +10,9 @@ coverage
 *.info
 costs-reports.json
 node_modules
+
+# Isolated vault runtime/RV generated fixtures and replay cache
+tests/vault/.build/
+.rendezvous-regressions/
+tests/vault/.build-rv/
+tests/vault/__pycache__/
