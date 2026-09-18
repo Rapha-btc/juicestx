@@ -3,6 +3,7 @@
 (use-trait signer-mgr 'SP000000000000000000002Q6VF78.pox-5.signer-manager-trait)
 (impl-trait 'SP000000000000000000002Q6VF78.pox-5.signer-manager-trait)
 
+(define-constant ERR_NOT_RECOVERED (err u116))
 (define-constant ERR_SWAP_PENDING (err u115))
 
 (define-data-var pending-swap (optional { reward-cycle: uint, tranche: uint }) none)
@@ -359,12 +360,144 @@
   (contract-call? 'SP000000000000000000002Q6VF78.pox-5 get-earned-staker-rewards
     current-contract reward-cycle bond-index staker))
 
+;; Added swap-vault integration and emergency recovery.
+
 (define-public (finalize-swap)
   (let ((batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
         (amount (try! (contract-call? SWAP_VAULT finish))))
     (map-set stx-pot batch amount)
     (map-set finalized-tranches batch true)
     (var-set pending-swap none)
+    (print { topic: "finalize-swap", reward-cycle: (get reward-cycle batch),
+      tranche: (get tranche batch), amount: amount })
+    (ok amount)))
+
+;; Emergency accounting is separate from the normal swap route. STX uses the
+;; existing ledger; the remaining sBTC has its own payout, fee and dust ledgers.
+(define-map recovered-sbtc-pot { reward-cycle: uint, tranche: uint } uint)
+(define-map recovered-sbtc-paid { reward-cycle: uint, tranche: uint, staker: principal } uint)
+(define-map recovered-sbtc-tranche-paid { reward-cycle: uint, tranche: uint } uint)
+(define-map recovered-sbtc-paid-shares { reward-cycle: uint, tranche: uint } uint)
+(define-data-var earned-sbtc-fees uint u0)
+
+(define-read-only (is-recovered-tranche (reward-cycle uint) (tranche uint))
+  (is-some (map-get? recovered-sbtc-pot { reward-cycle: reward-cycle, tranche: tranche })))
+
+(define-read-only (get-recovered-sbtc-pot (reward-cycle uint) (tranche uint))
+  (default-to u0 (map-get? recovered-sbtc-pot { reward-cycle: reward-cycle, tranche: tranche })))
+
+(define-read-only (get-recovered-sbtc-paid (reward-cycle uint) (tranche uint) (staker principal))
+  (map-get? recovered-sbtc-paid { reward-cycle: reward-cycle, tranche: tranche, staker: staker }))
+
+(define-read-only (get-recovered-sbtc-residue (reward-cycle uint) (tranche uint))
+  (- (get-recovered-sbtc-pot reward-cycle tranche)
+     (default-to u0 (map-get? recovered-sbtc-tranche-paid
+       { reward-cycle: reward-cycle, tranche: tranche }))))
+
+(define-read-only (get-recovered-sbtc-paid-shares (reward-cycle uint) (tranche uint))
+  (default-to u0 (map-get? recovered-sbtc-paid-shares
+    { reward-cycle: reward-cycle, tranche: tranche })))
+
+(define-read-only (is-recovered-tranche-fully-paid (reward-cycle uint) (tranche uint))
+  (>= (get-recovered-sbtc-paid-shares reward-cycle tranche)
+      (get-cycle-total-shares reward-cycle)))
+
+(define-read-only (get-earned-sbtc-fees) (var-get earned-sbtc-fees))
+
+;; Returning funds and crediting exactly the pending tranche happen atomically.
+;; Normal finalize and recovery consume the same pending-swap, preventing reuse.
+(define-public (emergency-recover)
+  (begin
+    (try! (assert-admin))
+    (let ((batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
+          (recovered (try! (contract-call? SWAP_VAULT emergency-recover))))
+      (map-set stx-pot batch (get stx recovered))
+      (map-set recovered-sbtc-pot batch (get sbtc recovered))
+      (map-set finalized-tranches batch true)
+      (var-set pending-swap none)
+      (print { topic: "emergency-recover", batch: batch, recovered: recovered })
+      (ok recovered))))
+
+(define-private (pay-recovered-sbtc-one
+    (staker principal)
+    (acc { reward-cycle: uint, tranche: uint, pot: uint, total-shares: uint,
+           fee: uint, total: uint, fees: uint }))
+  (let ((cycle (get reward-cycle acc))
+        (trn (get tranche acc))
+        (shares (contract-call? POX5 get-staker-shares-staked-for-cycle
+          staker cycle none current-contract))
+        (owed (if (is-eq (get total-shares acc) u0) u0
+          (/ (* (get pot acc) shares) (get total-shares acc))))
+        (fee (if (is-og staker) u0 (/ (* owed (get fee acc)) MAX_BIPS)))
+        (net (- owed fee))
+        (batch { reward-cycle: cycle, tranche: trn }))
+    (if (or (is-eq shares u0) (is-some (map-get? recovered-sbtc-paid
+          { reward-cycle: cycle, tranche: trn, staker: staker })))
+      acc
+      (begin
+        (if (> net u0)
+          (unwrap-panic (as-contract? ((with-ft SBTC "sbtc-token" net))
+            (unwrap-panic (contract-call? SBTC transfer net current-contract staker none))))
+          true)
+        (var-set earned-sbtc-fees (+ (var-get earned-sbtc-fees) fee))
+        (map-set recovered-sbtc-paid { reward-cycle: cycle, tranche: trn, staker: staker } net)
+        (map-set recovered-sbtc-tranche-paid batch
+          (+ (default-to u0 (map-get? recovered-sbtc-tranche-paid batch)) owed))
+        (map-set recovered-sbtc-paid-shares batch
+          (+ (default-to u0 (map-get? recovered-sbtc-paid-shares batch)) shares))
+        (merge acc { total: (+ (get total acc) net), fees: (+ (get fees acc) fee) })))))
+
+;; Recovered STX uses pay-stx-stakers; this entry point pays only remaining sBTC.
+(define-public (pay-recovered-sbtc-stakers
+    (stakers (list 100 principal))
+    (reward-cycle uint)
+    (tranche uint)
+  )
+  (begin
+    (asserts! (is-recovered-tranche reward-cycle tranche) ERR_NOT_RECOVERED)
+    (let (
+        (result (fold pay-recovered-sbtc-one stakers {
+          reward-cycle: reward-cycle,
+          tranche: tranche,
+          pot: (get-recovered-sbtc-pot reward-cycle tranche),
+          total-shares: (get-cycle-total-shares reward-cycle),
+          fee: (var-get fee-bips),
+          total: u0,
+          fees: u0,
+        }))
+        (totl (get total result))
+      )
+      (print { topic: "pay-recovered-sbtc-stakers", reward-cycle: reward-cycle, tranche: tranche,
+        count: (len stakers), total: totl, fees: (get fees result) })
+      (ok totl)
+    )
+  )
+)
+
+;; Native STX dust and fees keep their existing withdrawal entry points.
+(define-public (sweep-recovered-sbtc-dust (reward-cycle uint) (tranche uint))
+  (let ((batch { reward-cycle: reward-cycle, tranche: tranche })
+        (dust (get-recovered-sbtc-residue reward-cycle tranche)))
+    (try! (assert-admin))
+    (asserts! (is-recovered-tranche reward-cycle tranche) ERR_NOT_RECOVERED)
+    (asserts! (is-recovered-tranche-fully-paid reward-cycle tranche) ERR_TRANCHE_UNPAID)
+    (asserts! (> dust u0) ERR_NO_DUST)
+    (try! (as-contract? ((with-ft SBTC "sbtc-token" dust))
+      (try! (contract-call? SBTC transfer dust current-contract (var-get admin) none))))
+    (map-set recovered-sbtc-tranche-paid batch
+      (+ (default-to u0 (map-get? recovered-sbtc-tranche-paid batch)) dust))
+    (print { topic: "sweep-recovered-sbtc-dust", reward-cycle: reward-cycle,
+      tranche: tranche, dust: dust })
+    (ok dust)))
+
+(define-public (withdraw-sbtc-fees (amount uint) (recipient principal))
+  (begin
+    (try! (assert-admin))
+    (asserts! (<= amount (var-get earned-sbtc-fees)) ERR_INSUFFICIENT_FEES)
+    (try! (as-contract? ((with-ft SBTC "sbtc-token" amount))
+      (try! (contract-call? SBTC transfer amount current-contract recipient none))))
+    (var-set earned-sbtc-fees (- (var-get earned-sbtc-fees) amount))
+    (print { topic: "withdraw-sbtc-fees", amount: amount, recipient: recipient })
     (ok amount)))
 
 (define-public (refloor-vault (update (buff 8192)))

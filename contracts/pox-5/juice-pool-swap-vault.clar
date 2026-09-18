@@ -3,6 +3,7 @@
 ;; One active batch. Defaults: 288 burn blocks maker-first, then oracle-floored
 ;; router chunks <= 0.05 BTC, separated by >= 1 burn block. Pool admin may tune
 ;; bounded settings; the window length may change only between batches.
+(define-constant ERR_RECOVERY_TOO_SOON (err u16046))
 (define-constant ERR_BUSY (err u16045))
 (define-constant ERR_UNAUTHORIZED (err u16000))
 (define-constant ERR_NO_FUNDS (err u16006))
@@ -33,6 +34,8 @@
 (define-constant JING_MARKET 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6)
 (define-constant JING_ROUTER 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5)
 
+;; Approximately one month, measured from funding; not admin-adjustable.
+(define-constant RECOVERY_DELAY_BLOCKS u4320)
 (define-constant MAX_DIA_AGE u7200)
 (define-constant MAX_WINDOW_BLOCKS u1008)
 (define-constant MAX_LEEWAY_BPS u1000)
@@ -59,7 +62,9 @@
     ;; Changing this during a batch would move its computed deadline.
     (asserts! (is-none (var-get batch-start)) ERR_BUSY)
     (asserts! (and (> blocks u0) (<= blocks MAX_WINDOW_BLOCKS)) ERR_OUT_OF_RANGE)
-    (ok (var-set window-blocks blocks))
+    (var-set window-blocks blocks)
+    (print { notification: "set-window-blocks", payload: { value: blocks } })
+    (ok true)
   )
 )
 
@@ -67,7 +72,9 @@
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_LEEWAY_BPS) ERR_OUT_OF_RANGE)
-    (ok (var-set leeway-bps bps))
+    (var-set leeway-bps bps)
+    (print { notification: "set-leeway-bps", payload: { value: bps } })
+    (ok true)
   )
 )
 
@@ -75,7 +82,9 @@
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_SLIPPAGE_BPS) ERR_OUT_OF_RANGE)
-    (ok (var-set slippage-bps bps))
+    (var-set slippage-bps bps)
+    (print { notification: "set-slippage-bps", payload: { value: bps } })
+    (ok true)
   )
 )
 
@@ -83,7 +92,9 @@
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (and (> sats u0) (<= sats MAX_CHUNK_SATS)) ERR_OUT_OF_RANGE)
-    (ok (var-set max-chunk-sats sats))
+    (var-set max-chunk-sats sats)
+    (print { notification: "set-max-chunk-sats", payload: { value: sats } })
+    (ok true)
   )
 )
 
@@ -91,7 +102,9 @@
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_DIA_BAND_BPS) ERR_OUT_OF_RANGE)
-    (ok (var-set dia-band-bps bps))
+    (var-set dia-band-bps bps)
+    (print { notification: "set-dia-band-bps", payload: { value: bps } })
+    (ok true)
   )
 )
 
@@ -99,7 +112,9 @@
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= blocks MAX_COOLDOWN_BLOCKS) ERR_OUT_OF_RANGE)
-    (ok (var-set router-cooldown-blocks blocks))
+    (var-set router-cooldown-blocks blocks)
+    (print { notification: "set-router-cooldown", payload: { value: blocks } })
+    (ok true)
   )
 )
 
@@ -111,6 +126,7 @@
     (asserts! (> amount u0) ERR_NO_FUNDS)
     (try! (contract-call? SBTC_TOKEN transfer amount POOL current-contract none))
     (var-set batch-start (some burn-block-height))
+    (print { notification: "fund", payload: { amount: amount, batch-start: burn-block-height } })
     (ok amount)))
 
 ;; Only the pool may finish, after every sat is sold and all market positions clear.
@@ -123,7 +139,44 @@
     (try! (as-contract? ((with-stx balance))
       (try! (stx-transfer? balance current-contract POOL))))
     (var-set batch-start none)
+    (print { notification: "finish", payload: { amount: balance } })
     (ok balance)))
+
+;; Atomic emergency exit: only the pool, after the original batch ages out.
+;; No oracle/router needed. Withdrawals remain available while Jing is paused.
+(define-public (emergency-recover)
+  (begin
+    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
+    (let ((start (unwrap! (var-get batch-start) ERR_NO_CLOCK))
+          (cycle (contract-call? JING_MARKET get-current-cycle))
+          (resting (contract-call? JING_MARKET get-token-x-deposit cycle current-contract))
+          (parked (contract-call? JING_MARKET get-token-x-parked current-contract)))
+      (asserts! (>= burn-block-height (+ start RECOVERY_DELAY_BLOCKS)) ERR_RECOVERY_TOO_SOON)
+      (if (or (> resting u0) (> parked u0))
+        (begin (try! (reclaim-core)) true)
+        true)
+      ;; Cancel may return a live deposit first; also clear any parked balance.
+      (if (and (> resting u0) (> parked u0))
+        (begin (try! (reclaim-core)) true)
+        true)
+      (let ((sbtc (sbtc-balance))
+            (stx (stx-get-balance current-contract)))
+        (if (> sbtc u0)
+          (begin
+            (try! (as-contract? ((with-ft SBTC_TOKEN ASSET_SBTC sbtc))
+              (try! (contract-call? SBTC_TOKEN transfer sbtc current-contract POOL none))))
+            true)
+          true)
+        (if (> stx u0)
+          (begin
+            (try! (as-contract? ((with-stx stx))
+              (try! (stx-transfer? stx current-contract POOL))))
+            true)
+          true)
+        (asserts! (is-empty) ERR_SOME_FUNDS)
+        (var-set batch-start none)
+        (print { notification: "emergency-recover", payload: { sbtc: sbtc, stx: stx } })
+        (ok { sbtc: sbtc, stx: stx })))))
 
 (define-public (jing-place (update (buff 8192)))
   (let (
@@ -362,10 +415,11 @@
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (try! (as-contract? ()
       (try! (contract-call? JING_MARKET set-token-x-limit floor (some u0) update))))
+    (print { notification: "jing-refloor", payload: { floor: floor } })
     (ok floor)))
 
 (define-read-only (get-config)
- { pool: POOL, window-blocks: (var-get window-blocks),
+ { pool: POOL, recovery-delay-blocks: RECOVERY_DELAY_BLOCKS, window-blocks: (var-get window-blocks),
    leeway-bps: (var-get leeway-bps), slippage-bps: (var-get slippage-bps),
    max-chunk-sats: (var-get max-chunk-sats), dia-band-bps: (var-get dia-band-bps),
    router-cooldown-blocks: (var-get router-cooldown-blocks),
