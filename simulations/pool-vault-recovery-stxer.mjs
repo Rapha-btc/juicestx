@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, real token/market/router contracts.
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -43,17 +45,17 @@ const operatorResponse=await fetch(`${NODE}/v2/data_var/${DEP}/markets-sbtc-stx-
 if(!operatorResponse.ok)throw new Error(`operator HTTP ${operatorResponse.status}`);
 const operator=deserializeCV((await operatorResponse.json()).data).value;
 const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
-const plan=[],batches=[];
+const plan=[],batches=[],sourceHashes={};
 const ok=v=>v.startsWith('(ok');
 function call(label,id,fn,args=[],want=ok,sender=DEP){
  const slot=plan.length;
- builder.addContractCall({contract_id:id,function_name:fn,function_args:args,sender});
+ builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});
  plan.push({label,kind:'tx',want});return slot;
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
 function advance(){builder.addAdvanceBlocks({bitcoin_blocks:1,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:'advance one burn block for router cooldown',kind:'advance'});}
-for(const [name,path] of [['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
- builder.addContractDeploy({contract_name:name,source_code:readFileSync(resolve(directory,path),'utf8'),clarity_version:ClarityVersion.Clarity6});
+for(const [name,path] of [['juice-swap-vault-trait','../contracts/pox-5/juice-swap-vault-trait.clar'],['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
+ builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(resolve(directory,path),'utf8')),clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});
 }
 for(const [side,orders] of [['x',sellers],['y',buyers]])for(const order of orders.value){
@@ -161,7 +163,7 @@ if(checks.every(c=>c.passed))for(const b of batches){
   checks.push({label:`${b.label}: ${name} ${asset} unchanged on replay`,passed:uint(b.replay[key])===uint(b.after[key]),actual:`balance ${uint(b.replay[key])}`});
  }
 }
-const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'recovery-continuity',block:tip.height,burn:tip.burn_block_height,productionSourcesUnmodified:true,proofTimestamp:proof.ts,
+const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'recovery-continuity',block:tip.height,burn:tip.burn_block_height,productionSourcesUnmodified:true,sourceHashes,proofTimestamp:proof.ts,
  fixtures:['PoX crystallized rewards and 1:3 shares seeded in fork; real sBTC transfers back the rewards; STX lock admission not tested','Funding clock aged via explicit vault Eval fixtures at 288, 4319 and 4320 blocks to retain valid signed oracle updates; not a real month of elapsed chain time','Existing Jing orders canceled only in fork; real Jing operator impersonated to pause/resume','Two burn blocks advanced with one-second synthetic intervals for production router cooldown'],checks,result};
 const resultsDirectory=resolve(directory,'results/pool-vault-stx');mkdirSync(resultsDirectory,{recursive:true});
 writeFileSync(resolve(resultsDirectory,'juice-recovery-continuity.json'),JSON.stringify(report,null,2));

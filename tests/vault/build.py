@@ -7,6 +7,7 @@ replacements={"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v
 files={p.stem:p.read_text() for p in (here/'fixtures').glob('*.clar') if p.stem!='pool-emergency-wrappers'}
 files['mock-signer-trait']='(define-trait signer-manager-trait ((validate-stake! (principal uint uint uint uint bool (optional (buff 500))) (response bool uint))))'
 hashes={}
+files['juice-swap-vault-trait']=(root/'contracts/pox-5/juice-swap-vault-trait.clar').read_text();hashes['juice-swap-vault-trait']=hashlib.sha256(files['juice-swap-vault-trait'].encode()).hexdigest()
 for n in ['juice-pool-stx-signer-stx-rewards','juice-pool-swap-vault']:
  s=(root/f'contracts/pox-5/{n}.clar').read_text();hashes[n]=hashlib.sha256(s.encode()).hexdigest();files[n]=s
 for n,s in files.items():
@@ -15,7 +16,7 @@ for n,s in files.items():
  if n=='v6-market':s+='\n(define-public (rv-park-x-for-test (who principal)) (park-token-x (var-get current-cycle) (contract-call? .mock-lazer-oracle get-mid) who (get-token-x-depositors (var-get current-cycle))))\n'
  if n=='juice-pool-stx-signer-stx-rewards':
   if '(define-public (router-swap-split-dia' not in s:s+='\n'+(here/'fixtures/pool-emergency-wrappers.clar').read_text()
-  s+='\n(define-public (test-fund (amount uint)) (begin (try! (assert-admin)) (as-contract? ((with-ft .mock-ft "mock-ft" amount)) (try! (contract-call? SWAP_VAULT fund amount)))))\n(define-public (test-finish) (begin (try! (assert-admin)) (contract-call? SWAP_VAULT finish)))\n'
+  s+='\n(define-public (test-fund (amount uint) (vault <swap-vault-interface>)) (begin (try! (assert-admin)) (try! (assert-active-vault vault)) (as-contract? ((with-ft .mock-ft "mock-ft" amount)) (try! (contract-call? vault fund amount)))))\n(define-public (test-finish (vault <swap-vault-interface>)) (begin (try! (assert-admin)) (try! (assert-active-vault vault)) (contract-call? vault finish)))\n'
  if n=='v6-market':
   s+='\n(define-public (test-park-extra (who principal) (amount uint)) (begin (try! (contract-call? .mock-ft mint amount current-contract)) (ok (map-set token-x-parked who amount))))\n'
   start=s.index('(define-public (refresh-mid');count=0

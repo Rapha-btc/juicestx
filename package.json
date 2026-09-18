@@ -10,7 +10,8 @@
     "test:watch": "chokidar \"tests/**/*.ts\" \"contracts/**/*.clar\" -c \"npm run test:report\"",
     "test:vault": "python3 tests/vault/build.py && node tests/vault/runtime.mjs",
     "rv:vault:build": "python3 tests/vault/build.py --rv",
-    "rv:vault": "rv tests/vault/.build-rv juice-pool-swap-vault invariant --runs=1000"
+    "rv:vault": "rv tests/vault/.build-rv juice-pool-swap-vault invariant --runs=1000",
+    "test:vault:migration": "python3 tests/vault/build.py && node tests/vault/migration.mjs"
   },
   "author": "",
   "license": "ISC",

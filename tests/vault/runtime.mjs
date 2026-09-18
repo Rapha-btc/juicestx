@@ -1,4 +1,5 @@
 // Isolated runtime tests for both current production drafts.
+import {POOL_VAULT_FUNCTIONS} from '../../simulations/_pool-vault-interface.mjs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
@@ -14,7 +15,7 @@ const sim=await initSimnet(manifest,true,{trackCoverage:true});
 const accounts=sim.getAccounts(), admin=accounts.get('deployer'), alice=accounts.get('wallet_1'), bob=accounts.get('wallet_2');
 const cp=n=>Cl.contractPrincipal(admin,n),u=Cl.uint, update=Cl.buffer(new Uint8Array());
 function call(n,f,a=[],sender=alice){
- const result=sim.callPublicFn(n,f,a,sender);
+ const result=sim.callPublicFn(n,f,vaultArgs(n,f,a),sender);
  if(result.result.type==='ok'){
   for(const event of eventChecks[`${n}.${f}`]||[]){
    assert.ok(result.events.some(e=>e.data?.value&&cvToString(e.data.value).includes(`"${event}"`)),`Missing ${event} event`);
@@ -27,6 +28,9 @@ function err(r,code){assert.equal(cvToString(r.result),`(err u${code})`)}
 function read(n,f,a=[]){return sim.callReadOnlyFn(n,f,a,admin).result}
 function stx(w){return sim.getAssetsMap().get('STX').get(w)||0n}
 const J='juice-pool-stx-signer-stx-rewards',JV='juice-pool-swap-vault',F='fastpool-stx-vault-signer',FV='fastpool-swap-vault';
+const VAULT_FUNCTIONS=new Set([...POOL_VAULT_FUNCTIONS,'test-fund','test-finish']);
+const vaultArgs=(n,f,a)=>n===J&&VAULT_FUNCTIONS.has(f)?[...a,cp(JV)]:a;
+const poolTx=(f,a,sender)=>tx.callPublicFn(J,f,vaultArgs(J,f,a),sender);
 const eventChecks={
  [`${J}.propose-admin`]:['propose-admin'],
  [`${J}.accept-admin`]:['accept-admin'],
@@ -92,7 +96,7 @@ for(const [pool,vault,cycle] of [[J,JV,140],[F,FV,141]]){
   err(call(J,'router-swap-split',[u(500001),...split.slice(1)],admin),16040);
   err(call(J,'router-swap-split',[u(5000001),u(5000001),u(0),u(0),u(0),update],admin),16039);
  }
- const first=pool===J?tx.callPublicFn(J,'router-swap-split',split,admin):tx.callPublicFn(vault,'router-swap',[u(500000),update],alice);
+ const first=pool===J?poolTx('router-swap-split',split,admin):tx.callPublicFn(vault,'router-swap',[u(500000),update],alice);
  const batch=sim.mineBlock([first,tx.callPublicFn(vault,'router-swap',[u(500000),update],bob)]);
  ok(batch[0]);err(batch[1],16044);
  err(call(pool,pool===J?'finalize-swap':'finalize-swap-vault'),16043);
@@ -405,6 +409,10 @@ ok(call('mock-ft','set-blocked-recipient',[Cl.none()],admin));
 ok(call(J,'router-swap-split-dia',[u(900000),u(300000),u(300000),u(300000)],admin));
 ok(call(J,'finalize-swap'));assert.equal(read(JV,'is-empty').type,'true');
 console.log('Juice emergency: zero window, amount/auth/chunk guards, DIA/native boundaries, rollback, balance conservation and full drain passed');
+const upgradeStatus=ok({result:read(JV,'get-upgrade-status')}).value;
+assert.equal(upgradeStatus.empty.type,'true');
+assert.equal(cvToString(upgradeStatus.pool),cvToString(cp(J)));
+assert.equal(upgradeStatus['batch-start'].type,'none');
 const directory=resolve(projectRoot,'tests/vault/results');mkdirSync(directory,{recursive:true});
 const report=sim.collectReport(false,'');
 const vaultRecord=report.coverage.split('end_of_record').find(r=>r.includes('/juice-pool-swap-vault.clar'));

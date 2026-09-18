@@ -13,14 +13,15 @@ const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
 const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api',API=process.env.STXER_API_URL||'https://api.stxer.xyz';
 const nativeMode=process.argv.includes('--native');
 (async()=>{
+const {withVaultArgument}=await import('./_pool-vault-interface.mjs');
 const tipResp=await fetch(NODE+'/extended/v1/block?limit=1',{signal:AbortSignal.timeout(20000)});
 if(!tipResp.ok)throw Error('tip '+tipResp.status);
 const tip=(await tipResp.json()).results[0];
 const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:false}).useBlockHeight(tip.height).withSender(DEP);
 const plan=[],sourceHashes={};
 const ev=(label,id,code)=>{b.addEvalCode(id,code);plan.push({label,kind:'eval'});};
-const call=(label,id,fn,args,sender=DEP)=>{b.addContractCall({contract_id:id,function_name:fn,function_args:args,sender});plan.push({label,kind:'tx'});};
-for(const [name,file]of [['juice-pool-swap-vault','juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','juice-pool-stx-signer-stx-rewards.clar']]){
+const call=(label,id,fn,args,sender=DEP)=>{b.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});plan.push({label,kind:'tx'});};
+for(const [name,file]of [['juice-swap-vault-trait','juice-swap-vault-trait.clar'],['juice-pool-swap-vault','juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','juice-pool-stx-signer-stx-rewards.clar']]){
 b.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(fs.readFileSync(base+'/contracts/pox-5/'+file,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy exact local '+name,kind:'tx'});}
 ev('raw DIA STX/USD',VAULT,`(contract-call? '${DIA} get-value "STX/USD")`);
 ev('raw DIA BTC/USD',VAULT,`(contract-call? '${DIA} get-value "BTC/USD")`);
@@ -38,7 +39,7 @@ call('admin sets DIA emergency tolerance to 10 percent',POOL,'set-vault-no-pyth-
 call('tolerance above 50 percent rejected',POOL,'set-vault-no-pyth-slippage-bps',[Cl.uint(5001)]);
 call('admin sets zero-block window',POOL,'set-vault-window-blocks',[Cl.uint(0)]);
 call('fixture: real whale sBTC funds draft pool on fork',SBTC,'transfer',[Cl.uint(100000),Cl.principal(WHALE),Cl.principal(POOL),Cl.none()],WHALE);
-ev('fixture: pool funds exact draft vault',POOL,'(as-contract? ((with-ft SBTC "sbtc-token" u100000)) (try! (contract-call? SWAP_VAULT fund u100000)))');
+ev('fixture: pool funds exact draft vault',POOL,'(as-contract? ((with-ft SBTC "sbtc-token" u100000)) (try! (contract-call? .juice-pool-swap-vault fund u100000)))');
 ev('zero window immediately elapsed',VAULT,'(get-clock)');
 if(nativeMode){
 ev('fixture: DIA feed stale by one second',DIA,`(let ((old (unwrap-panic (contract-call? '${DIA} get-value "STX/USD"))) (now (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1))))) (map-set values "STX/USD" {value: (get value old), timestamp: (* (- now u7201) u1000)}))`);

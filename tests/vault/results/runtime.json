@@ -1,7 +1,8 @@
 {
   "sourceHashes": {
-    "juice-pool-stx-signer-stx-rewards": "3df2ddc15523fc00850fcbd28f9b6a38672e14cfc5c69bca5f4df73978def350",
-    "juice-pool-swap-vault": "ab3e77289a9692ba5d217451177766ee1bf88aeeacc5f211d136bf4afd9677d7"
+    "juice-swap-vault-trait": "c0f471b1cd5876bcb12afcd689cdb82109f63163aee879d58e5ff691325cbbed",
+    "juice-pool-stx-signer-stx-rewards": "bdff5e99574f132b5b2e207144da46f273793f8576c6cdbb1652cdb2fba6471a",
+    "juice-pool-swap-vault": "be613079fbb7d40cfa205f287e2b9b653badef24724497e66a3e85bc7bf74a2f"
   },
   "status": "passed",
   "scope": "full-source local runtime with fixture dependencies; fork runs validate real dependency behavior"

@@ -1,3 +1,4 @@
+import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Shared fork runner; exact production pool/vault sources are deployed unchanged.
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -25,8 +26,9 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
  const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API}).useBlockHeight(tip.height).withSender(DEP);
  const plan=[],sourceHashes={};
  const deploy=(name,path)=>{builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});};
- const call=(label,id,fn,args,want,sender=STRANGER)=>{builder.addContractCall({contract_id:id,function_name:fn,function_args:args,sender});plan.push({label,kind:'tx',want});};
+ const call=(label,id,fn,args,want,sender=STRANGER)=>{builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(pid,vid,id,fn,args,Cl),sender});plan.push({label,kind:'tx',want});};
  const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
+ if(kind==='juice')deploy('juice-swap-vault-trait',resolve(dirname(vaultSource),'juice-swap-vault-trait.clar'));
  deploy(vault,vaultSource);deploy(pool,poolSource);
  ev('real PoX-5 cycle',POX,'(current-pox-reward-cycle)',v=>/^u\d+$/.test(v));
  ev('vault clock initially clear',vid,'(get-clock)',v=>v.includes('(batch-start none)')&&v.includes('(window-open false)'));
@@ -102,10 +104,11 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  const plan=[],sourceHashes={};
  const jingRouterSlots=[];
  const deploy=(name,path)=>{builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});};
- const call=(label,id,fn,args,want,sender=DEP)=>{builder.addContractCall({contract_id:id,function_name:fn,function_args:args,sender});plan.push({label,kind:'tx',want});return plan.length-1;};
+ const call=(label,id,fn,args,want,sender=DEP)=>{builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(pid,vid,id,fn,args,Cl),sender});plan.push({label,kind:'tx',want});return plan.length-1;};
  const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
  const advance=(n)=>{builder.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:`advance ${n} burn blocks, compressed timestamps`,kind:'advance'});};
  const ok=v=>v.startsWith('(ok');
+ if(kind==='juice')deploy('juice-swap-vault-trait',resolve(dirname(vaultSource),'juice-swap-vault-trait.clar'));
  deploy(vault,vaultSource);deploy(pool,poolSource);
  const FUND=100000;
  call('fund real PoX sBTC balance (fork only)',SBTC,'transfer',[Cl.uint(FUND),Cl.principal(WHALE),Cl.principal(POX),Cl.none()],'(ok true)',WHALE);

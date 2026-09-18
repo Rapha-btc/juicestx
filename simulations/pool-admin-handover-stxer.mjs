@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, timed propose/accept admin handover.
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -9,6 +11,7 @@ const {SimulationBuilder,getSimulationResult}=require('stxer');
 const {Cl,ClarityVersion,deserializeCV,cvToString,getAddressFromPrivateKey}=require('@stacks/transactions');
 const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
 const POOL=`${DEP}.juice-pool-stx-signer-stx-rewards`;
+const VAULT=`${DEP}.juice-pool-swap-vault`;
 const ALICE=getAddressFromPrivateKey('7'.repeat(64)+'01','mainnet');
 const BOB=getAddressFromPrivateKey('8'.repeat(64)+'01','mainnet');
 const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api';
@@ -17,16 +20,16 @@ const tipResponse=await fetch(`${NODE}/extended/v1/block?limit=1`,{signal:AbortS
 if(!tipResponse.ok)throw new Error(`tip HTTP ${tipResponse.status}`);
 const tip=(await tipResponse.json()).results[0];
 const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
-const plan=[];
+const plan=[],sourceHashes={};
 const ok=v=>v.startsWith('(ok');
 function call(label,id,fn,args=[],want=ok,sender=DEP){
  const slot=plan.length;
- builder.addContractCall({contract_id:id,function_name:fn,function_args:args,sender});
+ builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});
  plan.push({label,kind:'tx',want});return slot;
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
-for(const [name,path] of [['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
- builder.addContractDeploy({contract_name:name,source_code:readFileSync(resolve(directory,path),'utf8'),clarity_version:ClarityVersion.Clarity6});
+for(const [name,path] of [['juice-swap-vault-trait','../contracts/pox-5/juice-swap-vault-trait.clar'],['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
+ builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(resolve(directory,path),'utf8')),clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});
 }
 const admin=(label,want)=>ev(label,POOL,'(get-admin)',want);
@@ -104,7 +107,7 @@ for(let i=0;i<plan.length;i++){
  eventChecks.push({label:`${label}: ${topic} print emitted`,passed:printed,actual:'decoded committed pool print event'});
 }
 checks.push(...eventChecks);
-const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'admin-handover',block:tip.height,burn:tip.burn_block_height,productionSourcesUnmodified:true,
+const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'admin-handover',block:tip.height,burn:tip.burn_block_height,productionSourcesUnmodified:true,sourceHashes,
  fixtures:['Admin handover uses actual fork Bitcoin-block advances at 143/144-block boundaries; one-second synthetic intervals','No storage seeds, oracle updates or reward/share fixtures are used; signer registration is outside this scenario'],checks,result};
 const resultsDirectory=resolve(directory,'results/pool-vault-stx');mkdirSync(resultsDirectory,{recursive:true});
 writeFileSync(resolve(resultsDirectory,'juice-admin-handover.json'),JSON.stringify(report,null,2));

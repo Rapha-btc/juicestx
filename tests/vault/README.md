@@ -1,8 +1,10 @@
 # Current Juice vault runtime and Rendezvous tests
 
+[Four-week vault rotation](../../contracts/pox-5/README-juice-pool-vault-upgrades.md) is pushed in `fc58b61`. Current local runtime coverage reaches **129/129 branch outcomes** and **292/294 line counters**, with **97 passing migration checks**. [Current Stxer verification](../../simulations/README-pool-vault-stx.md) passes **570/570 checks** across 11 forks. The Rendezvous counts below remain archived pre-rotation results.
+
 Target: `contracts/pox-5/juice-pool-swap-vault.clar`.
 
-2026-09-18 results: the full local runtime suite passed, reaching **129/129
+Pre-rotation 2026-09-18 results: the full local runtime suite passed, reaching **129/129
 instrumented branch outcomes** and **286/288 line counters**. Two Rendezvous
 seeds passed **2,000/2,000 invariant checks**, with **zero falsified invariants**,
 **zero runtime exceptions** and **60 completed batch round trips**. These complement

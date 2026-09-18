@@ -1,43 +1,40 @@
 # Juice pool / swap-vault verification
 
-Current-source validation on **2026-09-18**: **471/471 Stxer checks passed** in
-10 mainnet forks. Every run deploys the local Clarity 6 pool and vault before
-calling real mainnet dependencies. No live transactions are submitted.
+Current-source validation on **2026-09-18**: **570/570 Stxer checks passed** across 11 mainnet forks for the three contracts pushed in `fc58b61`. Each fork deploys the exact trait, vault and pool source before testing. No production transactions are sent.
 
-The local runtime suite reaches **129/129 instrumented branch outcomes** and
-**286/288 line counters** for `contracts/pox-5/juice-pool-swap-vault.clar`.
-The two zero-hit counters are the `mins` tuple binding and the native contract
-literal (lines 272/336); tests execute both paths. Rendezvous checked eight
-invariants over two seeds: **2,000/2,000 invariant checks passed**, no runtime
-exceptions, and **60 successful batch round trips**. This is measured vault
-coverage with declared fixtures, not proof that every possible transaction or
-all external contract code is bug-free.
+The rotation fork has **89 passing checks**: admin/pool binding, cancellation and reset, 4,031-block rejection and 4,032-block activation, pending-tranche protection, old/new batch clocks and resting/parked positions, tiny donations accepted on both idle vaults, every stale wrapper rejected, and a real post-switch PoX claim, AMM swap, finalization and payout. Candidate vault copies exist only in the fork.
 
-Vault SHA-256: `ab3e77289a9692ba5d217451177766ee1bf88aeeacc5f211d136bf4afd9677d7`.
-Pool SHA-256: `3df2ddc15523fc00850fcbd28f9b6a38672e14cfc5c69bca5f4df73978def350`.
-The pool hash includes the emergency admin wrappers in the local working tree;
-those pool source amendments remain uncommitted separately from this test work.
-Do not assume a previously deployed pool has these new methods.
+The local migration suite passes **97 checks**. Current local vault coverage reaches **129/129 branch outcomes** and **292/294 line counters**. The two zero-hit literal/binding counters execute semantically. The earlier Rendezvous runs (2,000 checks, zero exceptions, 60 completed batches) refer to pre-rotation hashes; they have not been rerun for vault rotation.
 
 ## Current Stxer runs
 
 | Scenario | Passed | Stxer | Raw report |
 | --- | --- | --- | --- |
-| Deployment and guards | 14/14 | [simulation](https://stxer.xyz/simulations/mainnet/a802afe1e2560bfe2c3b7d892b538666) | [juice-deployment-guards.json](results/pool-vault-stx/juice-deployment-guards.json) |
-| Maker fill during patience | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/575d7961086357312e7a464a543fdb98) | [juice-maker.json](results/pool-vault-stx/juice-maker.json) |
-| Smart-router AMM liquidation | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/ca99c1e1ea2564f52e2867ee00cef13a) | [juice-liquidation.json](results/pool-vault-stx/juice-liquidation.json) |
-| Smart-router Jing fills | 39/39 | [simulation](https://stxer.xyz/simulations/mainnet/805d3ef5744496d654b69c6c259fddc4) | [juice-jing-router.json](results/pool-vault-stx/juice-jing-router.json) |
-| Owner-only direct Jing take | 34/34 | [simulation](https://stxer.xyz/simulations/mainnet/a1f6901f1527cd7407beeb9d395a3bf1) | [juice-jing-take.json](results/pool-vault-stx/juice-jing-take.json) |
-| Required-Pyth manual split | 35/35 | [simulation](https://stxer.xyz/simulations/mainnet/d68fa679b74688e94fd2df8a1f922191) | [juice-split-pyth.json](results/pool-vault-stx/juice-split-pyth.json) |
-| Four-batch recovery continuity | 185/185 | [simulation](https://stxer.xyz/simulations/mainnet/e662fbe736f230e530fc31cfc53a37a9) | [juice-recovery-continuity.json](results/pool-vault-stx/juice-recovery-continuity.json) |
-| Timed admin handover | 52/52 | [simulation](https://stxer.xyz/simulations/mainnet/9010c0341aa816fad433d5bf4e0134fc) | [juice-admin-handover.json](results/pool-vault-stx/juice-admin-handover.json) |
-| Emergency DIA swap | 19/19 | [simulation](https://stxer.xyz/simulations/mainnet/f1aee856d660d58e8709ccd279fa296f) | [juice-emergency-dia.json](results/pool-vault-stx/juice-emergency-dia.json) |
-| Emergency native fallback | 29/29 | [simulation](https://stxer.xyz/simulations/mainnet/bcc54d2a6ad69210bd7a91c44b08be72) | [juice-emergency-native.json](results/pool-vault-stx/juice-emergency-native.json) |
+| Vault rotation and post-switch rewards | 89/89 | [simulation](https://stxer.xyz/simulations/mainnet/dbd028618b2a89291b43a66069b62d23) | [juice-vault-upgrade.json](results/pool-vault-stx/juice-vault-upgrade.json) |
+| Deployment and guards | 15/15 | [simulation](https://stxer.xyz/simulations/mainnet/2274b02948e1381360d12f2a0b6d53b6) | [juice-deployment-guards.json](results/pool-vault-stx/juice-deployment-guards.json) |
+| Maker fill during patience | 31/31 | [simulation](https://stxer.xyz/simulations/mainnet/a773f4a7d6d7dff8554b476832dbb9bc) | [juice-maker.json](results/pool-vault-stx/juice-maker.json) |
+| Smart-router AMM liquidation | 35/35 | [simulation](https://stxer.xyz/simulations/mainnet/d3b40e8a7c10664eb3d6e0e4e10f7ac9) | [juice-liquidation.json](results/pool-vault-stx/juice-liquidation.json) |
+| Smart-router Jing fills | 40/40 | [simulation](https://stxer.xyz/simulations/mainnet/0a2efbe80b3936672dce8c6be4e042a8) | [juice-jing-router.json](results/pool-vault-stx/juice-jing-router.json) |
+| Admin direct Jing take | 35/35 | [simulation](https://stxer.xyz/simulations/mainnet/caa0a8749794c515cee4b16372eb58fd) | [juice-jing-take.json](results/pool-vault-stx/juice-jing-take.json) |
+| Required-Pyth manual split | 36/36 | [simulation](https://stxer.xyz/simulations/mainnet/acd282c4b730fa9ee454824bcdb5772f) | [juice-split-pyth.json](results/pool-vault-stx/juice-split-pyth.json) |
+| Four-batch recovery continuity | 186/186 | [simulation](https://stxer.xyz/simulations/mainnet/b9107092fc2f1c74bac94a5dae9b9306) | [juice-recovery-continuity.json](results/pool-vault-stx/juice-recovery-continuity.json) |
+| Timed admin handover | 53/53 | [simulation](https://stxer.xyz/simulations/mainnet/423cbe080c8335e611ee87f2809f5df4) | [juice-admin-handover.json](results/pool-vault-stx/juice-admin-handover.json) |
+| Emergency DIA swap | 20/20 | [simulation](https://stxer.xyz/simulations/mainnet/b14d5ed91cf95e2e0995f460dbd775e5) | [juice-emergency-dia.json](results/pool-vault-stx/juice-emergency-dia.json) |
+| Emergency native fallback | 30/30 | [simulation](https://stxer.xyz/simulations/mainnet/02d37affb122566fff0de32e0cb628c5) | [juice-emergency-native.json](results/pool-vault-stx/juice-emergency-native.json) |
+
+Current SHA-256 source fingerprints:
+
+- `juice-pool-swap-vault`: `be613079fbb7d40cfa205f287e2b9b653badef24724497e66a3e85bc7bf74a2f`
+- `juice-swap-vault-trait`: `c0f471b1cd5876bcb12afcd689cdb82109f63163aee879d58e5ff691325cbbed`
+- `juice-pool-stx-signer-stx-rewards`: `bdff5e99574f132b5b2e207144da46f273793f8576c6cdbb1652cdb2fba6471a`
+
+Pre-rotation reports (471 checks) are preserved in [pre-rotation](results/pool-vault-stx/pre-rotation/). Older runs remain in [history](results/pool-vault-stx/history/).
 
 ## Run the fork cases
 
 ```sh
 npm ci
+node simulations/pool-vault-upgrade-stxer.mjs
 node simulations/pool-vault-stx-stxer.mjs
 node simulations/pool-vault-stx-stxer.mjs --maker
 node simulations/pool-vault-stx-stxer.mjs --lifecycle
@@ -84,11 +81,11 @@ The successful parent-chain cases above replace that incomplete run.
 
 ## Emergency price and output examples
 
-`router-swap-split-dia(amount, dlmm, xyk, velar)` has no Jing or update arguments.
+`router-swap-split-dia(amount, dlmm, xyk, velar, active-vault)` has no Jing or update arguments.
 It forwards Jing `u0` and update `none`. The restored `router-swap-split` requires
 a Pyth buffer, and retains its normal 1% floor and separate 0.6% Velar floor.
 
-The current emergency DIA run returned:
+The archived pre-rotation emergency DIA run returned:
 
 - STX/USD `(ok {value: u28252561, timestamp: u1789764657889})`: $0.28252561/STX.
 - BTC/USD `(ok {value: u8110528212401, timestamp: u1789764657889})`: $81,105.28212401/BTC.
@@ -152,3 +149,7 @@ not current-source coverage. In particular
 [ed4d8d4d0bb0698f50d4e059a811f026](https://stxer.xyz/simulations/mainnet/ed4d8d4d0bb0698f50d4e059a811f026)
 is the superseded optional-Pyth split prototype; its `err u16047` and interface no
 longer apply. The emergency function's separate interface is verified by current runs.
+
+## Rotation fork fixtures
+
+The rotation fork deploys an unchanged candidate copy plus a wrong-pool copy. It seeds private batch clocks, market position maps and the pending-tranche guard only in the fork to isolate each rejection. Real one-satoshi and one-microSTX donations remain on the retired vault. After switching, a seeded earned PoX reward of 10,000 sats plus the candidate donation is claimed through the public pool API, swapped through the real router/AMM, finalized and paid to the original staker. The 4,032 burn-height steps use compressed timestamps; they test the height gate, not a month of real-time oracle updates. Local migration tests separately preserve prior tranche payouts.
