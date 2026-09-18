@@ -46,6 +46,10 @@
 ;; CityCoins' split path uses a separate 0.6% guard for Velar.
 (define-constant VELAR_SLIPPAGE_BPS u60)
 
+(define-constant MAX_NO_PYTH_SLIPPAGE_BPS u5000)
+;; Emergency DIA tolerance: 10% by default, bounded at 50%.
+(define-data-var no-pyth-slippage-bps uint u1000)
+
 (define-data-var window-blocks uint u288)
 (define-data-var leeway-bps uint u500)
 (define-data-var slippage-bps uint u100)
@@ -56,12 +60,20 @@
 (define-data-var batch-start (optional uint) none)
 
 ;; Settings are reachable only through the pool's admin wrappers.
+(define-public (set-no-pyth-slippage-bps (bps uint))
+  (begin
+    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
+    (asserts! (<= bps MAX_NO_PYTH_SLIPPAGE_BPS) ERR_OUT_OF_RANGE)
+    (var-set no-pyth-slippage-bps bps)
+    (print { notification: "set-no-pyth-slippage-bps", payload: { value: bps } })
+    (ok true)))
+
 (define-public (set-window-blocks (blocks uint))
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     ;; Changing this during a batch would move its computed deadline.
     (asserts! (is-none (var-get batch-start)) ERR_BUSY)
-    (asserts! (and (> blocks u0) (<= blocks MAX_WINDOW_BLOCKS)) ERR_OUT_OF_RANGE)
+    (asserts! (<= blocks MAX_WINDOW_BLOCKS) ERR_OUT_OF_RANGE)
     (var-set window-blocks blocks)
     (print { notification: "set-window-blocks", payload: { value: blocks } })
     (ok true)
@@ -285,6 +297,47 @@
   )
 )
 
+;; Emergency AMM-only liquidation. No Jing allocation or Pyth argument.
+(define-public (router-swap-split-dia
+    (amount uint) (dlmm uint) (xyk uint) (velar uint))
+  (begin
+    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
+    (asserts! (is-eq amount (+ dlmm xyk velar)) ERR_SPLIT_MISMATCH)
+    (asserts! (window-elapsed) ERR_WINDOW_OPEN)
+    (asserts! (<= amount (var-get max-chunk-sats)) ERR_CHUNK_TOO_BIG)
+    (try! (check-amount amount))
+    (try! (cooldown-tick))
+    (let ((price (try! (get-no-pyth-price))))
+      (let ((limit (get limit price))
+            (mins { dlmm: (floor-out dlmm limit),
+                    xyk: (floor-out xyk limit),
+                    velar: (floor-out velar limit) }))
+        (let ((result (try! (as-contract?
+            ((with-ft SBTC_TOKEN ASSET_SBTC amount))
+            (try! (contract-call? JING_ROUTER swap-sbtc-for-stx amount u0 limit
+              none none { dlmm: dlmm, xyk: xyk, velar: velar } mins
+              (floor-out amount limit)))))))
+          (ok (print { notification: "router-swap-split-dia", payload: {
+            amount: amount, dlmm: dlmm, xyk: xyk, velar: velar,
+            mid: (get mid price), limit-price: limit, price-source: (get source price),
+            dia-error: (get dia-error price),
+            out: (get out result), unsold: (get unsold result),
+          } })))))))
+
+
+;; DIA supplies the emergency mid. On any DIA response error, use the
+;; deployed RFQ's native lower band edge; never substitute a zero price.
+(define-read-only (get-no-pyth-price)
+  (match (get-dia-price)
+    mid (let ((limit (/ (* mid (- BPS_PRECISION (var-get no-pyth-slippage-bps))) BPS_PRECISION)))
+      (asserts! (> limit u0) ERR_INVALID_PRICE)
+      (ok { mid: mid, limit: limit, source: "dia", dia-error: none }))
+    dia-error (let ((mid (try! (contract-call?
+        'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3 get-native-price)))
+        (limit (/ mid u2)))
+      (asserts! (> limit u0) ERR_INVALID_PRICE)
+      (ok { mid: mid, limit: limit, source: "native", dia-error: (some dia-error) }))))
+
 (define-read-only (get-dia-value (key (string-ascii 32)))
   (let (
       (res (unwrap! (contract-call?
@@ -420,7 +473,7 @@
 
 (define-read-only (get-config)
  { pool: POOL, recovery-delay-blocks: RECOVERY_DELAY_BLOCKS, window-blocks: (var-get window-blocks),
-   leeway-bps: (var-get leeway-bps), slippage-bps: (var-get slippage-bps),
+   leeway-bps: (var-get leeway-bps), slippage-bps: (var-get slippage-bps), no-pyth-slippage-bps: (var-get no-pyth-slippage-bps),
    max-chunk-sats: (var-get max-chunk-sats), dia-band-bps: (var-get dia-band-bps),
    router-cooldown-blocks: (var-get router-cooldown-blocks),
    last-router-swap: (var-get last-router-swap),
