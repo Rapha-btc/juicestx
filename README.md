@@ -110,7 +110,7 @@ before paying stakers native STX. After 4,320 Bitcoin blocks, admin recovery can
 return the remaining sBTC and converted STX to their original tranche. The vault
 can then fund another batch, even while earlier recovered payouts are uncollected.
 
-Latest-code Stxer validation: **263/263 checks passed**.
+Swap/recovery Stxer validation before the timed admin amendment: **263/263 checks passed**.
 
 | Scenario | Passed | Stxer |
 | --- | --- | --- |
@@ -121,3 +121,9 @@ Latest-code Stxer validation: **263/263 checks passed**.
 
 See [simulation commands and recovery behavior](simulations/README-pool-vault-stx.md)
 and [all run links, raw reports and fixture scope](simulations/results/pool-vault-stx/README.md).
+
+Admin handover now requires a proposal by the current admin and acceptance by
+the nominee after **144 Bitcoin blocks**. Cancellation is available to the current
+admin; replacement restarts the delay. Stxer passed **52/52 admin checks**:
+[admin handover simulation](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8).
+See [handover behavior and commands](simulations/README-pool-vault-stx.md#timed-admin-handover).

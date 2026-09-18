@@ -1,8 +1,8 @@
 # Juice swap-vault Stxer results
 
-## Latest reviewed code
+## Successful swap and recovery validation before timed admin handover
 
-All **263/263 checks passed** across the following four runs.
+All **263/263 checks passed** across these four runs. They predate the timed admin handover; the new admin validation is documented below.
 
 | Scenario | Passed | Stxer | Raw results |
 | --- | --- | --- | --- |
@@ -48,3 +48,15 @@ These links document earlier contract versions; use the latest runs above for th
 | Initial maker lifecycle | 30/30 | [b05bffa7d714f6a497c79bf311a56ed6](https://stxer.xyz/simulations/mainnet/b05bffa7d714f6a497c79bf311a56ed6) |
 | Initial liquidation lifecycle | 34/34 | [f7c21a3e95ddf16c45df3d5cab22dccd](https://stxer.xyz/simulations/mainnet/f7c21a3e95ddf16c45df3d5cab22dccd) |
 | Recovery continuity before final print/layout amendments | 185/185 | [fda41364996150a91b14a9e50f66e34e](https://stxer.xyz/simulations/mainnet/fda41364996150a91b14a9e50f66e34e) |
+
+## Timed admin handover
+
+**52/52 checks passed** on the signer with the new propose/accept interface:
+[0bb89b79924e5dac7fc81f96decec1f8](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8). [Raw results](juice-admin-handover.json).
+
+Both production sources were deployed unchanged. The test uses actual fork
+Bitcoin-block advances, with one-second synthetic timestamps, at 143/144-block
+boundaries; no storage seeds or oracle proofs are involved. It verifies nominee-only
+acceptance, current-admin authority while pending, cancellation, replacement
+resetting the timer, cleared pending state, former-admin role revocation, repeated
+handover, and committed print events for proposals, acceptance and cancellation.

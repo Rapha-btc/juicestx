@@ -10,6 +10,7 @@ node simulations/pool-vault-stx-stxer.mjs
 node simulations/pool-vault-stx-stxer.mjs --maker
 node simulations/pool-vault-stx-stxer.mjs --lifecycle
 node simulations/pool-vault-recovery-stxer.mjs
+node simulations/pool-admin-handover-stxer.mjs
 ```
 
 The shared runner and signed-update helper are local to this simulations directory;
@@ -17,7 +18,7 @@ no sibling repo is required. STACKS_API_URL and STXER_API_URL override the defau
 node and simulation service. PYTH_API_KEY is optional; without it the scripts use
 the public Jing backend for a signed BTC/STX update.
 
-## Latest successful runs
+## Successful swap and recovery runs (before timed admin handover)
 
 | Scenario | Passed | Stxer |
 | --- | --- | --- |
@@ -63,3 +64,23 @@ Recovered STX uses pay-stx-stakers; remaining sBTC uses pay-recovered-sbtc-stake
 Funding clocks are aged by explicit vault Eval fixtures (288, 4,319 and 4,320 blocks)
 to keep signed updates valid for the following swaps. This is a state-transition test,
 not a real month of chain time. Two additional one-second Bitcoin blocks exercise router cooldown.
+
+## Timed admin handover
+
+The current admin calls `propose-admin`; only the proposed principal can call
+`accept-admin`, after 144 Bitcoin blocks. The current admin remains in charge
+until acceptance and can call `cancel-admin-proposal`. Replacing a proposal
+restarts the full 144-block delay. `get-pending-admin` exposes the nominee,
+proposal height and acceptance height. Each successful action emits a pool print.
+
+```sh
+node simulations/pool-admin-handover-stxer.mjs
+```
+
+Stxer: [0bb89b79924e5dac7fc81f96decec1f8](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8) — **52/52 checks passed**.
+The simulation checks 143/144-block boundaries, nominee-only acceptance,
+cancellation, replacement resetting the delay, former-admin authority revocation,
+a second successful handover, and decoded committed proposal/accept/cancel prints.
+It deploys both contract sources unchanged and advances actual fork Bitcoin blocks
+with one-second synthetic timestamps; it uses no reward, share or storage fixtures.
+Earlier swap/recovery runs below predate this admin-interface amendment.

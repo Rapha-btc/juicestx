@@ -361,7 +361,7 @@ is coverage of its two *refusal* paths.
 
 ## Juice STX reward pool and swap vault
 
-Latest reviewed-code runs: **263/263 checks passed**.
+Swap/recovery validation before the timed admin amendment: **263/263 checks passed**.
 
 | Scenario | Passed | Stxer |
 | --- | --- | --- |
@@ -372,3 +372,15 @@ Latest reviewed-code runs: **263/263 checks passed**.
 
 Commands and recovery behavior: [pool/vault simulations](README-pool-vault-stx.md).
 Raw reports, fixtures and earlier run links: [pool/vault results](results/pool-vault-stx/README.md).
+
+### Timed admin handover
+
+`node simulations/pool-admin-handover-stxer.mjs` — **52/52 checks passed**:
+[0bb89b79924e5dac7fc81f96decec1f8](https://stxer.xyz/simulations/mainnet/0bb89b79924e5dac7fc81f96decec1f8).
+
+Tests nominee-only acceptance at 144 Bitcoin blocks (rejected at 143), proposal
+replacement/cancellation, revocation of the former admin, repeated handover and
+proposal/accept/cancel print events. Both sources are unchanged; this scenario
+uses actual fork-block advances with synthetic timestamps and no storage fixtures.
+See [handover behavior and commands](README-pool-vault-stx.md#timed-admin-handover)
+and [raw report](results/pool-vault-stx/juice-admin-handover.json).

@@ -5,6 +5,7 @@
 
 (define-constant ERR_NOT_RECOVERED (err u116))
 (define-constant ERR_SWAP_PENDING (err u115))
+(define-constant ERR_NO_PENDING_ADMIN (err u117))
 
 (define-data-var pending-swap (optional { reward-cycle: uint, tranche: uint }) none)
 (define-map finalized-tranches { reward-cycle: uint, tranche: uint } bool)
@@ -28,8 +29,11 @@
 
 (define-constant MAX_BIPS u10000)
 (define-constant MAX_FEE_BIPS u500)
+(define-constant ADMIN_COOLDOWN u144)
 
 (define-data-var admin  principal tx-sender)
+(define-data-var pending-admin (optional principal) none)
+(define-data-var pending-admin-height uint u0)
 (define-data-var paused bool false)
 
 (define-read-only (get-admin) (var-get admin))
@@ -38,11 +42,37 @@
 (define-private (assert-admin)
   (ok (asserts! (is-eq contract-caller (var-get admin)) ERR_UNAUTHORIZED)))
 
-(define-public (set-admin (new-admin principal))
+(define-read-only (get-pending-admin)
+  { admin: (var-get pending-admin),
+    proposed-at: (var-get pending-admin-height),
+    executable-at: (+ (var-get pending-admin-height) ADMIN_COOLDOWN) })
+
+(define-public (propose-admin (new-admin principal))
   (begin
     (try! (assert-admin))
+    (var-set pending-admin (some new-admin))
+    (var-set pending-admin-height burn-block-height)
+    (print { topic: "propose-admin", current: (var-get admin), proposed: new-admin,
+      executable-at: (+ burn-block-height ADMIN_COOLDOWN) })
+    (ok new-admin)))
+
+(define-public (accept-admin)
+  (let ((new-admin (unwrap! (var-get pending-admin) ERR_NO_PENDING_ADMIN)))
+    (asserts! (is-eq contract-caller new-admin) ERR_UNAUTHORIZED)
+    (asserts! (>= burn-block-height (+ (var-get pending-admin-height) ADMIN_COOLDOWN))
+      ERR_COOLDOWN)
+    (print { topic: "accept-admin", old-admin: (var-get admin), new-admin: new-admin })
     (var-set admin new-admin)
-    (print { topic: "set-admin", old-admin: contract-caller, new-admin: new-admin })
+    (var-set pending-admin none)
+    (var-set pending-admin-height u0)
+    (ok true)))
+
+(define-public (cancel-admin-proposal)
+  (begin
+    (try! (assert-admin))
+    (print { topic: "cancel-admin-proposal", cancelled: (var-get pending-admin) })
+    (var-set pending-admin none)
+    (var-set pending-admin-height u0)
     (ok true)))
 
 (define-public (set-paused (p bool))
