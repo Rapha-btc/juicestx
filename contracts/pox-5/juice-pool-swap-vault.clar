@@ -1,3 +1,5 @@
+(impl-trait .juice-swap-vault-trait.swap-vault-trait)
+
 ;; DRAFT: one sBTC -> STX vault per pool, adapted from CCD016 v2.
 ;; Deploy vault before pool, at the same address. No CityCoins/DAO dependencies.
 ;; One active batch. Defaults: 288 burn blocks maker-first, then oracle-floored
@@ -478,3 +480,11 @@
    router-cooldown-blocks: (var-get router-cooldown-blocks),
    last-router-swap: (var-get last-router-swap),
    market: JING_MARKET, router: JING_ROUTER })
+
+;; Response wrapper for trait-based upgrade checks; no state changes.
+(define-read-only (get-upgrade-status)
+  (let ((cycle (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-current-cycle)))
+    (ok { pool: POOL, empty: (is-empty), sbtc-balance: (sbtc-balance),
+      stx-balance: (stx-get-balance current-contract), batch-start: (var-get batch-start),
+      jing-resting: (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-token-x-deposit cycle current-contract),
+      jing-parked: (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-token-x-parked current-contract) })))

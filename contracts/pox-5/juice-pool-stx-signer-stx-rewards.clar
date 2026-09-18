@@ -10,7 +10,16 @@
 (define-data-var pending-swap (optional { reward-cycle: uint, tranche: uint }) none)
 (define-map finalized-tranches { reward-cycle: uint, tranche: uint } bool)
 
-(define-constant SWAP_VAULT .juice-pool-swap-vault)
+(use-trait swap-vault-interface .juice-swap-vault-trait.swap-vault-trait)
+
+(define-constant SWAP_VAULT_COOLDOWN u4032)
+(define-constant ERR_NO_PENDING_SWAP_VAULT (err u118))
+(define-constant ERR_INVALID_SWAP_VAULT (err u119))
+(define-constant ERR_SWAP_VAULT_BUSY (err u120))
+
+(define-data-var swap-vault principal .juice-pool-swap-vault)
+(define-data-var pending-swap-vault (optional principal) none)
+(define-data-var pending-swap-vault-height uint u0)
 (define-constant POX5 'SP000000000000000000002Q6VF78.pox-5)
 (define-constant SBTC 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)
 
@@ -74,6 +83,99 @@
     (var-set pending-admin none)
     (var-set pending-admin-height u0)
     (ok true)))
+
+
+;; Four-week notice; finish/recover the old batch before switching destinations.
+(define-read-only (get-swap-vault)
+  (var-get swap-vault)
+)
+
+(define-read-only (get-pending-swap-vault)
+  {
+    vault: (var-get pending-swap-vault),
+    proposed-at: (var-get pending-swap-vault-height),
+    executable-at: (+ (var-get pending-swap-vault-height) SWAP_VAULT_COOLDOWN),
+  }
+)
+
+(define-private (assert-active-vault (vault <swap-vault-interface>))
+  (ok (asserts! (is-eq (contract-of vault) (var-get swap-vault))
+    ERR_INVALID_SWAP_VAULT
+  ))
+)
+
+;; Donations cannot block rotation; active batches and positions still do.
+(define-private (assert-idle-vault (vault <swap-vault-interface>))
+  (let ((status (try! (contract-call? vault get-upgrade-status))))
+    (asserts! (is-eq (get pool status) current-contract) ERR_INVALID_SWAP_VAULT)
+    (asserts! (and
+      (is-none (get batch-start status))
+      (is-eq (get jing-resting status) u0)
+      (is-eq (get jing-parked status) u0)) ERR_SWAP_VAULT_BUSY)
+    (ok true)))
+
+(define-public (propose-swap-vault (new-vault <swap-vault-interface>))
+  (begin
+    (try! (assert-admin))
+    (asserts! (not (is-eq (contract-of new-vault) (var-get swap-vault)))
+      ERR_INVALID_SWAP_VAULT
+    )
+    (try! (assert-idle-vault new-vault))
+    (var-set pending-swap-vault (some (contract-of new-vault)))
+    (var-set pending-swap-vault-height burn-block-height)
+    (print {
+      topic: "propose-swap-vault",
+      current: (var-get swap-vault),
+      proposed: (contract-of new-vault),
+      executable-at: (+ burn-block-height SWAP_VAULT_COOLDOWN),
+    })
+    (ok (contract-of new-vault))
+  )
+)
+
+(define-public (cancel-swap-vault-proposal)
+  (begin
+    (try! (assert-admin))
+    (print {
+      topic: "cancel-swap-vault-proposal",
+      cancelled: (var-get pending-swap-vault),
+    })
+    (var-set pending-swap-vault none)
+    (var-set pending-swap-vault-height u0)
+    (ok true)
+  )
+)
+
+(define-public (confirm-swap-vault
+    (old-vault <swap-vault-interface>)
+    (new-vault <swap-vault-interface>)
+  )
+  (begin
+    (try! (assert-admin))
+    (let ((proposed (unwrap! (var-get pending-swap-vault) ERR_NO_PENDING_SWAP_VAULT)))
+      (try! (assert-active-vault old-vault))
+      (asserts! (is-eq (contract-of new-vault) proposed) ERR_INVALID_SWAP_VAULT)
+      (asserts!
+        (>= burn-block-height
+          (+ (var-get pending-swap-vault-height) SWAP_VAULT_COOLDOWN)
+        )
+        ERR_COOLDOWN
+      )
+      (asserts! (is-none (var-get pending-swap)) ERR_SWAP_PENDING)
+      (try! (assert-idle-vault old-vault))
+      (try! (assert-idle-vault new-vault))
+      (var-set swap-vault proposed)
+      (var-set pending-swap-vault none)
+      (var-set pending-swap-vault-height u0)
+      (print {
+        topic: "confirm-swap-vault",
+        old-vault: (contract-of old-vault),
+        new-vault: proposed,
+      })
+      (ok proposed)
+    )
+  )
+)
 
 (define-public (set-paused (p bool))
   (begin
@@ -191,28 +293,48 @@
 (define-public (pox-claim-rewards
     (bond-periods (list 6 uint))
     (reward-cycle uint)
+    (vault <swap-vault-interface>)
   )
-  (let (
-      (trn (get-tranche-count reward-cycle))
-      (dist (contract-call? POX5 current-distribution-cycle))
-      (last-dist (map-get? last-claim-dist-cycle reward-cycle))
-    )
-    (asserts! (match last-dist l (> dist l) true) ERR_TRANCHE_TOO_SOON)
+  (begin
+    (try! (assert-active-vault vault))
     (let (
-      (result (try! (contract-call? POX5 claim-rewards bond-periods reward-cycle)))
-      (claimed (get total-rewards result))
-    )
-    (asserts! (> claimed u0) ERR_NO_NEW_REWARDS)
-    (asserts! (is-none (var-get pending-swap)) ERR_SWAP_PENDING)
-    (try! (as-contract? ((with-ft SBTC "sbtc-token" claimed))
-      (try! (contract-call? SWAP_VAULT fund claimed))))
-    (var-set pending-swap (some { reward-cycle: reward-cycle, tranche: trn }))
-    (map-set tranche-count reward-cycle (+ trn u1))
-    (map-set last-claim-dist-cycle reward-cycle dist)
-    (print { topic: "claim-rewards", reward-cycle: reward-cycle,
-      tranche: trn, claimed: claimed, dist-cycle: dist,
-      fee-bips: (var-get fee-bips) })
-    (ok result)
+        (trn (get-tranche-count reward-cycle))
+        (dist (contract-call? POX5 current-distribution-cycle))
+        (last-dist (map-get? last-claim-dist-cycle reward-cycle))
+      )
+      (asserts! (match last-dist
+        l (> dist l)
+        true
+      )
+        ERR_TRANCHE_TOO_SOON
+      )
+      (let (
+          (result (try! (contract-call? POX5 claim-rewards bond-periods reward-cycle)))
+          (claimed (get total-rewards result))
+        )
+        (asserts! (> claimed u0) ERR_NO_NEW_REWARDS)
+        (asserts! (is-none (var-get pending-swap)) ERR_SWAP_PENDING)
+        (try! (as-contract? ((with-ft SBTC "sbtc-token" claimed))
+          (try! (contract-call? vault fund claimed))
+        ))
+        (var-set pending-swap
+          (some {
+            reward-cycle: reward-cycle,
+            tranche: trn,
+          })
+        )
+        (map-set tranche-count reward-cycle (+ trn u1))
+        (map-set last-claim-dist-cycle reward-cycle dist)
+        (print {
+          topic: "claim-rewards",
+          reward-cycle: reward-cycle,
+          tranche: trn,
+          claimed: claimed,
+          dist-cycle: dist,
+          fee-bips: (var-get fee-bips),
+        })
+        (ok result)
+      )
     )
   )
 )
@@ -403,15 +525,26 @@
 
 ;; Added swap-vault integration and emergency recovery.
 
-(define-public (finalize-swap)
-  (let ((batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
-        (amount (try! (contract-call? SWAP_VAULT finish))))
-    (map-set stx-pot batch amount)
-    (map-set finalized-tranches batch true)
-    (var-set pending-swap none)
-    (print { topic: "finalize-swap", reward-cycle: (get reward-cycle batch),
-      tranche: (get tranche batch), amount: amount })
-    (ok amount)))
+(define-public (finalize-swap (vault <swap-vault-interface>))
+  (begin
+    (try! (assert-active-vault vault))
+    (let (
+        (batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
+        (amount (try! (contract-call? vault finish)))
+      )
+      (map-set stx-pot batch amount)
+      (map-set finalized-tranches batch true)
+      (var-set pending-swap none)
+      (print {
+        topic: "finalize-swap",
+        reward-cycle: (get reward-cycle batch),
+        tranche: (get tranche batch),
+        amount: amount,
+      })
+      (ok amount)
+    )
+  )
+)
 
 ;; Emergency accounting is separate from the normal swap route. STX uses the
 ;; existing ledger; the remaining sBTC has its own payout, fee and dust ledgers.
@@ -447,17 +580,29 @@
 
 ;; Returning funds and crediting exactly the pending tranche happen atomically.
 ;; Normal finalize and recovery consume the same pending-swap, preventing reuse.
-(define-public (emergency-recover)
+(define-public (emergency-recover (vault <swap-vault-interface>))
   (begin
-    (try! (assert-admin))
-    (let ((batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
-          (recovered (try! (contract-call? SWAP_VAULT emergency-recover))))
-      (map-set stx-pot batch (get stx recovered))
-      (map-set recovered-sbtc-pot batch (get sbtc recovered))
-      (map-set finalized-tranches batch true)
-      (var-set pending-swap none)
-      (print { topic: "emergency-recover", batch: batch, recovered: recovered })
-      (ok recovered))))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (let (
+          (batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
+          (recovered (try! (contract-call? vault emergency-recover)))
+        )
+        (map-set stx-pot batch (get stx recovered))
+        (map-set recovered-sbtc-pot batch (get sbtc recovered))
+        (map-set finalized-tranches batch true)
+        (var-set pending-swap none)
+        (print {
+          topic: "emergency-recover",
+          batch: batch,
+          recovered: recovered,
+        })
+        (ok recovered)
+      )
+    )
+  )
+)
 
 (define-private (pay-recovered-sbtc-one
     (staker principal)
@@ -541,52 +686,157 @@
     (print { topic: "withdraw-sbtc-fees", amount: amount, recipient: recipient })
     (ok amount)))
 
-(define-public (refloor-vault (update (buff 8192)))
+(define-public (refloor-vault
+    (update (buff 8192))
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT jing-refloor update)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault jing-refloor update)
+    )
+  )
+)
 
 ;; Bounded vault settings: vault trusts this pool; pool checks its admin.
-(define-public (set-vault-window-blocks (blocks uint))
+(define-public (set-vault-window-blocks
+    (blocks uint)
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT set-window-blocks blocks)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-window-blocks blocks)
+    )
+  )
+)
 
-(define-public (set-vault-leeway-bps (bps uint))
+(define-public (set-vault-leeway-bps
+    (bps uint)
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT set-leeway-bps bps)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-leeway-bps bps)
+    )
+  )
+)
 
-(define-public (set-vault-slippage-bps (bps uint))
+(define-public (set-vault-slippage-bps
+    (bps uint)
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT set-slippage-bps bps)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-slippage-bps bps)
+    )
+  )
+)
 
-(define-public (set-vault-max-chunk-sats (sats uint))
+(define-public (set-vault-max-chunk-sats
+    (sats uint)
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT set-max-chunk-sats sats)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-max-chunk-sats sats)
+    )
+  )
+)
 
-(define-public (set-vault-dia-band-bps (bps uint))
+(define-public (set-vault-dia-band-bps
+    (bps uint)
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT set-dia-band-bps bps)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-dia-band-bps bps)
+    )
+  )
+)
 
-(define-public (set-vault-router-cooldown (blocks uint))
+(define-public (set-vault-router-cooldown
+    (blocks uint)
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT set-router-cooldown blocks)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-router-cooldown blocks)
+    )
+  )
+)
 
-(define-public (jing-take (amount uint) (update (buff 8192)))
+(define-public (jing-take
+    (amount uint)
+    (update (buff 8192))
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT jing-take amount update)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault jing-take amount update)
+    )
+  )
+)
 
 (define-public (router-swap-split
-    (amount uint) (jing uint) (dlmm uint) (xyk uint) (velar uint)
-    (update (buff 8192)))
+    (amount uint)
+    (jing uint)
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+    (update (buff 8192))
+    (vault <swap-vault-interface>)
+  )
   (begin
-    (try! (assert-admin))
-    (contract-call? SWAP_VAULT router-swap-split amount jing dlmm xyk velar update)))
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault router-swap-split amount jing dlmm xyk velar update)
+    )
+  )
+)
 
 (define-read-only (get-pending-swap) (var-get pending-swap))
+
+(define-public (set-vault-no-pyth-slippage-bps
+    (bps uint)
+    (vault <swap-vault-interface>)
+  )
+  (begin
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-no-pyth-slippage-bps bps)
+    )
+  )
+)
+
+(define-public (router-swap-split-dia
+    (amount uint)
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+    (vault <swap-vault-interface>)
+  )
+  (begin
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault router-swap-split-dia amount dlmm xyk velar)
+    )
+  )
+)
