@@ -1,4 +1,4 @@
-# Juice STX rewards pool: delayed swap-vault rotation 
+# Juice STX rewards pool: delayed swap-vault rotation
 
 The pool starts with `.juice-pool-swap-vault` but stores its active destination
 in `swap-vault`. Its current admin can select a compatible future vault after
