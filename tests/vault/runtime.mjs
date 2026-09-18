@@ -425,5 +425,5 @@ assert.equal(branchHits,branchTotal,'current vault branch coverage regressed');
 writeFileSync(resolve(directory,'coverage.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,'.build/source-hashes.json'))),
  branchTotal,branchHits,lineTotal:lineCounts.length,lineHits:lineCounts.filter(c=>c.hits>0).length,
  zeroHitLines:lineCounts.filter(c=>!c.hits).map(c=>c.line),
- notes:'Two zero-hit literal/binding lines execute semantically (mins tuple/native literal); all instrumented branch outcomes reached. Dependency addresses/assets rebound to fixtures, with declared fault injection. This is local vault coverage, not exhaustive mainnet dependency coverage.'},null,2)+'\n');
+ notes:'Zero-hit counters are tuple fields, bindings and multiline contract-call arguments exercised by the tests; all instrumented branch outcomes reached. Dependency addresses/assets rebound to fixtures, with declared fault injection. This is local vault coverage, not exhaustive mainnet dependency coverage.'},null,2)+'\n');
 writeFileSync(resolve(directory,'runtime.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,'.build/source-hashes.json'))),status:'passed',scope:'full-source local runtime with fixture dependencies; fork runs validate real dependency behavior'},null,2)+'\n');

@@ -1,10 +1,5 @@
 (impl-trait .juice-swap-vault-trait.swap-vault-trait)
 
-;; DRAFT: one sBTC -> STX vault per pool, adapted from CCD016 v2.
-;; Deploy vault before pool, at the same address. No CityCoins/DAO dependencies.
-;; One active batch. Defaults: 288 burn blocks maker-first, then oracle-floored
-;; router chunks <= 0.05 BTC, separated by >= 1 burn block. Pool admin may tune
-;; bounded settings; the window length may change only between batches.
 (define-constant ERR_RECOVERY_TOO_SOON (err u16046))
 (define-constant ERR_BUSY (err u16045))
 (define-constant ERR_UNAUTHORIZED (err u16000))
@@ -36,7 +31,6 @@
 (define-constant JING_MARKET 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6)
 (define-constant JING_ROUTER 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5)
 
-;; Approximately one month, measured from funding; not admin-adjustable.
 (define-constant RECOVERY_DELAY_BLOCKS u4320)
 (define-constant MAX_DIA_AGE u7200)
 (define-constant MAX_WINDOW_BLOCKS u1008)
@@ -45,11 +39,11 @@
 (define-constant MAX_DIA_BAND_BPS u5000)
 (define-constant MAX_CHUNK_SATS u100000000)
 (define-constant MAX_COOLDOWN_BLOCKS u144)
-;; CityCoins' split path uses a separate 0.6% guard for Velar.
+
 (define-constant VELAR_SLIPPAGE_BPS u60)
 
 (define-constant MAX_NO_PYTH_SLIPPAGE_BPS u5000)
-;; Emergency DIA tolerance: 10% by default, bounded at 50%.
+
 (define-data-var no-pyth-slippage-bps uint u1000)
 
 (define-data-var window-blocks uint u288)
@@ -61,23 +55,30 @@
 (define-data-var last-router-swap uint u0)
 (define-data-var batch-start (optional uint) none)
 
-;; Settings are reachable only through the pool's admin wrappers.
 (define-public (set-no-pyth-slippage-bps (bps uint))
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_NO_PYTH_SLIPPAGE_BPS) ERR_OUT_OF_RANGE)
     (var-set no-pyth-slippage-bps bps)
-    (print { notification: "set-no-pyth-slippage-bps", payload: { value: bps } })
-    (ok true)))
+    (print {
+      notification: "set-no-pyth-slippage-bps",
+      payload: { value: bps },
+    })
+    (ok true)
+  )
+)
 
 (define-public (set-window-blocks (blocks uint))
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
-    ;; Changing this during a batch would move its computed deadline.
+
     (asserts! (is-none (var-get batch-start)) ERR_BUSY)
     (asserts! (<= blocks MAX_WINDOW_BLOCKS) ERR_OUT_OF_RANGE)
     (var-set window-blocks blocks)
-    (print { notification: "set-window-blocks", payload: { value: blocks } })
+    (print {
+      notification: "set-window-blocks",
+      payload: { value: blocks },
+    })
     (ok true)
   )
 )
@@ -87,7 +88,10 @@
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_LEEWAY_BPS) ERR_OUT_OF_RANGE)
     (var-set leeway-bps bps)
-    (print { notification: "set-leeway-bps", payload: { value: bps } })
+    (print {
+      notification: "set-leeway-bps",
+      payload: { value: bps },
+    })
     (ok true)
   )
 )
@@ -97,7 +101,10 @@
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_SLIPPAGE_BPS) ERR_OUT_OF_RANGE)
     (var-set slippage-bps bps)
-    (print { notification: "set-slippage-bps", payload: { value: bps } })
+    (print {
+      notification: "set-slippage-bps",
+      payload: { value: bps },
+    })
     (ok true)
   )
 )
@@ -107,7 +114,10 @@
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (and (> sats u0) (<= sats MAX_CHUNK_SATS)) ERR_OUT_OF_RANGE)
     (var-set max-chunk-sats sats)
-    (print { notification: "set-max-chunk-sats", payload: { value: sats } })
+    (print {
+      notification: "set-max-chunk-sats",
+      payload: { value: sats },
+    })
     (ok true)
   )
 )
@@ -117,7 +127,10 @@
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= bps MAX_DIA_BAND_BPS) ERR_OUT_OF_RANGE)
     (var-set dia-band-bps bps)
-    (print { notification: "set-dia-band-bps", payload: { value: bps } })
+    (print {
+      notification: "set-dia-band-bps",
+      payload: { value: bps },
+    })
     (ok true)
   )
 )
@@ -127,12 +140,14 @@
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (<= blocks MAX_COOLDOWN_BLOCKS) ERR_OUT_OF_RANGE)
     (var-set router-cooldown-blocks blocks)
-    (print { notification: "set-router-cooldown", payload: { value: blocks } })
+    (print {
+      notification: "set-router-cooldown",
+      payload: { value: blocks },
+    })
     (ok true)
   )
 )
 
-;; Unsolicited sBTC joins the next batch; a donation cannot block funding.
 (define-public (fund (amount uint))
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
@@ -140,62 +155,104 @@
     (asserts! (> amount u0) ERR_NO_FUNDS)
     (try! (contract-call? SBTC_TOKEN transfer amount POOL current-contract none))
     (var-set batch-start (some burn-block-height))
-    (print { notification: "fund", payload: { amount: amount, batch-start: burn-block-height } })
-    (ok amount)))
+    (print {
+      notification: "fund",
+      payload: {
+        amount: amount,
+        batch-start: burn-block-height,
+      },
+    })
+    (ok amount)
+  )
+)
 
-;; Only the pool may finish, after every sat is sold and all market positions clear.
-;; Do not clear the clock on a swap: the pool must first attribute the STX.
 (define-public (finish)
   (let ((balance (stx-get-balance current-contract)))
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (is-some (var-get batch-start)) ERR_NO_CLOCK)
     (asserts! (is-empty) ERR_SOME_FUNDS)
     (try! (as-contract? ((with-stx balance))
-      (try! (stx-transfer? balance current-contract POOL))))
+      (try! (stx-transfer? balance current-contract POOL))
+    ))
     (var-set batch-start none)
-    (print { notification: "finish", payload: { amount: balance } })
-    (ok balance)))
+    (print {
+      notification: "finish",
+      payload: { amount: balance },
+    })
+    (ok balance)
+  )
+)
 
-;; Atomic emergency exit: only the pool, after the original batch ages out.
-;; No oracle/router needed. Withdrawals remain available while Jing is paused.
 (define-public (emergency-recover)
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
-    (let ((start (unwrap! (var-get batch-start) ERR_NO_CLOCK))
-          (cycle (contract-call? JING_MARKET get-current-cycle))
-          (resting (contract-call? JING_MARKET get-token-x-deposit cycle current-contract))
-          (parked (contract-call? JING_MARKET get-token-x-parked current-contract)))
-      (asserts! (>= burn-block-height (+ start RECOVERY_DELAY_BLOCKS)) ERR_RECOVERY_TOO_SOON)
+    (let (
+        (start (unwrap! (var-get batch-start) ERR_NO_CLOCK))
+        (cycle (contract-call? JING_MARKET get-current-cycle))
+        (resting (contract-call? JING_MARKET get-token-x-deposit cycle current-contract))
+        (parked (contract-call? JING_MARKET get-token-x-parked current-contract))
+      )
+      (asserts! (>= burn-block-height (+ start RECOVERY_DELAY_BLOCKS))
+        ERR_RECOVERY_TOO_SOON
+      )
       (if (or (> resting u0) (> parked u0))
-        (begin (try! (reclaim-core)) true)
-        true)
-      ;; Cancel may return a live deposit first; also clear any parked balance.
+        (begin
+          (try! (reclaim-core))
+          true
+        )
+        true
+      )
+
       (if (and (> resting u0) (> parked u0))
-        (begin (try! (reclaim-core)) true)
-        true)
-      (let ((sbtc (sbtc-balance))
-            (stx (stx-get-balance current-contract)))
+        (begin
+          (try! (reclaim-core))
+          true
+        )
+        true
+      )
+      (let (
+          (sbtc (sbtc-balance))
+          (stx (stx-get-balance current-contract))
+        )
         (if (> sbtc u0)
           (begin
             (try! (as-contract? ((with-ft SBTC_TOKEN ASSET_SBTC sbtc))
-              (try! (contract-call? SBTC_TOKEN transfer sbtc current-contract POOL none))))
-            true)
-          true)
+              (try! (contract-call? SBTC_TOKEN transfer sbtc current-contract POOL none))
+            ))
+            true
+          )
+          true
+        )
         (if (> stx u0)
           (begin
             (try! (as-contract? ((with-stx stx))
-              (try! (stx-transfer? stx current-contract POOL))))
-            true)
-          true)
+              (try! (stx-transfer? stx current-contract POOL))
+            ))
+            true
+          )
+          true
+        )
         (asserts! (is-empty) ERR_SOME_FUNDS)
         (var-set batch-start none)
-        (print { notification: "emergency-recover", payload: { sbtc: sbtc, stx: stx } })
-        (ok { sbtc: sbtc, stx: stx })))))
+        (print {
+          notification: "emergency-recover",
+          payload: {
+            sbtc: sbtc,
+            stx: stx,
+          },
+        })
+        (ok {
+          sbtc: sbtc,
+          stx: stx,
+        })
+      )
+    )
+  )
+)
 
 (define-public (jing-place (update (buff 8192)))
   (let (
       (floor (ask-of (try! (current-mid update))))
-      ;; the whole balance, always: a caller chooses nothing but WHEN
       (amount (sbtc-balance))
     )
     (asserts! (window-open) ERR_WINDOW_CLOSED)
@@ -205,7 +262,13 @@
         SBTC_TOKEN ASSET_SBTC
       ))
     ))
-    (ok (print { notification: "jing-place", payload: { amount: amount, floor: floor } }))
+    (ok (print {
+      notification: "jing-place",
+      payload: {
+        amount: amount,
+        floor: floor,
+      },
+    }))
   )
 )
 
@@ -216,19 +279,32 @@
   )
 )
 
-;; Admin-only direct Jing liquidation. The pool must finalize the batch clock.
-(define-public (jing-take (amount uint) (update (buff 8192)))
+(define-public (jing-take
+    (amount uint)
+    (update (buff 8192))
+  )
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (window-elapsed) ERR_WINDOW_OPEN)
     (try! (check-amount amount))
     (let ((limit (floor-of (try! (current-mid update)))))
       (let ((result (try! (as-contract? ((with-ft SBTC_TOKEN ASSET_SBTC amount))
-          (try! (contract-call? JING_MARKET swap amount limit update
-            SBTC_TOKEN ASSET_SBTC WSTX_TOKEN ASSET_WSTX true))))))
-        (ok (print { notification: "jing-take", payload: {
-          amount: amount, limit-price: limit, out: (get token-y-received result),
-        } }))))))
+          (try! (contract-call? JING_MARKET swap amount limit update SBTC_TOKEN
+            ASSET_SBTC WSTX_TOKEN ASSET_WSTX true
+          ))
+        ))))
+        (ok (print {
+          notification: "jing-take",
+          payload: {
+            amount: amount,
+            limit-price: limit,
+            out: (get token-y-received result),
+          },
+        }))
+      )
+    )
+  )
+)
 
 (define-public (router-swap
     (amount uint)
@@ -250,15 +326,20 @@
           (some update) mid min-out
         ))
       ))))
-      (ok (print { notification: "router-swap", payload: {
-        amount: amount, limit-price: limit, mid: mid,
-        out: (get out result), unsold: (get unsold result),
-      } }))
+      (ok (print {
+        notification: "router-swap",
+        payload: {
+          amount: amount,
+          limit-price: limit,
+          mid: mid,
+          out: (get out result),
+          unsold: (get unsold result),
+        },
+      }))
     )
   )
 )
 
-;; Explicit venue allocation is reserved for the pool admin.
 (define-public (router-swap-split
     (amount uint)
     (jing uint)
@@ -287,21 +368,40 @@
     (let ((result (try! (as-contract?
         ((with-ft SBTC_TOKEN ASSET_SBTC (+ amount (get min-token-x market-mins))))
         (try! (contract-call? JING_ROUTER swap-sbtc-for-stx amount jing limit
-          (some update) none { dlmm: dlmm, xyk: xyk, velar: velar } mins
+          (some update) none {
+          dlmm: dlmm,
+          xyk: xyk,
+          velar: velar,
+        }
+          mins
           (+ (floor-out (+ jing dlmm xyk) limit) (floor-out velar velar-limit))
         ))
       ))))
-      (ok (print { notification: "router-swap-split", payload: {
-        amount: amount, jing: jing, dlmm: dlmm, xyk: xyk, velar: velar, limit-price: limit, velar-limit: velar-limit, mid: mid,
-        out: (get out result), unsold: (get unsold result),
-      } }))
+      (ok (print {
+        notification: "router-swap-split",
+        payload: {
+          amount: amount,
+          jing: jing,
+          dlmm: dlmm,
+          xyk: xyk,
+          velar: velar,
+          limit-price: limit,
+          velar-limit: velar-limit,
+          mid: mid,
+          out: (get out result),
+          unsold: (get unsold result),
+        },
+      }))
     )
   )
 )
 
-;; Emergency AMM-only liquidation. No Jing allocation or Pyth argument.
 (define-public (router-swap-split-dia
-    (amount uint) (dlmm uint) (xyk uint) (velar uint))
+    (amount uint)
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+  )
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (is-eq amount (+ dlmm xyk velar)) ERR_SPLIT_MISMATCH)
@@ -310,43 +410,85 @@
     (try! (check-amount amount))
     (try! (cooldown-tick))
     (let ((price (try! (get-no-pyth-price))))
-      (let ((limit (get limit price))
-            (mins { dlmm: (floor-out dlmm limit),
-                    xyk: (floor-out xyk limit),
-                    velar: (floor-out velar limit) }))
-        (let ((result (try! (as-contract?
-            ((with-ft SBTC_TOKEN ASSET_SBTC amount))
-            (try! (contract-call? JING_ROUTER swap-sbtc-for-stx amount u0 limit
-              none none { dlmm: dlmm, xyk: xyk, velar: velar } mins
-              (floor-out amount limit)))))))
-          (ok (print { notification: "router-swap-split-dia", payload: {
-            amount: amount, dlmm: dlmm, xyk: xyk, velar: velar,
-            mid: (get mid price), limit-price: limit, price-source: (get source price),
-            dia-error: (get dia-error price),
-            out: (get out result), unsold: (get unsold result),
-          } })))))))
+      (let (
+          (limit (get limit price))
+          (mins {
+            dlmm: (floor-out dlmm limit),
+            xyk: (floor-out xyk limit),
+            velar: (floor-out velar limit),
+          })
+        )
+        (let ((result (try! (as-contract? ((with-ft SBTC_TOKEN ASSET_SBTC amount))
+            (try! (contract-call? JING_ROUTER swap-sbtc-for-stx amount u0 limit none
+              none {
+              dlmm: dlmm,
+              xyk: xyk,
+              velar: velar,
+            }
+              mins (floor-out amount limit)
+            ))
+          ))))
+          (ok (print {
+            notification: "router-swap-split-dia",
+            payload: {
+              amount: amount,
+              dlmm: dlmm,
+              xyk: xyk,
+              velar: velar,
+              mid: (get mid price),
+              limit-price: limit,
+              price-source: (get source price),
+              dia-error: (get dia-error price),
+              out: (get out result),
+              unsold: (get unsold result),
+            },
+          }))
+        )
+      )
+    )
+  )
+)
 
-
-;; DIA supplies the emergency mid. On any DIA response error, use the
-;; deployed RFQ's native lower band edge; never substitute a zero price.
 (define-read-only (get-no-pyth-price)
   (match (get-dia-price)
     mid (let ((limit (/ (* mid (- BPS_PRECISION (var-get no-pyth-slippage-bps))) BPS_PRECISION)))
       (asserts! (> limit u0) ERR_INVALID_PRICE)
-      (ok { mid: mid, limit: limit, source: "dia", dia-error: none }))
-    dia-error (let ((mid (try! (contract-call?
-        'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3 get-native-price)))
-        (limit (/ mid u2)))
+      (ok {
+        mid: mid,
+        limit: limit,
+        source: "dia",
+        dia-error: none,
+      })
+    )
+    dia-error (let (
+        (mid (try! (contract-call?
+          'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3
+          get-native-price
+        )))
+        (limit (/ mid u2))
+      )
       (asserts! (> limit u0) ERR_INVALID_PRICE)
-      (ok { mid: mid, limit: limit, source: "native", dia-error: (some dia-error) }))))
+      (ok {
+        mid: mid,
+        limit: limit,
+        source: "native",
+        dia-error: (some dia-error),
+      })
+    )
+  )
+)
 
 (define-read-only (get-dia-value (key (string-ascii 32)))
   (let (
-      (res (unwrap! (contract-call?
-        'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle get-value key)
-        ERR_ORACLE_DIA))
-      ;; "now" = the previous block's timestamp (the current block has none yet)
-      (last-time (unwrap! (get-stacks-block-info? time (- stacks-block-height u1)) ERR_NO_BLOCK_TIME))
+      (res (unwrap!
+        (contract-call? 'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle
+          get-value key
+        )
+        ERR_ORACLE_DIA
+      ))
+      (last-time (unwrap! (get-stacks-block-info? time (- stacks-block-height u1))
+        ERR_NO_BLOCK_TIME
+      ))
       (ts (/ (get timestamp res) u1000))
       (v (get value res))
     )
@@ -382,7 +524,9 @@
 )
 
 (define-private (sbtc-balance)
-  (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance current-contract))
+  (unwrap-panic (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+    get-balance current-contract
+  ))
 )
 
 (define-private (current-mid (update (buff 8192)))
@@ -393,8 +537,12 @@
     (asserts! (> mid u0) ERR_INVALID_PRICE)
     (if (> band u0)
       (let ((dia (try! (get-dia-price))))
-        (asserts! (>= (* mid BPS_PRECISION) (* dia (- BPS_PRECISION band))) ERR_ORACLE_DIVERGED)
-        (asserts! (<= (* mid BPS_PRECISION) (* dia (+ BPS_PRECISION band))) ERR_ORACLE_DIVERGED)
+        (asserts! (>= (* mid BPS_PRECISION) (* dia (- BPS_PRECISION band)))
+          ERR_ORACLE_DIVERGED
+        )
+        (asserts! (<= (* mid BPS_PRECISION) (* dia (+ BPS_PRECISION band)))
+          ERR_ORACLE_DIVERGED
+        )
         (ok mid)
       )
       (ok mid)
@@ -410,13 +558,21 @@
   (/ (* mid (- BPS_PRECISION (var-get slippage-bps))) BPS_PRECISION)
 )
 
-(define-private (floor-out (amount uint) (limit uint))
+(define-private (floor-out
+    (amount uint)
+    (limit uint)
+  )
   (/ (* amount limit) (* PRICE_PRECISION DECIMAL_FACTOR))
 )
 
 (define-private (cooldown-tick)
   (begin
-    (asserts! (>= burn-block-height (+ (var-get last-router-swap) (var-get router-cooldown-blocks))) ERR_COOLDOWN)
+    (asserts!
+      (>= burn-block-height
+        (+ (var-get last-router-swap) (var-get router-cooldown-blocks))
+      )
+      ERR_COOLDOWN
+    )
     (ok (var-set last-router-swap burn-block-height))
   )
 )
@@ -433,7 +589,10 @@
   (let ((refunded (try! (as-contract? ()
       (try! (contract-call? JING_MARKET cancel-token-x-deposit SBTC_TOKEN ASSET_SBTC))
     ))))
-    (ok (print { notification: "jing-reclaim", payload: { amount: refunded } }))
+    (ok (print {
+      notification: "jing-reclaim",
+      payload: { amount: refunded },
+    }))
   )
 )
 
@@ -453,38 +612,86 @@
 )
 
 (define-read-only (is-empty)
-  (let ((cycle (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-current-cycle)))
+  (let ((cycle (contract-call?
+      'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6
+      get-current-cycle
+    )))
     (and
       (is-eq (sbtc-balance) u0)
-      (is-eq (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-token-x-deposit cycle current-contract) u0)
-      (is-eq (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-token-x-parked current-contract) u0)
+      (is-eq
+        (contract-call?
+          'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6
+          get-token-x-deposit cycle current-contract
+        )
+        u0
+      )
+      (is-eq
+        (contract-call?
+          'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6
+          get-token-x-parked current-contract
+        )
+        u0
+      )
     )
   )
 )
 
-;; Pool admin may reset the guard if the market fell below the maker floor.
-;; This changes the guard; the zero-spread peg still executes at verified mid.
 (define-public (jing-refloor (update (buff 8192)))
-  (let ((mid (try! (current-mid update)))
-        (floor (if (window-open) (ask-of mid) (floor-of mid))))
+  (let (
+      (mid (try! (current-mid update)))
+      (floor (if (window-open)
+        (ask-of mid)
+        (floor-of mid)
+      ))
+    )
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (try! (as-contract? ()
-      (try! (contract-call? JING_MARKET set-token-x-limit floor (some u0) update))))
-    (print { notification: "jing-refloor", payload: { floor: floor } })
-    (ok floor)))
+      (try! (contract-call? JING_MARKET set-token-x-limit floor (some u0) update))
+    ))
+    (print {
+      notification: "jing-refloor",
+      payload: { floor: floor },
+    })
+    (ok floor)
+  )
+)
 
 (define-read-only (get-config)
- { pool: POOL, recovery-delay-blocks: RECOVERY_DELAY_BLOCKS, window-blocks: (var-get window-blocks),
-   leeway-bps: (var-get leeway-bps), slippage-bps: (var-get slippage-bps), no-pyth-slippage-bps: (var-get no-pyth-slippage-bps),
-   max-chunk-sats: (var-get max-chunk-sats), dia-band-bps: (var-get dia-band-bps),
-   router-cooldown-blocks: (var-get router-cooldown-blocks),
-   last-router-swap: (var-get last-router-swap),
-   market: JING_MARKET, router: JING_ROUTER })
+  {
+    pool: POOL,
+    recovery-delay-blocks: RECOVERY_DELAY_BLOCKS,
+    window-blocks: (var-get window-blocks),
+    leeway-bps: (var-get leeway-bps),
+    slippage-bps: (var-get slippage-bps),
+    no-pyth-slippage-bps: (var-get no-pyth-slippage-bps),
+    max-chunk-sats: (var-get max-chunk-sats),
+    dia-band-bps: (var-get dia-band-bps),
+    router-cooldown-blocks: (var-get router-cooldown-blocks),
+    last-router-swap: (var-get last-router-swap),
+    market: JING_MARKET,
+    router: JING_ROUTER,
+  }
+)
 
-;; Response wrapper for trait-based upgrade checks; no state changes.
 (define-read-only (get-upgrade-status)
-  (let ((cycle (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-current-cycle)))
-    (ok { pool: POOL, empty: (is-empty), sbtc-balance: (sbtc-balance),
-      stx-balance: (stx-get-balance current-contract), batch-start: (var-get batch-start),
-      jing-resting: (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-token-x-deposit cycle current-contract),
-      jing-parked: (contract-call? 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6 get-token-x-parked current-contract) })))
+  (let ((cycle (contract-call?
+      'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6
+      get-current-cycle
+    )))
+    (ok {
+      pool: POOL,
+      empty: (is-empty),
+      sbtc-balance: (sbtc-balance),
+      stx-balance: (stx-get-balance current-contract),
+      batch-start: (var-get batch-start),
+      jing-resting: (contract-call?
+        'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6
+        get-token-x-deposit cycle current-contract
+      ),
+      jing-parked: (contract-call?
+        'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6
+        get-token-x-parked current-contract
+      ),
+    })
+  )
+)

@@ -3,9 +3,9 @@
   "checks": 97,
   "delayBitcoinBlocks": 4032,
   "sourceHashes": {
-    "juice-swap-vault-trait": "c0f471b1cd5876bcb12afcd689cdb82109f63163aee879d58e5ff691325cbbed",
-    "juice-pool-stx-signer-stx-rewards": "bdff5e99574f132b5b2e207144da46f273793f8576c6cdbb1652cdb2fba6471a",
-    "juice-pool-swap-vault": "be613079fbb7d40cfa205f287e2b9b653badef24724497e66a3e85bc7bf74a2f"
+    "juice-swap-vault-trait": "4881086b2a235c8857362c76f265bf1627ea1997c49c2a89b8d85f8920b6bf08",
+    "juice-pool-stx-signer-stx-rewards": "1c0ada409703c23b7b48ac817cbf49080c3519a14a534bea2b47958b3a7e4b45",
+    "juice-pool-swap-vault": "9ccf853b315d32a9cdef2919a007b5fdb4ac83c2c4d7c491c3f1558d45d13c77"
   },
   "cases": [
     "admin gate",

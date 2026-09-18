@@ -114,3 +114,20 @@ node simulations/pool-vault-upgrade-stxer.mjs
 ```
 
 Earlier Rendezvous reports validate the recorded pre-rotation hashes; they do not test the rotation feature.
+
+## Deployment source preparation
+
+The three production contracts are now comment-free and formatted with Clarinet.
+Comparing Clarity tokens before/after (ignoring whitespace and optional commas)
+confirmed identical executable content. Backend deployment templates match the
+formatted source byte for byte and use Clarity 6, account index 0. Deployment order
+is trait, vault, rewards pool; wait for each transaction to confirm before the next.
+[Curl commands and fees](https://github.com/Rapha-btc/faktory-dao/blob/master/backend/docs/juice-stx-rewards-deployment.md)
+are recorded in the backend repository.
+
+The 570 fork checks above refer to the recorded **pre-format hashes** in `fc58b61`.
+They are preserved unchanged. After formatting, local migration checks still pass
+**97/97**, and local vault coverage reaches **129/129 branch outcomes**, now
+**398/417 line counters**. Formatting creates additional tuple-field, binding and
+multiline contract-call counters; zero counters are listed in the saved coverage
+report. It did not change executable behavior.

@@ -1,4 +1,3 @@
-;; Interface for vaults selectable by the Juice STX rewards pool.
 (define-trait swap-vault-trait (
   (fund
     (uint)
@@ -10,10 +9,13 @@
   )
   (emergency-recover
     ()
-    (response {
+    (
+      response       {
       stx: uint,
       sbtc: uint,
-    } uint)
+    }
+      uint
+    )
   )
   (get-upgrade-status
     ()
