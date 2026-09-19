@@ -23,6 +23,7 @@
 (define-constant ERR_NO_PENDING_SWAP_VAULT (err u118))
 (define-constant ERR_INVALID_SWAP_VAULT (err u119))
 (define-constant ERR_SWAP_VAULT_BUSY (err u120))
+(define-constant ERR_VAULT_TRANSFER_MISMATCH (err u121))
 
 (define-data-var swap-vault principal .juice-pool-swap-vault)
 (define-data-var pending-swap-vault (optional principal) none)
@@ -838,8 +839,12 @@
     (try! (assert-active-vault vault))
     (let (
         (batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
+        (before (stx-get-balance current-contract))
         (amount (try! (contract-call? vault finish)))
+        (after (stx-get-balance current-contract))
       )
+      (asserts! (>= after before) ERR_VAULT_TRANSFER_MISMATCH)
+      (asserts! (is-eq (- after before) amount) ERR_VAULT_TRANSFER_MISMATCH)
       (map-set stx-pot batch amount)
       (map-set finalized-tranches batch true)
       (var-set pending-swap none)

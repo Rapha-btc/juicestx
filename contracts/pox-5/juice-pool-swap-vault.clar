@@ -31,7 +31,7 @@
 (define-constant JING_MARKET 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6)
 (define-constant JING_ROUTER 'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5)
 
-(define-constant RECOVERY_DELAY_BLOCKS u4320)
+(define-constant RECOVERY_DELAY_BLOCKS u432)
 (define-constant MAX_DIA_AGE u7200)
 (define-constant MAX_WINDOW_BLOCKS u1008)
 (define-constant MAX_LEEWAY_BPS u1000)
@@ -54,6 +54,7 @@
 (define-data-var router-cooldown-blocks uint u1)
 (define-data-var last-router-swap uint u0)
 (define-data-var batch-start (optional uint) none)
+(define-data-var ready-to-finish bool false)
 
 (define-public (set-no-pyth-slippage-bps (bps uint))
   (begin
@@ -152,6 +153,7 @@
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (is-none (var-get batch-start)) ERR_BUSY)
+    (asserts! (not (var-get ready-to-finish)) ERR_BUSY)
     (asserts! (> amount u0) ERR_NO_FUNDS)
     (try! (contract-call? SBTC_TOKEN transfer amount POOL current-contract none))
     (var-set batch-start (some burn-block-height))
@@ -166,15 +168,28 @@
   )
 )
 
+;; Anyone may close a batch after all sBTC and Jing positions are gone.
+(define-public (close-batch)
+  (begin
+    (asserts! (is-empty) ERR_SOME_FUNDS)
+    (asserts! (is-some (var-get batch-start)) ERR_NO_CLOCK)
+    (var-set batch-start none)
+    (var-set ready-to-finish true)
+    (ok (print {
+      notification: "close-batch",
+      payload: { burn-height: burn-block-height },
+    }))
+  )
+)
+
 (define-public (finish)
   (let ((balance (stx-get-balance current-contract)))
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
-    (asserts! (is-some (var-get batch-start)) ERR_NO_CLOCK)
-    (asserts! (is-empty) ERR_SOME_FUNDS)
+    (asserts! (var-get ready-to-finish) ERR_NO_CLOCK)
     (try! (as-contract? ((with-stx balance))
       (try! (stx-transfer? balance current-contract POOL))
     ))
-    (var-set batch-start none)
+    (var-set ready-to-finish false)
     (print {
       notification: "finish",
       payload: { amount: balance },
@@ -234,6 +249,7 @@
         )
         (asserts! (is-empty) ERR_SOME_FUNDS)
         (var-set batch-start none)
+        (var-set ready-to-finish false)
         (print {
           notification: "emergency-recover",
           payload: {
@@ -293,6 +309,7 @@
             ASSET_SBTC WSTX_TOKEN ASSET_WSTX true
           ))
         ))))
+        (close-if-empty)
         (ok (print {
           notification: "jing-take",
           payload: {
@@ -326,6 +343,7 @@
           (some update) mid min-out
         ))
       ))))
+      (close-if-empty)
       (ok (print {
         notification: "router-swap",
         payload: {
@@ -377,6 +395,7 @@
           (+ (floor-out (+ jing dlmm xyk) limit) (floor-out velar velar-limit))
         ))
       ))))
+      (close-if-empty)
       (ok (print {
         notification: "router-swap-split",
         payload: {
@@ -428,6 +447,7 @@
               mins (floor-out amount limit)
             ))
           ))))
+          (close-if-empty)
           (ok (print {
             notification: "router-swap-split-dia",
             payload: {
@@ -600,6 +620,7 @@
   (let ((start (var-get batch-start)))
     {
       batch-start: start,
+      ready-to-finish: (var-get ready-to-finish),
       window-ends: (match start
         s (some (+ s (var-get window-blocks)))
         none
@@ -608,6 +629,17 @@
       window-elapsed: (window-elapsed),
       burn-height: burn-block-height,
     }
+  )
+)
+
+;; Once an exit empties the batch, later donations belong to the next batch.
+(define-private (close-if-empty)
+  (if (is-empty)
+    (begin
+      (var-set batch-start none)
+      (var-set ready-to-finish true)
+    )
+    false
   )
 )
 
