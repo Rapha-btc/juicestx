@@ -962,11 +962,21 @@
   (var-get earned-sbtc-fees)
 )
 
+;; Permissionless, like FastPool's recover-swap-vault.
+;;
+;; The only way sBTC leaves this vault is through here: `finish` moves STX only,
+;; and no other exit returns sBTC to the pool. Gating that behind `assert-admin`
+;; put every stacker's sBTC behind one key -- `admin` is a single principal with
+;; a propose/accept cooldown and no backup -- so a lost or unresponsive admin
+;; stranded the funds permanently.
+;;
+;; Nothing is gained by the gate: the vault already refuses to recover until
+;; RECOVERY_DELAY_BLOCKS (432) past the batch start, and the destination is
+;; hard-wired to POOL, so a caller can only move the funds home, later.
 (define-public (emergency-recover (vault <swap-vault-interface>))
   (begin
     (try! (assert-active-vault vault))
     (begin
-      (try! (assert-admin))
       (let (
           (batch (unwrap! (var-get pending-swap) ERR_SWAP_PENDING))
           (recovered (try! (contract-call? vault emergency-recover)))
