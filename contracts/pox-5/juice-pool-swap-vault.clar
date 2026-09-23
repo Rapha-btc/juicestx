@@ -207,7 +207,7 @@
   )
 )
 
-(define-public (emergency-recover (update (optional (buff 8192))))
+(define-public (emergency-recover)
   (begin
     (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (let (
@@ -220,20 +220,13 @@
       (asserts! (>= burn-block-height (+ start RECOVERY_DELAY_BLOCKS))
         ERR_RECOVERY_TOO_SOON
       )
-      (if (> escrowed u0)
-        (begin
-          (try! (contract-call? JING_MARKET settle-token-x-deposit current-contract
-            (unwrap! update ERR_UPDATE_REQUIRED) SBTC_TOKEN ASSET_SBTC
-          ))
-          true
-        )
-        true
-      )
+      ;; Cancel returns pending escrow + resting + parked in one call, with no
+      ;; oracle and no pause check, so recovery never waits on a settle.
       (let (
           (resting (contract-call? JING_MARKET get-token-x-deposit cycle current-contract))
           (parked (contract-call? JING_MARKET get-token-x-parked current-contract))
         )
-        (if (or (> resting u0) (> parked u0))
+        (if (or (> escrowed u0) (> resting u0) (> parked u0))
           (begin
             (try! (reclaim-core))
             true
