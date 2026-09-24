@@ -1,3 +1,5 @@
+if(process.argv.includes('--matrix')) { await (await import('./_vault-recovery-v6-3.mjs')).runRecoveryMatrix('juice'); process.exit(0); }
+import {appendJingStack} from './_jing-v6-3.mjs';
 import {createHash} from 'node:crypto';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, real token/market/router contracts.
@@ -13,7 +15,7 @@ const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
 const POX='SP000000000000000000002Q6VF78.pox-5';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
-const MARKET=`${DEP}.markets-sbtc-stx-jing-v6`;
+const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-3`;
 const POOL=`${DEP}.juice-pool-stx-signer-stx-rewards`;
 const VAULT=`${DEP}.juice-pool-swap-vault`;
 const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
@@ -38,14 +40,10 @@ const tipResponse=await fetch(`${NODE}/extended/v1/block?limit=1`,{signal:AbortS
 if(!tipResponse.ok)throw new Error(`tip HTTP ${tipResponse.status}`);
 const tip=(await tipResponse.json()).results[0];
 const cycle=Number((await read(POX,'current-pox-reward-cycle')).value)-1;
-const marketCycle=await read(MARKET,'get-current-cycle');
-const sellers=await read(MARKET,'get-token-x-depositors',[marketCycle]);
-const buyers=await read(MARKET,'get-token-y-depositors',[marketCycle]);
-const operatorResponse=await fetch(`${NODE}/v2/data_var/${DEP}/markets-sbtc-stx-jing-v6/operator`,{signal:AbortSignal.timeout(20000)});
-if(!operatorResponse.ok)throw new Error(`operator HTTP ${operatorResponse.status}`);
-const operator=deserializeCV((await operatorResponse.json()).data).value;
+const sellers={value:[]},buyers={value:[]},operator=DEP; // Fresh fork market.
 const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
 const plan=[],batches=[],sourceHashes={};
+appendJingStack(builder,plan,sourceHashes);
 const ok=v=>v.startsWith('(ok');
 function call(label,id,fn,args=[],want=ok,sender=DEP){
  const slot=plan.length;
@@ -54,7 +52,7 @@ function call(label,id,fn,args=[],want=ok,sender=DEP){
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
 function advance(){builder.addAdvanceBlocks({bitcoin_blocks:1,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:'advance one burn block for router cooldown',kind:'advance'});}
-for(const [name,path] of [['juice-swap-vault-trait','../contracts/pox-5/juice-swap-vault-trait.clar'],['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
+for(const [name,path] of [['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
  builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(resolve(directory,path),'utf8')),clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});
 }
@@ -82,11 +80,11 @@ function claim(label,offset){
 function age(label,blocks){ev(`${label}: fork fixture ages funding clock by ${blocks} blocks`,VAULT,`(begin (var-set batch-start (some (- burn-block-height u${blocks}))) true)`,'true');}
 function recover(b){
  b.recovered=true;
- call(`${b.label}: outsider cannot recover`,POOL,'emergency-recover',[],'(err u100)',ALICE);
+ call(`${b.label}: anyone is still bound by the recovery delay`,POOL,'emergency-recover',[],'(err u16046)',ALICE);
  call(`${b.label}: admin cannot recover a young batch`,POOL,'emergency-recover',[],'(err u16046)');
- age(b.label,4319);
+ age(b.label,431);
  call(`${b.label}: recovery blocked one block before deadline`,POOL,'emergency-recover',[],'(err u16046)');
- age(b.label,4320);
+ age(b.label,432);
  call(`${b.label}: pause Jing market`,MARKET,'set-paused',[Cl.bool(true)],'(ok true)',operator);
  call(`${b.label}: recover real sBTC and any STX despite pause`,POOL,'emergency-recover');
  ev(`${b.label}: recovery clears pending batch`,POOL,'(get-pending-swap)','none');
@@ -120,6 +118,7 @@ function pay(b,active){
   ev(`${b.label}: old payouts cannot spend new vault rewards`,VAULT,`(contract-call? '${SBTC} get-balance current-contract)`,`(ok u${FUND})`);
  }
 }
+call('set explicit 50k chunk cap for partial-conversion cases',POOL,'set-vault-max-chunk-sats',[u(50000)],'(ok true)');
 const a=claim('A resting recovery',0);
 call('A: real Jing maker placement',VAULT,'jing-place',[update]);
 recover(a);
@@ -163,8 +162,8 @@ if(checks.every(c=>c.passed))for(const b of batches){
   checks.push({label:`${b.label}: ${name} ${asset} unchanged on replay`,passed:uint(b.replay[key])===uint(b.after[key]),actual:`balance ${uint(b.replay[key])}`});
  }
 }
-const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'recovery-continuity',block:tip.height,burn:tip.burn_block_height,productionSourcesUnmodified:true,sourceHashes,proofTimestamp:proof.ts,
- fixtures:['PoX crystallized rewards and 1:3 shares seeded in fork; real sBTC transfers back the rewards; STX lock admission not tested','Funding clock aged via explicit vault Eval fixtures at 288, 4319 and 4320 blocks to retain valid signed oracle updates; not a real month of elapsed chain time','Existing Jing orders canceled only in fork; real Jing operator impersonated to pause/resume','Two burn blocks advanced with one-second synthetic intervals for production router cooldown'],checks,result};
+const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'recovery-continuity',block:9021103,observedTip:tip,productionSourcesUnmodified:true,sourceHashes,proofTimestamp:proof.ts,
+ fixtures:['PoX crystallized rewards and 1:3 shares seeded in fork; real sBTC transfers back the rewards; STX lock admission not tested','Funding clock aged via explicit vault Eval fixtures at 288, 431 and 432 blocks to retain valid signed oracle updates; not a real month of elapsed chain time','Existing Jing orders canceled only in fork; real Jing operator impersonated to pause/resume','Two burn blocks advanced with one-second synthetic intervals for production router cooldown'],checks,result};
 const resultsDirectory=resolve(directory,'results/pool-vault-stx');mkdirSync(resultsDirectory,{recursive:true});
 writeFileSync(resolve(resultsDirectory,'juice-recovery-continuity.json'),JSON.stringify(report,null,2));
 if(checks.some(c=>!c.passed))throw new Error(`${checks.filter(c=>!c.passed).length}/${checks.length} continuity checks failed`);

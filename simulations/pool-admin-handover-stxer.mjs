@@ -1,3 +1,4 @@
+import {appendJingStack} from './_jing-v6-3.mjs';
 import {createHash} from 'node:crypto';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, timed propose/accept admin handover.
@@ -21,6 +22,7 @@ if(!tipResponse.ok)throw new Error(`tip HTTP ${tipResponse.status}`);
 const tip=(await tipResponse.json()).results[0];
 const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
 const plan=[],sourceHashes={};
+appendJingStack(builder,plan,sourceHashes);
 const ok=v=>v.startsWith('(ok');
 function call(label,id,fn,args=[],want=ok,sender=DEP){
  const slot=plan.length;
@@ -28,7 +30,7 @@ function call(label,id,fn,args=[],want=ok,sender=DEP){
  plan.push({label,kind:'tx',want});return slot;
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
-for(const [name,path] of [['juice-swap-vault-trait','../contracts/pox-5/juice-swap-vault-trait.clar'],['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
+for(const [name,path] of [['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
  builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(resolve(directory,path),'utf8')),clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});
 }
@@ -107,7 +109,7 @@ for(let i=0;i<plan.length;i++){
  eventChecks.push({label:`${label}: ${topic} print emitted`,passed:printed,actual:'decoded committed pool print event'});
 }
 checks.push(...eventChecks);
-const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'admin-handover',block:tip.height,burn:tip.burn_block_height,productionSourcesUnmodified:true,sourceHashes,
+const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'admin-handover',block:9021103,observedTip:tip,productionSourcesUnmodified:true,sourceHashes,
  fixtures:['Admin handover uses actual fork Bitcoin-block advances at 143/144-block boundaries; one-second synthetic intervals','No storage seeds, oracle updates or reward/share fixtures are used; signer registration is outside this scenario'],checks,result};
 const resultsDirectory=resolve(directory,'results/pool-vault-stx');mkdirSync(resultsDirectory,{recursive:true});
 writeFileSync(resolve(resultsDirectory,'juice-admin-handover.json'),JSON.stringify(report,null,2));

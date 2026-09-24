@@ -1,5 +1,7 @@
 # Juice pool / swap-vault verification
 
+> Current 2026-09-23 v6-3 recovery and regression results: [cancel-only recovery verification](README-v6-3-recovery.md). The notes below describe the earlier verification; linked JSON artifacts now contain the current reruns.
+
 Current-source validation on **2026-09-18**: **570/570 Stxer checks passed** across 11 mainnet forks for the three contracts pushed in `fc58b61`. Each fork deploys the exact trait, vault and pool source before testing. No production transactions are sent.
 
 The rotation fork has **89 passing checks**: admin/pool binding, cancellation and reset, 4,031-block rejection and 4,032-block activation, pending-tranche protection, old/new batch clocks and resting/parked positions, tiny donations accepted on both idle vaults, every stale wrapper rejected, and a real post-switch PoX claim, AMM swap, finalization and payout. Candidate vault copies exist only in the fork.

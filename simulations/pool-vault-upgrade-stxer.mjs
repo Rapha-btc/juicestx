@@ -1,3 +1,4 @@
+import {appendJingStack} from './_jing-v6-3.mjs';
 // Exact production sources; candidate copies and state seeds exist on this fork only.
 import {SimulationBuilder,getSimulationResult} from 'stxer';
 import {Cl,ClarityVersion,deserializeCV,cvToString} from '@stacks/transactions';
@@ -13,6 +14,7 @@ const read=await (await fetch(NODE+'/v2/contracts/call-read/SP000000000000000000
 const cycle=Number(deserializeCV(read.result).value)-1;
 const tip=await (await fetch(NODE+'/extended/v1/block?limit=1')).json();
 const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API}).useBlockHeight(tip.results[0].height).withSender(DEP),plan=[],sourceHashes={};
+appendJingStack(b,plan,sourceHashes);
 const ok=s=>s.startsWith('(ok');
 const deploy=(name,source,production=true)=>{b.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy '+name,kind:'tx',want:ok});if(production)sourceHashes[name]=createHash('sha256').update(source).digest('hex');};
 const ev=(label,id,code,want)=>{b.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
@@ -20,7 +22,7 @@ const call=(label,fn,args=[],want=ok,sender=DEP,id=P)=>{b.addContractCall({contr
 const cp=id=>Cl.principal(id),u=Cl.uint;
 const advance=n=>{b.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:'advance '+n+' burn blocks (synthetic timestamps)',kind:'advance'});};
 let vaultSource;
-for(const name of ['juice-swap-vault-trait','juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){const source=readFileSync(new URL('../contracts/pox-5/'+name+'.clar',import.meta.url),'utf8');deploy(name,source);if(name==='juice-pool-swap-vault')vaultSource=source;}
+for(const name of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){const source=readFileSync(new URL('../contracts/pox-5/'+name+'.clar',import.meta.url),'utf8');deploy(name,source);if(name==='juice-pool-swap-vault')vaultSource=source;}
 deploy('sim-upgrade-next',vaultSource,false);deploy('sim-upgrade-wrong',vaultSource.replace('(define-constant POOL .juice-pool-stx-signer-stx-rewards)',`(define-constant POOL '${OTHER})`),false);
 ev('initial active vault',P,'(get-swap-vault)',V);
 call('no proposal', 'confirm-swap-vault',[cp(V),cp(N)],'(err u118)');
@@ -31,7 +33,7 @@ ev('fixture candidate active clock',N,'(var-set batch-start (some burn-block-hei
 call('candidate batch rejected','propose-swap-vault',[cp(N)],'(err u120)');
 ev('fixture clear candidate clock',N,'(var-set batch-start none)','true');
 for(const id of [V,N]){call('donate one satoshi '+id,'transfer',[u(1),cp(WHALE),cp(id),Cl.none()], '(ok true)',WHALE,SBTC);ev('donate one microSTX '+id,P,`(stx-transfer? u1 tx-sender '${id})`,'(ok true)');}
-const MKT=DEP+'.markets-sbtc-stx-jing-v6';
+const MKT=DEP+'.markets-sbtc-stx-jing-v6-3';
 const position=(id,kind,n)=>kind==='resting'?`(map-set token-x-deposits {cycle: (var-get current-cycle), depositor: '${id}} u${n})`:`(map-set token-x-parked '${id} u${n})`;
 for(const kind of ['resting','parked']){
  ev('fixture candidate '+kind,MKT,position(N,kind,1),'true');
@@ -90,5 +92,6 @@ call('next upgrade fresh notice','propose-swap-vault',[cp(V)]);call('next upgrad
 console.log('Submitting',plan.length,'upgrade checks');const id=await b.run();console.log('https://stxer.xyz/simulations/mainnet/'+id);
 const result=await getSimulationResult(id,{stxerApi:API});
 const checks=plan.map((p,i)=>{const r=result.steps[i]?.Result;let actual=p.kind==='advance'?(r?.AdvanceBlocks?.Ok?'ok':JSON.stringify(r)):p.kind==='eval'?(r?.Eval?.Ok!==undefined?cvToString(deserializeCV(r.Eval.Ok)):JSON.stringify(r)):(r?.Transaction?.Ok&&!r.Transaction.Ok.vm_error?cvToString(deserializeCV(r.Transaction.Ok.result)):JSON.stringify(r));const passed=p.kind==='advance'?actual==='ok':typeof p.want==='function'?p.want(actual):p.want===actual;console.log(passed?'PASS':'FAIL',p.label,actual?.slice(0,180));return {label:p.label,passed,actual};});
-const dir=new URL('./results/pool-vault-stx/',import.meta.url);mkdirSync(dir,{recursive:true});writeFileSync(new URL('juice-vault-upgrade.json',dir),JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,sourceHashes,fixtures:['Candidate copies deployed only in fork; wrong-pool copy changes only POOL binding','Tiny real STX/sBTC donations; private batch, resting/parked market maps and pending-tranche state injected explicitly','PoX earned-reward and share fixture; public claim, real AMM swap, finalize and payout on new vault','4032 real burn-height advance with compressed timestamps; not oracle-freshness evidence'],checks,result},null,2)+'\n');
+const dir=new URL('./results/pool-vault-stx/',import.meta.url);mkdirSync(dir,{recursive:true});writeFileSync(new URL('juice-vault-upgrade.json',dir),JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,forkBlock:9021103,sourceHashes,fixtures:['Candidate copies deployed only in fork; wrong-pool copy changes only POOL binding','Tiny real STX/sBTC donations; private batch, resting/parked market maps and pending-tranche state injected explicitly','PoX earned-reward and share fixture; public claim, real AMM swap, finalize and payout on new vault','4032 real burn-height advance with compressed timestamps; not oracle-freshness evidence'],checks,result},null,2)+'\n');
 if(checks.some(c=>!c.passed))throw Error(checks.filter(c=>!c.passed).length+' upgrade checks failed');
+console.log(`${checks.filter(c=>c.passed).length}/${checks.length} checks green`);

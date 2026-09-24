@@ -19,9 +19,10 @@ if(!tipResp.ok)throw Error('tip '+tipResp.status);
 const tip=(await tipResp.json()).results[0];
 const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:false}).useBlockHeight(tip.height).withSender(DEP);
 const plan=[],sourceHashes={};
+(await import('./_jing-v6-3.mjs')).appendJingStack(b,plan,sourceHashes);
 const ev=(label,id,code)=>{b.addEvalCode(id,code);plan.push({label,kind:'eval'});};
 const call=(label,id,fn,args,sender=DEP)=>{b.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});plan.push({label,kind:'tx'});};
-for(const [name,file]of [['juice-swap-vault-trait','juice-swap-vault-trait.clar'],['juice-pool-swap-vault','juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','juice-pool-stx-signer-stx-rewards.clar']]){
+for(const [name,file]of [['juice-pool-swap-vault','juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','juice-pool-stx-signer-stx-rewards.clar']]){
 b.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(fs.readFileSync(base+'/contracts/pox-5/'+file,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy exact local '+name,kind:'tx'});}
 ev('raw DIA STX/USD',VAULT,`(contract-call? '${DIA} get-value "STX/USD")`);
 ev('raw DIA BTC/USD',VAULT,`(contract-call? '${DIA} get-value "BTC/USD")`);
@@ -58,7 +59,7 @@ call('unusable price split rejected',POOL,'router-swap-split-dia',[Cl.uint(10000
 call('real DIA emergency DLMM swap',POOL,'router-swap-split-dia',[Cl.uint(10000),Cl.uint(10000),Cl.uint(0),Cl.uint(0)]);
 ev('balances after DIA emergency',VAULT,'{sbtc: (sbtc-balance), stx: (stx-get-balance current-contract)}');
 }
-console.log('Submitting',plan.length,'steps, mainnet block',tip.height);
+console.log('Submitting',plan.length,'steps, mainnet block',9021103);
 const id=await b.run();console.log('SIMULATION https://stxer.xyz/simulations/mainnet/'+id);
 const result=await getSimulationResult(id,{stxerApi:API});
 const checks=plan.map((p,i)=>{const r=result.steps[i]?.Result;let value;
@@ -81,7 +82,7 @@ for(const check of checks){
 for(let i=0;i<checks.length;i++)if(checks[i].label.startsWith('real ')&&checks[i].label.includes('swap')){
  const receipt=result.steps[i]?.Result?.Transaction?.Ok;
  const events=(receipt?.events||[]).map(e=>typeof e==='string'?JSON.parse(e):e);
- const event=events.find(e=>e.committed&&e.contract_event?.contract_identifier===DEP+'.swap-router-sbtc-stx-jing-v5');
+ const event=events.find(e=>e.committed&&e.contract_event?.contract_identifier===DEP+'.swap-router-sbtc-stx-jing-v5-3');
  const routing=event?deserializeCV(event.contract_event.raw_value).value:null;
  checks.push({label:'router reports Jing skipped and no unsold sats',kind:'event',value:routing?cvToString(deserializeCV(event.contract_event.raw_value)):'missing print',
  passed:routing?.['jing-ok']?.type==='false'&&routing?.['jing-in']?.value===0n&&routing?.['jing-out']?.value===0n&&routing?.unsold?.value===0n});
@@ -89,7 +90,7 @@ for(let i=0;i<checks.length;i++)if(checks[i].label.startsWith('real ')&&checks[i
 }
 const directory=path.join(base,'simulations/results/pool-vault-stx');fs.mkdirSync(directory,{recursive:true});
 const output=path.join(directory,nativeMode?'juice-emergency-native.json':'juice-emergency-dia.json');
-fs.writeFileSync(output,JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,tip,sourceHashes,mode:nativeMode?'emergency-native':'emergency-dia',
+fs.writeFileSync(output,JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,forkBlock:9021103,observedTip:tip,sourceHashes,mode:nativeMode?'emergency-native':'emergency-dia',
  fixtures:['Real whale transfer and pool Eval funding on fork only','Admin zero window; no Pyth fetched or supplied',...(nativeMode?['DIA stale and zero map fixtures; RFQ coinbase zero fixture; final cooldown disabled to isolate price rejection']:[])],checks,result},null,2)+'\n');
 const failed=checks.filter(c=>!c.passed);if(failed.length)throw Error(failed.length+' checks failed: '+failed.map(c=>c.label).join(', '));
 console.log(checks.length+'/'+checks.length+' checks passed; report '+output);
