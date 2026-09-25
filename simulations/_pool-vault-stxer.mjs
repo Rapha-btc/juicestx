@@ -37,7 +37,7 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
  call('outsider cannot finish or redirect STX',vid,'finish',[],'(err u16000)');
  call('reclaim blocked before a batch exists',vid,'jing-reclaim',[],'(err u16031)');
  call('maker placement requires active patience window (real signed update)',vid,'jing-place',[update],'(err u16030)');
- call('router blocked before liquidation (real signed update)',vid,'router-swap',[Cl.uint(1000),update],'(err u16031)');
+ call('router blocked before liquidation (real signed update)',vid,'router-swap',[update],'(err u16031)');
  call('outsider cannot refloor',vid,'jing-refloor',[update],'(err u16000)');
  if(kind==='juice') {
   ev('no pending tranche',pid,'(get-pending-swap)','none');
@@ -137,7 +137,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   call(`fork cleanup existing ${side} maker ${who.slice(0,8)}`,MKT,`cancel-token-${side}-deposit`,[Cl.contractPrincipal(...(side==='x'?SBTC:'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2').split('.')),Cl.stringAscii(side==='x'?'sbtc-token':'wstx')],ok,who);
  }
  call('real Jing maker placement',vid,'jing-place',[update],v=>ok(v)&&v.includes(`(amount u${FUND})`),STRANGER);
- call('router forbidden during patience',vid,'router-swap',[Cl.uint(50000),update],'(err u16031)',STRANGER);
+ call('router forbidden during patience',vid,'router-swap',[update],'(err u16031)',STRANGER);
  call('cannot finalize while reward is resting',pid,kind==='juice'?'finalize-swap':'finalize-swap-vault',[],'(err u16032)');
  if(profile==='maker') {
   const mid=proof.px*100000000n/proof.py;
@@ -166,14 +166,17 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   ?call(label,pid,'jing-take',[Cl.uint(50000),update],v=>ok(v)&&/\(out u[1-9]\d*\)/.test(v),DEP)
   :profile==='split-pyth'
    ?call(label,pid,'router-swap-split',[Cl.uint(50000),Cl.uint(50000),Cl.uint(0),Cl.uint(0),Cl.uint(0),update],v=>ok(v)&&v.includes('(unsold u0)'),DEP)
-   :call(label,vid,'router-swap',[Cl.uint(50000),update],v=>ok(v)&&v.includes('(unsold u0)'),STRANGER);
- const firstRouterSlot=route('real router: first reward chunk');
+   // router-swap takes no size: with 100k held and a 50k cap a stranger sells exactly one full chunk, never a sliver
+   :call(label,vid,'router-swap',[update],v=>ok(v)&&v.includes('(amount u50000)')&&v.includes('(unsold u0)'),STRANGER);
+ const firstRouterSlot=route('real router: first reward chunk (exactly 50k)');
  if(profile==='jing-router')jingRouterSlots.push(firstRouterSlot);
- if(profile!=='jing-take')call('same-burn-block second sale rejected',vid,'router-swap',[Cl.uint(50000),update],'(err u16044)',STRANGER);
+ ev('one 50k chunk left the vault, 50k remain',vid,`(contract-call? '${SBTC} get-balance current-contract)`,'(ok u50000)');
+ if(profile!=='jing-take')call('same-burn-block second sale rejected (u16044 cooldown)',vid,'router-swap',[update],'(err u16044)',STRANGER);
  call('cannot finalize a half-sold batch',pid,kind==='juice'?'finalize-swap':'finalize-swap-vault',[],'(err u16032)');
  advance(1);
- const secondRouterSlot=route('real router: second reward chunk');
+ const secondRouterSlot=route('real router: second reward chunk (remaining 50k)');
  if(profile==='jing-router')jingRouterSlots.push(secondRouterSlot);
+ ev('vault drained after two chunks',vid,'(is-empty)','true');
  }
  const finalSlot=plan.length;
  call('attribute real native STX back to pool',pid,kind==='juice'?'finalize-swap':'finalize-swap-vault',[],v=>/^\(ok u[1-9]\d*\)$/.test(v));
