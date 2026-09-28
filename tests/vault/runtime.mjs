@@ -50,7 +50,7 @@ for(const setting of ['window-blocks','leeway-bps','slippage-bps','max-chunk-sat
 ok(sim.transferSTX(Cl.uint(50000000000).value,`${admin}.mock-router`,admin));
 // New Juice admin controls: every setting checks caller and its upper bound.
 for(const [name,value,max,positive] of [
- ['window-blocks',288,1008,false],['leeway-bps',500,1000,false],
+ ['window-blocks',288,288,false],['leeway-bps',500,1000,false],
  ['slippage-bps',100,1000,false],['max-chunk-sats',5000000,100000000,true],
  ['dia-band-bps',1000,5000,false],['router-cooldown',1,144,false]]){
  err(call(JV,`set-${name}`,[u(value)],admin),16000);

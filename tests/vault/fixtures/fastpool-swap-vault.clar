@@ -6,7 +6,9 @@
 (define-constant POOL .fastpool-stx-vault-signer)
 (define-constant ERR_OUT_OF_RANGE (err u16033))
 (define-constant ERR_SPLIT_MISMATCH (err u16040))
-(define-constant MAX_WINDOW_BLOCKS u1008)
+;; the patience window must close before recovery opens (batch start +
+;; RECOVERY_DELAY_BLOCKS, also the pool's own recovery deadline)
+(define-constant MAX_WINDOW_BLOCKS u288)
 (define-constant VELAR_SLIPPAGE_BPS u60)
 (define-constant ERR_BUSY (err u16045))
 (define-constant ERR_UNAUTHORIZED (err u16000))
