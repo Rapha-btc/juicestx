@@ -172,3 +172,40 @@ They are preserved unchanged. After formatting, local migration checks still pas
 **398/417 line counters**. Formatting creates additional tuple-field, binding and
 multiline contract-call counters; zero counters are listed in the saved coverage
 report. It did not change executable behavior.
+
+## Rerun on the current sources, and the vault fixes (L-1, L-2, #6, #7)
+
+Juice vault `07476d1b` (juicestx `45bf3be`), pool `a5be5363`, Jing market
+`d1e3bbad`, router `dfc8165b`, core `67242f19`; fork at block 9021103. No
+expectation changed (the AMMs sat above the 1% floor at this block).
+
+| sim | stxer | checks |
+|---|---|---|
+| guards | [22a079d6](https://stxer.xyz/simulations/mainnet/22a079d61a6c98b5484e0b75269c10a2) | 21/21 |
+| maker | [5af8935a](https://stxer.xyz/simulations/mainnet/5af8935a16cbbec380a1dc8bfc70c8a6) | 34/34 |
+| liquidation | [f6ad3bb6](https://stxer.xyz/simulations/mainnet/f6ad3bb67c89d5acd3390363ba59a8be) | 40/40 |
+| jing-router | [5db1d2bc](https://stxer.xyz/simulations/mainnet/5db1d2bcab47b0a5587bfa97d4234d74) | 45/45 |
+| jing-take | [812a09de](https://stxer.xyz/simulations/mainnet/812a09de2da4fab84e97bfadd4b808af) | 40/40 |
+| split-pyth | [98090c31](https://stxer.xyz/simulations/mainnet/98090c31296e1797a96bedbb4cee23e5) | 41/41 |
+| recovery-continuity | [1dee3dd2](https://stxer.xyz/simulations/mainnet/1dee3dd2e738147e598cb988ca3198f2) | 189/189 |
+| upgrade | [0aa4ab91](https://stxer.xyz/simulations/mainnet/0aa4ab9172a19ff74a6726683e6bcddb) | 95/95 |
+| admin-handover | [dedf87f3](https://stxer.xyz/simulations/mainnet/dedf87f364aab94665be5c5600017c5a) | 59/59 |
+| emergency-dia | [83d8d37a](https://stxer.xyz/simulations/mainnet/83d8d37a1a7d13f8169e4b4166c18826) | 26/26 |
+| emergency-native | [8fcd1f79](https://stxer.xyz/simulations/mainnet/8fcd1f7995d903483a30104c7a2972da) | 36/36 |
+| recovery matrix (5 forks) | see `results/v6-3-recovery/juice.json` | 529/529 |
+| **vault fixes** (`pool-vault-fixes-stxer.mjs`) | [5d728fd5](https://stxer.xyz/simulations/mainnet/5d728fd5588d24df1cf334ea9847874d) | 195/195 |
+
+The vault-fixes sim:
+- **#6:** a 2-sat claim closes and finalizes `(ok u0)` with no transfer; the
+  next 6-sat claim lands on top (the vault holds 8).
+- **L-2:** 289 and 1008 refused `(err u16033)`; 288 and 287 accepted.
+- **L-1:** an 8-sat sale reverts `(err u16047)` without burning the cooldown,
+  and 9 sats sell in the same burn block; a partial sale of a 1 BTC chunk
+  sells 9,664,748 and keeps 90,335,252, the next call at the same floor reverts
+  u16047, and after raising slippage the rest sells; `finalize` equals the sum
+  of all `out`.
+- **#7:** a 1-sat top-up in pending escrow after the live ask sold out;
+  `close-batch` reclaims it and closes at once.
+- **#8** (allowance band) cannot be built since the market's M-1 fix: the book
+  leg fills in full, so no refund can push the outflow past the allowance.
+
