@@ -6,6 +6,6 @@ export const POOL_VAULT_FUNCTIONS=new Set([
  'set-vault-no-pyth-slippage-bps','jing-take','router-swap-split','router-swap-split-dia',
 ]);
 export function withVaultArgument(poolId,vaultId,id,fn,args,Cl){
- return id===poolId&&poolId.endsWith('.juice-pool-stx-signer-stx-rewards')&&POOL_VAULT_FUNCTIONS.has(fn)
+ return id===poolId&&/\.juice-pool-stx-signer-stx-rewards(-v1)?$/.test(poolId)&&POOL_VAULT_FUNCTIONS.has(fn)
   ? [...args,Cl.principal(vaultId)] : args;
 }

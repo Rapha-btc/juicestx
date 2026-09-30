@@ -4,6 +4,7 @@
 // current Jing market / core / router, real sBTC, AMMs and PoX-5 claim path.
 // PoX earned rewards and 1:3 shares are Eval fixtures backed by real fork sBTC.
 import {appendJingStack} from './_jing-v6-3.mjs';
+import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock} from './_juice-fork.mjs';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
@@ -22,8 +23,8 @@ const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
 const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-3`;
 const ROUTER=`${DEP}.swap-router-sbtc-stx-jing-v5-3`;
-const POOL=`${DEP}.juice-pool-stx-signer-stx-rewards`;
-const VAULT=`${DEP}.juice-pool-swap-vault`;
+const POOL=POOL_ID;
+const VAULT=VAULT_ID;
 const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
 const ALICE=getAddressFromPrivateKey('7'.repeat(64)+'01','mainnet');
 const BOB=getAddressFromPrivateKey('8'.repeat(64)+'01','mainnet');
@@ -31,9 +32,13 @@ const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api';
 const API=process.env.STXER_API_URL||'https://api.stxer.xyz';
 const u=Cl.uint,cp=id=>Cl.contractPrincipal(...id.split('.'));
 const sbtcCv=cp(SBTC),wstxCv=cp(WSTX);
-const BIG=300000000;     // L-1: 3 BTC; the AMMs take about 2 BTC inside the 1% floor at this fork block
+// L-1: 0.3 BTC sold in 0.1 BTC chunks. Sized for AMM depth at the tip fork: the
+// 1% floor takes only part of one chunk (partial sale, then u16047), and the rest
+// sells at 3% / 10%, so the batch closes. At the tip, 3 BTC in 1 BTC chunks no
+// longer clears within 10% in the fixed plan.
+const BIG=30000000;
 const BAND_FUND=300000,BAND_CAP=198380; // #8: Void Kael's measured book-capacity band 198,320-198,440
-const CHUNK=100000000;   // MAX_CHUNK_SATS
+const CHUNK=10000000;    // L-1 max-chunk setting (0.1 BTC)
 const MAKER=100000;      // #7: vault maker order, filled by a real taker
 async function read(id,fn,args=[]){
  const [address,name]=id.split('.');
@@ -47,9 +52,10 @@ const update=Cl.buffer(Buffer.from(proof.hex.replace(/^0x/,''),'hex'));
 const mid=proof.px*100000000n/proof.py;
 const tip=(await (await fetch(`${NODE}/extended/v1/block?limit=1`,{signal:AbortSignal.timeout(20000)})).json()).results[0];
 const cycle=Number((await read(POX,'current-pox-reward-cycle')).value)-1;
-const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
+const forkBlock=await juiceForkBlock(NODE);
+const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(forkBlock).withSender(DEP);
 const plan=[],sourceHashes={},post=[];
-appendJingStack(builder,plan,sourceHashes);
+appendJingStack(builder,plan,sourceHashes,forkBlock);
 const ok=v=>v.startsWith('(ok');
 const any=()=>true;
 function call(label,id,fn,args=[],want=ok,sender=DEP){const slot=plan.length;builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});plan.push({label,kind:'tx',want});return slot;}
@@ -59,11 +65,11 @@ const vaultSbtc=(label,want)=>ev(label,VAULT,`(contract-call? '${SBTC} get-balan
 const vaultStx=(label,want)=>ev(label,VAULT,'(stx-get-balance current-contract)',want);
 const age=(label,blocks)=>ev(`${label}: fixture ages the funding clock by ${blocks} blocks`,VAULT,`(begin (var-set batch-start (some (- burn-block-height u${blocks}))) true)`,'true');
 const donate=(label,n)=>call(label,SBTC,'transfer',[u(n),Cl.principal(WHALE),Cl.principal(VAULT),Cl.none()],'(ok true)',WHALE);
-for(const name of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){
- const source=readFileSync(resolve(directory,'../contracts/pox-5/'+name+'.clar'),'utf8');
- sourceHashes[name]=createHash('sha256').update(source).digest('hex');
+// Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){
+ const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
- plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});
+ plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});
 }
 // a real PoX claim of `amount` sats for reward cycle (cycle - offset)
 function claim(label,offset,amount,extra){
@@ -131,8 +137,8 @@ post.push({kind:'small',d8,d9,dFin});
 
 // ---- L-1: partial sale, rest kept, next call sells more ----
 const C=claim('L-1 batch',3,BIG);
-vaultSbtc('L-1: vault holds the 3 BTC claim',`(ok u${BIG})`);
-call('L-1: chunk cap at the 1 BTC maximum',POOL,'set-vault-max-chunk-sats',[u(CHUNK)],'(ok true)');
+vaultSbtc('L-1: vault holds the 0.3 BTC claim',`(ok u${BIG})`);
+call('L-1: chunk cap at 0.1 BTC',POOL,'set-vault-max-chunk-sats',[u(CHUNK)],'(ok true)');
 age('L-1',288);
 advance();
 const l1=[],l1bal=[],l1clk=[],l1bps=[];
@@ -197,7 +203,7 @@ const f8=call('#8: router-swap with a book leg and the rest to the AMMs',VAULT,'
 const f8bal=vaultSbtc('#8: vault balance after the sale',v=>/^\(ok u\d+\)$/.test(v));
 post.push({kind:'eight',f8,f8cap,f8bal,dust:null});
 
-console.log(`juice fixes: ${plan.length} planned steps at fork block 9021103`);
+console.log(`juice fixes: ${plan.length} planned steps at fork block ${forkBlock}`);
 let id;
 for(let attempt=1;;attempt++){try{id=await builder.run();break;}catch(e){if(attempt>=3)throw e;console.log('retry run:',e.message);await new Promise(r=>setTimeout(r,5000));}}
 console.log(`View: https://stxer.xyz/simulations/mainnet/${id}`);
@@ -272,8 +278,11 @@ for(const p of post){
  }
  if(p.kind==='eight'){
   const r=checks[p.f8].actual;console.log('#8 capacity',checks[p.f8cap].actual);
+  // market gross-up of the book's net capacity: 0 if net-cap is 0, else floor(((net-cap+1)*10020-1)/10000)
+  {const cap=checks[p.f8cap].actual,net=field(cap,'net-cap'),gross=field(cap,'gross-cap'),want=net===0n?0n:((net+1n)*10020n-1n)/10000n;
+   push('#8: gross-cap = gross-up(net-cap) at 20 bps',gross===want,`net-cap ${net}, gross-cap ${gross}, model ${want}`);}
   if(r.startsWith('(ok')){const e=events(p.f8),f=flows(e),amount=field(r,'amount'),unsold=field(r,'unsold');
-   const oldAllow=amount+1000n,newAllow=amount+1000n+amount*70n/10000n;
+   const oldAllow=amount+1000n,newAllow=amount+1000n+51n; // amount + min-x + JING_REBATE_DUST_SATS
    const fromMkt=e.ft.filter(t=>t.recipient===VAULT&&t.sender===MARKET).reduce((a,t)=>a+BigInt(t.amount),0n);
    push('#8: gross sBTC outflow within the new allowance',f.sbtcOut<=newAllow,`gross out ${f.sbtcOut}, market refund ${fromMkt}, old allowance ${oldAllow}, new ${newAllow}, jing ${e.router?.['jing-in']?.value}/${e.router?.['jing-cap']?.value} ok ${e.router?.['jing-ok']?.type}, amms ${e.router?.['dlmm-in']?.value}/${e.router?.['xyk-in']?.value}/${e.router?.['velar-in']?.value}`);
    push('#8: net sBTC outflow equals sold',f.sbtcOut-f.sbtcIn===amount-unsold,`net ${f.sbtcOut-f.sbtcIn}, sold ${amount-unsold}`);
@@ -283,7 +292,7 @@ for(const p of post){
 }
 const passed=checks.filter(c=>c.passed).length;
 const dir=resolve(directory,'results/pool-vault-stx');mkdirSync(dir,{recursive:true});
-writeFileSync(resolve(dir,'juice-fixes.json'),JSON.stringify({id,url:`https://stxer.xyz/simulations/mainnet/${id}`,mode:'fix-scenarios L-1 L-2 #6 #7',block:9021103,observedTip:tip,proofTimestamp:proof.ts,mid:String(mid),sourceHashes,
+writeFileSync(resolve(dir,'juice-fixes.json'),JSON.stringify({id,url:`https://stxer.xyz/simulations/mainnet/${id}`,mode:'fix-scenarios L-1 L-2 #6 #7',block:forkBlock,observedTip:tip,proofTimestamp:proof.ts,mid:String(mid),sourceHashes,
  fixtures:['PoX earned rewards and 1:3 shares seeded with Eval, backed by real fork sBTC','Vault funding clock aged by Eval to open liquidation without expiring the signed update','Whale donations are real sBTC transfers'],passed,total:checks.length,checks,result},null,2)+'\n');
 console.log(`juice fixes: ${passed}/${checks.length} checks passed`);
 if(passed!==checks.length)process.exit(1);

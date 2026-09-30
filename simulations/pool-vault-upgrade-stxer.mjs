@@ -5,16 +5,18 @@ import {Cl,ClarityVersion,deserializeCV,cvToString} from '@stacks/transactions';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {POOL_VAULT_FUNCTIONS} from './_pool-vault-interface.mjs';
+import {POOL_ID,VAULT_ID,VAULT_NAME,juiceSource,juiceForkBlock} from './_juice-fork.mjs';
 const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22',OTHER='SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM';
-const P=DEP+'.juice-pool-stx-signer-stx-rewards',V=DEP+'.juice-pool-swap-vault',N=DEP+'.sim-upgrade-next',W=DEP+'.sim-upgrade-wrong';
+const P=POOL_ID,V=VAULT_ID,N=DEP+'.sim-upgrade-next',W=DEP+'.sim-upgrade-wrong';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token',WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
 const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api',API=process.env.STXER_API_URL||'https://api.stxer.xyz';
 const POX='SP000000000000000000002Q6VF78.pox-5';
 const read=await (await fetch(NODE+'/v2/contracts/call-read/SP000000000000000000002Q6VF78/pox-5/current-pox-reward-cycle',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sender:DEP,arguments:[]})})).json();
 const cycle=Number(deserializeCV(read.result).value)-1;
 const tip=await (await fetch(NODE+'/extended/v1/block?limit=1')).json();
-const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API}).useBlockHeight(tip.results[0].height).withSender(DEP),plan=[],sourceHashes={};
-appendJingStack(b,plan,sourceHashes);
+const forkBlock=await juiceForkBlock(NODE);
+const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API}).useBlockHeight(forkBlock).withSender(DEP),plan=[],sourceHashes={};
+appendJingStack(b,plan,sourceHashes,forkBlock);
 const ok=s=>s.startsWith('(ok');
 const deploy=(name,source,production=true)=>{b.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy '+name,kind:'tx',want:ok});if(production)sourceHashes[name]=createHash('sha256').update(source).digest('hex');};
 const ev=(label,id,code,want)=>{b.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
@@ -22,8 +24,9 @@ const call=(label,fn,args=[],want=ok,sender=DEP,id=P)=>{b.addContractCall({contr
 const cp=id=>Cl.principal(id),u=Cl.uint;
 const advance=n=>{b.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:'advance '+n+' burn blocks (synthetic timestamps)',kind:'advance'});};
 let vaultSource;
-for(const name of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){const source=readFileSync(new URL('../contracts/pox-5/'+name+'.clar',import.meta.url),'utf8');deploy(name,source);if(name==='juice-pool-swap-vault')vaultSource=source;}
-deploy('sim-upgrade-next',vaultSource,false);deploy('sim-upgrade-wrong',vaultSource.replace('(define-constant POOL .juice-pool-stx-signer-stx-rewards)',`(define-constant POOL '${OTHER})`),false);
+// Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){const j=juiceSource(repoName,new URL('../contracts/pox-5/'+repoName+'.clar',import.meta.url),sourceHashes);deploy(j.name,j.source,false);if(j.name===VAULT_NAME)vaultSource=j.source;}
+deploy('sim-upgrade-next',vaultSource,false);deploy('sim-upgrade-wrong',vaultSource.replace('(define-constant POOL .juice-pool-stx-signer-stx-rewards-v1)',`(define-constant POOL '${OTHER})`),false);
 ev('initial active vault',P,'(get-swap-vault)',V);
 call('no proposal', 'confirm-swap-vault',[cp(V),cp(N)],'(err u118)');
 for(const [fn,args]of [['propose-swap-vault',[cp(N)]],['cancel-swap-vault-proposal',[]],['confirm-swap-vault',[cp(V),cp(N)]]])call('outsider '+fn,fn,args,'(err u100)',OTHER);
@@ -92,6 +95,6 @@ call('next upgrade fresh notice','propose-swap-vault',[cp(V)]);call('next upgrad
 console.log('Submitting',plan.length,'upgrade checks');const id=await b.run();console.log('https://stxer.xyz/simulations/mainnet/'+id);
 const result=await getSimulationResult(id,{stxerApi:API});
 const checks=plan.map((p,i)=>{const r=result.steps[i]?.Result;let actual=p.kind==='advance'?(r?.AdvanceBlocks?.Ok?'ok':JSON.stringify(r)):p.kind==='eval'?(r?.Eval?.Ok!==undefined?cvToString(deserializeCV(r.Eval.Ok)):JSON.stringify(r)):(r?.Transaction?.Ok&&!r.Transaction.Ok.vm_error?cvToString(deserializeCV(r.Transaction.Ok.result)):JSON.stringify(r));const passed=p.kind==='advance'?actual==='ok':typeof p.want==='function'?p.want(actual):p.want===actual;console.log(passed?'PASS':'FAIL',p.label,actual?.slice(0,180));return {label:p.label,passed,actual};});
-const dir=new URL('./results/pool-vault-stx/',import.meta.url);mkdirSync(dir,{recursive:true});writeFileSync(new URL('juice-vault-upgrade.json',dir),JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,forkBlock:9021103,sourceHashes,fixtures:['Candidate copies deployed only in fork; wrong-pool copy changes only POOL binding','Tiny real STX/sBTC donations; private batch, resting/parked market maps and pending-tranche state injected explicitly','PoX earned-reward and share fixture; public claim, real AMM swap, finalize and payout on new vault','4032 real burn-height advance with compressed timestamps; not oracle-freshness evidence'],checks,result},null,2)+'\n');
+const dir=new URL('./results/pool-vault-stx/',import.meta.url);mkdirSync(dir,{recursive:true});writeFileSync(new URL('juice-vault-upgrade.json',dir),JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,forkBlock,sourceHashes,fixtures:['Candidate copies deployed only in fork; wrong-pool copy changes only POOL binding','Tiny real STX/sBTC donations; private batch, resting/parked market maps and pending-tranche state injected explicitly','PoX earned-reward and share fixture; public claim, real AMM swap, finalize and payout on new vault','4032 real burn-height advance with compressed timestamps; not oracle-freshness evidence'],checks,result},null,2)+'\n');
 if(checks.some(c=>!c.passed))throw Error(checks.filter(c=>!c.passed).length+' upgrade checks failed');
 console.log(`${checks.filter(c=>c.passed).length}/${checks.length} checks green`);

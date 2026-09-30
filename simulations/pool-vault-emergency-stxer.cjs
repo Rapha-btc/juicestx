@@ -6,7 +6,6 @@ const base=path.resolve(__dirname,'..');
 const {SimulationBuilder,getSimulationResult}=require(base+'/node_modules/stxer');
 const {Cl,ClarityVersion,deserializeCV,cvToString}=require(base+'/node_modules/@stacks/transactions');
 const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
-const POOL=DEP+'.juice-pool-stx-signer-stx-rewards', VAULT=DEP+'.juice-pool-swap-vault';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const DIA='SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle';
 const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
@@ -14,16 +13,19 @@ const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api',API=proce
 const nativeMode=process.argv.includes('--native');
 (async()=>{
 const {withVaultArgument}=await import('./_pool-vault-interface.mjs');
+const {POOL_ID:POOL,VAULT_ID:VAULT,VAULT_NAME,juiceSource,juiceForkBlock}=await import('./_juice-fork.mjs');
 const tipResp=await fetch(NODE+'/extended/v1/block?limit=1',{signal:AbortSignal.timeout(20000)});
 if(!tipResp.ok)throw Error('tip '+tipResp.status);
 const tip=(await tipResp.json()).results[0];
-const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:false}).useBlockHeight(tip.height).withSender(DEP);
+const forkBlock=await juiceForkBlock(NODE);
+const b=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:false}).useBlockHeight(forkBlock).withSender(DEP);
 const plan=[],sourceHashes={};
-(await import('./_jing-v6-3.mjs')).appendJingStack(b,plan,sourceHashes);
+(await import('./_jing-v6-3.mjs')).appendJingStack(b,plan,sourceHashes,forkBlock);
 const ev=(label,id,code)=>{b.addEvalCode(id,code);plan.push({label,kind:'eval'});};
 const call=(label,id,fn,args,sender=DEP)=>{b.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});plan.push({label,kind:'tx'});};
-for(const [name,file]of [['juice-pool-swap-vault','juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','juice-pool-stx-signer-stx-rewards.clar']]){
-b.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(fs.readFileSync(base+'/contracts/pox-5/'+file,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy exact local '+name,kind:'tx'});}
+// Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){const {name,source}=juiceSource(repoName,base+'/contracts/pox-5/'+repoName+'.clar',sourceHashes);
+b.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy local '+name+' (names only rewritten)',kind:'tx'});}
 ev('raw DIA STX/USD',VAULT,`(contract-call? '${DIA} get-value "STX/USD")`);
 ev('raw DIA BTC/USD',VAULT,`(contract-call? '${DIA} get-value "BTC/USD")`);
 ev('DIA freshness arithmetic',VAULT,`(let ((now (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1))))
@@ -40,7 +42,7 @@ call('admin sets DIA emergency tolerance to 10 percent',POOL,'set-vault-no-pyth-
 call('tolerance above 50 percent rejected',POOL,'set-vault-no-pyth-slippage-bps',[Cl.uint(5001)]);
 call('admin sets zero-block window',POOL,'set-vault-window-blocks',[Cl.uint(0)]);
 call('fixture: real whale sBTC funds draft pool on fork',SBTC,'transfer',[Cl.uint(100000),Cl.principal(WHALE),Cl.principal(POOL),Cl.none()],WHALE);
-ev('fixture: pool funds exact draft vault',POOL,'(as-contract? ((with-ft SBTC "sbtc-token" u100000)) (try! (contract-call? .juice-pool-swap-vault fund u100000)))');
+ev('fixture: pool funds exact draft vault',POOL,`(as-contract? ((with-ft SBTC "sbtc-token" u100000)) (try! (contract-call? .${VAULT_NAME} fund u100000)))`);
 ev('zero window immediately elapsed',VAULT,'(get-clock)');
 if(nativeMode){
 ev('fixture: DIA feed stale by one second',DIA,`(let ((old (unwrap-panic (contract-call? '${DIA} get-value "STX/USD"))) (now (unwrap-panic (get-stacks-block-info? time (- stacks-block-height u1))))) (map-set values "STX/USD" {value: (get value old), timestamp: (* (- now u7201) u1000)}))`);
@@ -59,7 +61,7 @@ call('unusable price split rejected',POOL,'router-swap-split-dia',[Cl.uint(10000
 call('real DIA emergency DLMM swap',POOL,'router-swap-split-dia',[Cl.uint(10000),Cl.uint(10000),Cl.uint(0),Cl.uint(0)]);
 ev('balances after DIA emergency',VAULT,'{sbtc: (sbtc-balance), stx: (stx-get-balance current-contract)}');
 }
-console.log('Submitting',plan.length,'steps, mainnet block',9021103);
+console.log('Submitting',plan.length,'steps, mainnet block',forkBlock);
 const id=await b.run();console.log('SIMULATION https://stxer.xyz/simulations/mainnet/'+id);
 const result=await getSimulationResult(id,{stxerApi:API});
 const checks=plan.map((p,i)=>{const r=result.steps[i]?.Result;let value;
@@ -90,7 +92,7 @@ for(let i=0;i<checks.length;i++)if(checks[i].label.startsWith('real ')&&checks[i
 }
 const directory=path.join(base,'simulations/results/pool-vault-stx');fs.mkdirSync(directory,{recursive:true});
 const output=path.join(directory,nativeMode?'juice-emergency-native.json':'juice-emergency-dia.json');
-fs.writeFileSync(output,JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,forkBlock:9021103,observedTip:tip,sourceHashes,mode:nativeMode?'emergency-native':'emergency-dia',
+fs.writeFileSync(output,JSON.stringify({id,url:'https://stxer.xyz/simulations/mainnet/'+id,forkBlock,observedTip:tip,sourceHashes,mode:nativeMode?'emergency-native':'emergency-dia',
  fixtures:['Real whale transfer and pool Eval funding on fork only','Admin zero window; no Pyth fetched or supplied',...(nativeMode?['DIA stale and zero map fixtures; RFQ coinbase zero fixture; final cooldown disabled to isolate price rejection']:[])],checks,result},null,2)+'\n');
 const failed=checks.filter(c=>!c.passed);if(failed.length)throw Error(failed.length+' checks failed: '+failed.map(c=>c.label).join(', '));
 console.log(checks.length+'/'+checks.length+' checks passed; report '+output);

@@ -11,9 +11,11 @@ export const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
 export const MARKET=DEP+'.markets-sbtc-stx-jing-v6-3',CORE=DEP+'.jing-core-v6',LADDER=DEP+'.jing-ladder-v1',ROUTER=DEP+'.swap-router-sbtc-stx-jing-v5-3';
 export const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token',WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
 export const {fetchLazerUpdateAny,lazerFeedTimes}=await import(resolve(JING_SRC,'../simulations/_lazer.js'));
-export function appendJingStack(builder,plan,sourceHashes={}) {
- // Last block before the live Juice vault/pool deployment; shared trait exists.
- builder.useBlockHeight(9021103);
+export function appendJingStack(builder,plan,sourceHashes={},forkBlock) {
+ // Juice forks at the tip (see _juice-fork.mjs); the Jing contracts are not on
+ // mainnet, so they keep their real names at any height.
+ if(!Number.isInteger(forkBlock))throw new Error('appendJingStack: forkBlock required');
+ builder.useBlockHeight(forkBlock);
  const {Cl,ClarityVersion}=stacks,cp=id=>Cl.contractPrincipal(...id.split('.'));
  for(const name of ['jing-core-v6','jing-ladder-v1','markets-sbtc-stx-jing-v6-3','swap-router-sbtc-stx-jing-v5-3']) {
   const source=readFileSync(resolve(JING_SRC,name+'.clar'),'utf8');

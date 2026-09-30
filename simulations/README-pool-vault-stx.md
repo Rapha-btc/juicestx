@@ -1,6 +1,8 @@
 # Juice pool / swap-vault verification
 
-> Current 2026-09-23 v6-3 recovery and regression results: [cancel-only recovery verification](README-v6-3-recovery.md). The notes below describe the earlier verification; linked JSON artifacts now contain the current reruns.
+> Latest (2026-09-30): [rerun on the exact-rebate market, forked at the tip](#rerun-on-the-exact-rebate-market-forked-at-the-tip-2026-09-30), with the vault and pool deployed as `-v1`.
+>
+> 2026-09-23 v6-3 recovery and regression results: [cancel-only recovery verification](README-v6-3-recovery.md). The notes below describe the earlier verification; linked JSON artifacts now contain the current reruns.
 
 Current-source validation on **2026-09-18**: **570/570 Stxer checks passed** across 11 mainnet forks for the three contracts pushed in `fc58b61`. Each fork deploys the exact trait, vault and pool source before testing. No production transactions are sent.
 
@@ -209,3 +211,83 @@ The vault-fixes sim:
 - **#8** (allowance band) cannot be built since the market's M-1 fix: the book
   leg fills in full, so no refund can push the outflow past the allowance.
 
+
+## Rerun on the exact-rebate market, forked at the tip (2026-09-30)
+
+What changed since the run above:
+- **Market** (jing-contracts-v3 `34bbe18`): `swap` sizes the rebate on the net,
+  `net = floor(amount*10000/(10000+bps))`, `rebate = amount - net` (bps 20 fresh,
+  +1/s after 30 s, max 70). The taker still sends exactly `amount`; the unused
+  rebate refunded is only rounding. `gross-cap = net-cap==0 ? 0 : floor(((net-cap+1)*10020-1)/10000)`.
+- **Router** (`6a84e02`): `jing-size` estimates `net = size*BPS/(BPS+20)`.
+- **Vault** (juicestx `5211831`): the `router-swap` allowance is
+  `amount + min-x + JING_REBATE_DUST_SATS` (u51), replacing `amount*70/10000`.
+
+Fork setup changes:
+- **All sims fork at one tip height, 9093074** (`JUICE_FORK_BLOCK`, default: the node tip),
+  so AMM prices match the live Pyth mid. The old 9021103 pin predated the live
+  Juice deploys. At that pin, AMM prices were frozen while the mid moved, and L-1 did not clear.
+- **The vault and pool deploy as `-v1`**, because `juice-pool-swap-vault` and
+  `juice-pool-stx-signer-stx-rewards` are live on mainnet with an older version.
+  `_juice-fork.mjs` rewrites only the two names and their references, in memory.
+  Each run asserts that mapping the names back gives the repo file byte for byte.
+  The Jing contracts are not on mainnet and keep their names.
+- **L-1 is sized to the tip's AMM depth.** It now sells 0.3 BTC in 0.1 BTC chunks, down from 3 BTC in 1 BTC chunks. At the tip, 3 BTC did not clear within 10% in the fixed eight-call plan.
+  The plan is unchanged:
+  - sale 1 at 1% is partial (7,370,940 of 10,000,000 unsold);
+  - sales 2–4 at 1% get `u16047`;
+  - 3% and 10% sell the rest, the batch closes and finalize equals the sum of `out`;
+  - then #7 and #8.
+- **Model updates.**
+  - #8 checks the gross outflow against `amount + 1000 + 51`.
+  - A new check tests `gross-cap = gross-up(net-cap)` (198,379 → 198,776).
+
+| sim | stxer | checks |
+|---|---|---|
+| guards | [1d02c55b0902eac5461d0442175e3865](https://stxer.xyz/simulations/mainnet/1d02c55b0902eac5461d0442175e3865) | 21/21 |
+| maker | [ec53c85f5f3089bd08ea47b5366668e7](https://stxer.xyz/simulations/mainnet/ec53c85f5f3089bd08ea47b5366668e7) | 34/34 |
+| liquidation | [c87b52f3d691e62ddca1c1670d173dab](https://stxer.xyz/simulations/mainnet/c87b52f3d691e62ddca1c1670d173dab) | 40/40 |
+| jing-router | [d3110309c7b97af257487b7c2c7beb2d](https://stxer.xyz/simulations/mainnet/d3110309c7b97af257487b7c2c7beb2d) | 45/45 |
+| jing-take | [6c6996e1311e95672b73cde787385f8f](https://stxer.xyz/simulations/mainnet/6c6996e1311e95672b73cde787385f8f) | 40/40 |
+| split-pyth | [f5f35918654330bc4bef338ef95423b7](https://stxer.xyz/simulations/mainnet/f5f35918654330bc4bef338ef95423b7) | 41/41 |
+| recovery-continuity | [9f2885d6a2c876ef0a28976dc0b8dfe3](https://stxer.xyz/simulations/mainnet/9f2885d6a2c876ef0a28976dc0b8dfe3) | 189/189 |
+| upgrade | [ecbdab692fa40181ada73d3e13496125](https://stxer.xyz/simulations/mainnet/ecbdab692fa40181ada73d3e13496125) | 95/95 |
+| admin-handover | [a30603c3391a182ece988754cebe753a](https://stxer.xyz/simulations/mainnet/a30603c3391a182ece988754cebe753a) | 59/59 |
+| emergency-dia | [3386c5059b86b8df25ded6d74d716557](https://stxer.xyz/simulations/mainnet/3386c5059b86b8df25ded6d74d716557) | 26/26 |
+| emergency-native | [cbeb64d2fd7ddb6fd3112a390d95822f](https://stxer.xyz/simulations/mainnet/cbeb64d2fd7ddb6fd3112a390d95822f) | 36/36 |
+| recovery matrix: pending | [fa434d8eb55842102823dde5e460f32f](https://stxer.xyz/simulations/mainnet/fa434d8eb55842102823dde5e460f32f) | 529/529 in total |
+| recovery matrix: resting | [7427ad0e7a32e050d055ef4616bf7781](https://stxer.xyz/simulations/mainnet/7427ad0e7a32e050d055ef4616bf7781) | |
+| recovery matrix: parked | [f287169685f521a5a5c71288d52f8752](https://stxer.xyz/simulations/mainnet/f287169685f521a5a5c71288d52f8752) | |
+| recovery matrix: pending+resting | [b8fcf37af2267c9deee65b283c39038b](https://stxer.xyz/simulations/mainnet/b8fcf37af2267c9deee65b283c39038b) | |
+| recovery matrix: none | [41a84ddb3d757474159382fe0d07a8c1](https://stxer.xyz/simulations/mainnet/41a84ddb3d757474159382fe0d07a8c1) | |
+| vault fixes | [716855fa46f534d9fd82b38b9382a609](https://stxer.xyz/simulations/mainnet/716855fa46f534d9fd82b38b9382a609) | 186/186 |
+| allowance proof | [df24e5278e709229bf9da6dde4c0bda9](https://stxer.xyz/simulations/mainnet/df24e5278e709229bf9da6dde4c0bda9) | 4/4 cases |
+
+**Allowance proof** (`vault-allowance-proof-stxer.mjs`,
+[vault-allowance-proof.json](results/pool-vault-stx/vault-allowance-proof.json)).
+The repo vault runs next to a TEST-ONLY `juice-pool-swap-vault-oldallow`, which has
+`JING_REBATE_DUST_SATS` removed from the allowance (`amount + min-x`). Both sell
+into the same three-bid book, which fills the whole chunk on Jing.
+
+| chunk | print | Jing leg | rebate (model = paid) | rebate refunded | gross outflow | old allowance | 51-sat allowance |
+|---|---|---|---|---|---|---|---|
+| 1,000,000 | 5 s, 20 bps | 1,000,000 | 1,997 | 2 | 1,000,000 | ok | ok |
+| 100,000,000 | 5 s, 20 bps | 100,000,000 | 199,601 | 1 | 100,000,000 | ok | ok |
+| 1,000,000 | 79 s, 69 bps | 1,000,000 | 6,853 | 2 | 1,000,000 | ok | ok |
+| 100,000,000 | 79 s, 69 bps | 100,000,000 | 685,272 | 1 | 100,000,000 | ok | ok |
+
+On the old market, the 1 BTC case at 69 bps failed with the old allowance.
+Now the refund is 1–2 sats (≤ 51) in every case, and both allowances pass.
+
+SHA-256 (repo file → deployed `-v1` source):
+
+- `juice-pool-swap-vault`: `d6e7637c7ece8eb8243361b50f065dc6734e50e6344a59199528e837dd4b6dbf` → `juice-pool-swap-vault-v1` `2219e13874055fa2dfa008a852857de5da5e159e26b6b688a74c17eb3c541a29`
+- `juice-pool-stx-signer-stx-rewards`: `a5be5363956688c17376ba55f2af688372997d21823755797b9a6b4c919036cc` → `juice-pool-stx-signer-stx-rewards-v1` `04111e41dba556a3f41b6389b04fac11f60b49e2953e63577fc8b663ccdde426`
+- `juice-pool-swap-vault-oldallow` (TEST-ONLY): `27b4b87cd355b7eeaac6fef277e25f0eab2ccf8dae5ea6815d01c7411147a8cf`
+- `markets-sbtc-stx-jing-v6-3`: `5c08412fc5990a8bf0db3a0cbbec3fa4c859d4185d0caf1cd16ae0c78f851bfb`
+- `swap-router-sbtc-stx-jing-v5-3`: `882374f40bfdf8270b3ea18ba2d7e68fce4431ee17c60f70b00bb2670240fe58`
+- `jing-core-v6`: `88a689affb23f13030953e891336af42a3f5cb275f13b3c54c79d8cd4de50697`
+- `jing-ladder-v1`: `0f1e08b023272ed96a2653f727292626d4b0325dcf4e42963104d977860ec786`
+
+Rerun the set on one fork: `JUICE_FORK_BLOCK=<height> node simulations/<sim>` (commands above;
+the matrix is `pool-vault-recovery-stxer.mjs --matrix`, the proof `vault-allowance-proof-stxer.mjs`).

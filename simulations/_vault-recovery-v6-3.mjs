@@ -5,6 +5,7 @@ import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {stacks,stxer,appendJingStack,fetchLazerUpdateAny,lazerFeedTimes,DEP,MARKET,CORE,LADDER,SBTC,WSTX} from './_jing-v6-3.mjs';
+import {VAULT_NAME,POOL_NAME,juiceSource,juiceForkBlock} from './_juice-fork.mjs';
 const {Cl,ClarityVersion,cvToString,deserializeCV,makeUnsignedContractDeploy,PostConditionMode,getAddressFromPrivateKey}=stacks;
 const {SimulationBuilder,getSimulationResult,submitSimulationSteps,callContract,getNonce,setSender}=stxer;
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
@@ -17,13 +18,14 @@ const ok=s=>s.startsWith('(ok'),uint=s=>BigInt(s.slice(1)),FUND=100000n;
 const decode=r=>r.Eval?.Ok?cvToString(deserializeCV(r.Eval.Ok)):r.Transaction?.Ok&&!r.Transaction.Ok.vm_error&&!r.Transaction.Ok.post_condition_aborted?cvToString(deserializeCV(r.Transaction.Ok.result)):`ENGINE ${JSON.stringify(r)}`;
 export async function runRecoveryMatrix(kind) {
  const city=kind==='citycoins',juice=kind==='juice';
- const name=city?'ccd016-swap-vault-mia-v2':juice?'juice-pool-swap-vault':'fastpool-swap-vault';
- const vault=DEP+'.'+name,pool=city?TREASURY:DEP+'.'+(juice?'juice-pool-stx-signer-stx-rewards':'signer-manager-vault-stx-rewards');
- const vaultPath=resolve(root,city?'contracts/extensions/'+name+'.clar':juice?'contracts/pox-5/'+name+'.clar':'contracts/'+name+'.clar');
+ const repoName=city?'ccd016-swap-vault-mia-v2':juice?'juice-pool-swap-vault':'fastpool-swap-vault',name=juice?VAULT_NAME:repoName;
+ const vault=DEP+'.'+name,pool=city?TREASURY:DEP+'.'+(juice?POOL_NAME:'signer-manager-vault-stx-rewards');
+ const vaultPath=resolve(root,city?'contracts/extensions/'+repoName+'.clar':juice?'contracts/pox-5/'+repoName+'.clar':'contracts/'+repoName+'.clar');
  const poolPath=city?null:resolve(root,juice?'contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar':'contracts/signer-manager-vault-stx-rewards.clar');
  const reports=[],checks=[];let sid,caseName,step=0,sourceHashes={};
+ const forkBlock=await juiceForkBlock(NODE);
  const resultDir=resolve(root,'simulations/results/v6-3-recovery');mkdirSync(resultDir,{recursive:true});
- function save(){writeFileSync(resolve(resultDir,kind+'.json'),JSON.stringify({kind,forkBlock:9021103,reports,checks,passed:checks.filter(c=>c.passed).length,total:checks.length,fixtures:['PoX earned reward/share fixtures backed by real fork token transfers; lock admission not exercised','Vault batch-start and fastpool settlement deadline aged by explicit Eval to keep native and Lazer pricing on real fork data','CityCoins DAO Extensions map grants only the actual vault and a sender-guarded test proposal extension','Public ladder reservation set to 49 to reach parking with one incumbent; public replacement, no market map writes'],sourceHashes},null,2)+'\n');}
+ function save(){writeFileSync(resolve(resultDir,kind+'.json'),JSON.stringify({kind,forkBlock,reports,checks,passed:checks.filter(c=>c.passed).length,total:checks.length,fixtures:['PoX earned reward/share fixtures backed by real fork token transfers; lock admission not exercised','Vault batch-start and fastpool settlement deadline aged by explicit Eval to keep native and Lazer pricing on real fork data','CityCoins DAO Extensions map grants only the actual vault and a sender-guarded test proposal extension','Public ladder reservation set to 49 to reach parking with one incumbent; public replacement, no market map writes'],sourceHashes},null,2)+'\n');}
  function check(label,actual,want){const passed=typeof want==='function'?want(actual):actual===want;checks.push({label:caseName+': '+label,actual:String(actual),expected:typeof want==='function'?String(want):String(want),passed,sid,step});console.log(`${passed?'ok':'FAIL'} ${checks.length}. ${caseName}: ${label}: ${String(actual).slice(0,360)}`);if(!passed){save();console.log(`${checks.filter(c=>c.passed).length}/${checks.length} checks green`);throw Error(`STOP ${label}: ${actual}; expected ${want}; https://stxer.xyz/simulations/mainnet/${sid}`);} }
  async function ev(label,id,code,want){const r=await submitSimulationSteps(sid,{steps:[{Eval:[DEP,'',id,code]}]});step++;const s=decode(r.steps[0]);if(want!==undefined)check(label,s,want);else if(s.startsWith('ENGINE'))check(label,s,()=>false);return s;}
  async function tx(label,id,fn,args=[],want=ok,sender=DEP){const r=await callContract(sid,{sender,contract:id,functionName:fn,functionArgs:args,fee:0});step++;check(label,r.vmError||r.result,want);return r;}
@@ -34,13 +36,17 @@ export async function runRecoveryMatrix(kind) {
  for(const shape of (process.env.SHAPE?[process.env.SHAPE]:['pending','resting','parked','pending+resting','none']))
  for(const route of (city?['public','dao']:['pool'])) {
   caseName=`${kind}/${shape}/${route}`;step=0;const beforeChecks=checks.length;
-  const b=SimulationBuilder.new({stacksNodeAPI:NODE}),plan=[];appendJingStack(b,plan,sourceHashes);sid=await b.run();console.log('View: https://stxer.xyz/simulations/mainnet/'+sid);
+  const b=SimulationBuilder.new({stacksNodeAPI:NODE}),plan=[];appendJingStack(b,plan,sourceHashes,forkBlock);sid=await b.run();console.log('View: https://stxer.xyz/simulations/mainnet/'+sid);
   const first=await getSimulationResult(sid);for(let i=0;i<plan.length;i++){step++;check(plan[i].label,decode(first.steps[i].Result),plan[i].want??ok);}
   // The shared Juice vault trait is already deployed on mainnet; impl-trait
   // and the pool's real dynamic call verify its zero-argument recovery ABI.
   if(city)await deploy('ccd015-redemption-book-mia-stx',resolve(root,'contracts/extensions/ccd015-redemption-book-mia-stx.clar'));
-  await deploy(name,vaultPath);
-  if(!city)await deploy(pool.split('.')[1],poolPath);
+  // Juice: repo sources under the fork names, only the names rewritten; both hashes recorded.
+  if(juice){const v=juiceSource('juice-pool-swap-vault',vaultPath),q=juiceSource('juice-pool-stx-signer-stx-rewards',poolPath);
+   sourceHashes['juice-pool-swap-vault']=v.repoSha256;sourceHashes['juice-pool-stx-signer-stx-rewards']=q.repoSha256;
+   await deploy(v.name,null,v.source);await deploy(q.name,null,q.source);}
+  else await deploy(name,vaultPath);
+  if(!city){if(!juice)await deploy(pool.split('.')[1],poolPath);}
   else {
    await deploy(PROXY.split('.')[1],null,`(define-private (admin) (ok (asserts! (is-eq tx-sender '${DEP}) (err u16000))))
     (define-public (reclaim) (begin (try! (admin)) (contract-call? '${vault} dao-reclaim none)))

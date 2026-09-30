@@ -1,4 +1,5 @@
 import {appendJingStack} from './_jing-v6-3.mjs';
+import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock} from './_juice-fork.mjs';
 import {createHash} from 'node:crypto';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, timed propose/accept admin handover.
@@ -11,8 +12,8 @@ const require=createRequire(resolve(directory,'../package.json'));
 const {SimulationBuilder,getSimulationResult}=require('stxer');
 const {Cl,ClarityVersion,deserializeCV,cvToString,getAddressFromPrivateKey}=require('@stacks/transactions');
 const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
-const POOL=`${DEP}.juice-pool-stx-signer-stx-rewards`;
-const VAULT=`${DEP}.juice-pool-swap-vault`;
+const POOL=POOL_ID;
+const VAULT=VAULT_ID;
 const ALICE=getAddressFromPrivateKey('7'.repeat(64)+'01','mainnet');
 const BOB=getAddressFromPrivateKey('8'.repeat(64)+'01','mainnet');
 const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api';
@@ -20,9 +21,10 @@ const API=process.env.STXER_API_URL||'https://api.stxer.xyz';
 const tipResponse=await fetch(`${NODE}/extended/v1/block?limit=1`,{signal:AbortSignal.timeout(20000)});
 if(!tipResponse.ok)throw new Error(`tip HTTP ${tipResponse.status}`);
 const tip=(await tipResponse.json()).results[0];
-const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
+const forkBlock=await juiceForkBlock(NODE);
+const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(forkBlock).withSender(DEP);
 const plan=[],sourceHashes={};
-appendJingStack(builder,plan,sourceHashes);
+appendJingStack(builder,plan,sourceHashes,forkBlock);
 const ok=v=>v.startsWith('(ok');
 function call(label,id,fn,args=[],want=ok,sender=DEP){
  const slot=plan.length;
@@ -30,9 +32,11 @@ function call(label,id,fn,args=[],want=ok,sender=DEP){
  plan.push({label,kind:'tx',want});return slot;
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
-for(const [name,path] of [['juice-pool-swap-vault','../contracts/pox-5/juice-pool-swap-vault.clar'],['juice-pool-stx-signer-stx-rewards','../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar']]){
- builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(resolve(directory,path),'utf8')),clarity_version:ClarityVersion.Clarity6});
- plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});
+// Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){
+ const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
+ builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
+ plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});
 }
 const admin=(label,want)=>ev(label,POOL,'(get-admin)',want);
 const pending=(label,want)=>ev(label,POOL,'(get-pending-admin)',want);
@@ -109,7 +113,7 @@ for(let i=0;i<plan.length;i++){
  eventChecks.push({label:`${label}: ${topic} print emitted`,passed:printed,actual:'decoded committed pool print event'});
 }
 checks.push(...eventChecks);
-const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'admin-handover',block:9021103,observedTip:tip,productionSourcesUnmodified:true,sourceHashes,
+const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind:'juice',mode:'admin-handover',block:forkBlock,observedTip:tip,productionSourcesUnmodified:true,sourceHashes,
  fixtures:['Admin handover uses actual fork Bitcoin-block advances at 143/144-block boundaries; one-second synthetic intervals','No storage seeds, oracle updates or reward/share fixtures are used; signer registration is outside this scenario'],checks,result};
 const resultsDirectory=resolve(directory,'results/pool-vault-stx');mkdirSync(resultsDirectory,{recursive:true});
 writeFileSync(resolve(resultsDirectory,'juice-admin-handover.json'),JSON.stringify(report,null,2));

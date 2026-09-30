@@ -1,4 +1,5 @@
 import {appendJingStack} from './_jing-v6-3.mjs';
+import {POOL_NAME,VAULT_NAME,juiceSource,juiceForkBlock} from './_juice-fork.mjs';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Shared fork runner; exact production pool/vault sources are deployed unchanged.
 import { createHash } from 'node:crypto';
@@ -15,8 +16,8 @@ const NODE=process.env.STACKS_API_URL||'http://77.42.3.101/stacks-api';
 const API=process.env.STXER_API_URL||'https://api.stxer.xyz';
 const POX='SP000000000000000000002Q6VF78.pox-5';
 export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirectory}) {
- const pool=kind==='juice'?'juice-pool-stx-signer-stx-rewards':'fastpool-stx-vault-signer';
- const vault=kind==='juice'?'juice-pool-swap-vault':'fastpool-swap-vault';
+ const pool=kind==='juice'?POOL_NAME:'fastpool-stx-vault-signer';
+ const vault=kind==='juice'?VAULT_NAME:'fastpool-swap-vault';
  const pid=`${DEP}.${pool}`,vid=`${DEP}.${vault}`;
  const {fetchLazerUpdateAny}=await import('./_pool-vault-lazer.mjs');
  const proof=await fetchLazerUpdateAny();
@@ -24,10 +25,16 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
  const tipResponse=await fetch(`${NODE}/extended/v1/block?limit=1`,{signal:AbortSignal.timeout(20000)});
  if(!tipResponse.ok)throw new Error(`tip HTTP ${tipResponse.status}`);
  const tip=(await tipResponse.json()).results[0];
- const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API}).useBlockHeight(tip.height).withSender(DEP);
+ const forkBlock=await juiceForkBlock(NODE);
+ const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API}).useBlockHeight(forkBlock).withSender(DEP);
  const plan=[],sourceHashes={};
- appendJingStack(builder,plan,sourceHashes);
- const deploy=(name,path)=>{builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});};
+ appendJingStack(builder,plan,sourceHashes,forkBlock);
+ const deploy=(name,path)=>{
+  // Juice: repo source with only the two contract names rewritten (see _juice-fork.mjs).
+  const j=kind==='juice'?juiceSource(path.endsWith('juice-pool-swap-vault.clar')?'juice-pool-swap-vault':'juice-pool-stx-signer-stx-rewards',path,sourceHashes):null;
+  const source=j?j.source:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8'));
+  if(j&&j.name!==name)throw new Error(`fork name mismatch ${j.name} vs ${name}`);
+  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:j?`deploy ${name} (repo source, names only rewritten)`:`deploy unchanged ${name}`,kind:'deploy'});};
  const call=(label,id,fn,args,want,sender=STRANGER)=>{if (/^deposit-token-[xy]$/.test(fn)&&args.length===6)args=args.filter((_,i)=>i!==3);builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(pid,vid,id,fn,args,Cl),sender});plan.push({label,kind:'tx',want});};
  const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
  deploy(vault,vaultSource);deploy(pool,poolSource);
@@ -50,7 +57,7 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
   ev('no timed sBTC fallback',pid,'(get-unswapped-for-cycle u144)','u0');
  }
  call('outsider cannot use pool admin refloor',pid,'refloor-vault',[update],kind==='juice'?'(err u100)':'(err u1002)');
- console.log(`${kind}: submitting ${plan.length} deployment/integration/guard checks at mainnet block 9021103`);
+ console.log(`${kind}: submitting ${plan.length} deployment/integration/guard checks at mainnet block ${forkBlock}`);
  const id=await builder.run();
  console.log(`View: https://stxer.xyz/simulations/mainnet/${id}`);
  const result=await getSimulationResult(id,{stxerApi:API});
@@ -68,7 +75,7 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
   return {label:p.label,passed,actual};
  });
  mkdirSync(resultDirectory,{recursive:true});
- const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind,mode:'deployment-and-guards',block:9021103,observedTip:tip,proofTimestamp:proof.ts,productionSourcesUnmodified:true,sourceHashes,checks,result};
+ const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind,mode:'deployment-and-guards',block:forkBlock,observedTip:tip,proofTimestamp:proof.ts,productionSourcesUnmodified:true,sourceHashes,checks,result};
  writeFileSync(resolve(resultDirectory,`${kind}-deployment-guards.json`),JSON.stringify(report,null,2));
  if(checks.some(c=>!c.passed))throw new Error(`${kind}: ${checks.filter(c=>!c.passed).length} fork checks failed`);
  console.log(`${kind}: ${checks.length}/${checks.length} fork checks passed`);
@@ -79,8 +86,8 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
 // pool and vault source stay unchanged; this does not test STX lock admission.
 export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultDirectory,profile="liquidation"}) {
  const {getAddressFromPrivateKey,serializeCV}=require('@stacks/transactions');
- const pool=kind==='juice'?'juice-pool-stx-signer-stx-rewards':'fastpool-stx-vault-signer';
- const vault=kind==='juice'?'juice-pool-swap-vault':'fastpool-swap-vault';
+ const pool=kind==='juice'?POOL_NAME:'fastpool-stx-vault-signer';
+ const vault=kind==='juice'?VAULT_NAME:'fastpool-swap-vault';
  const pid=`${DEP}.${pool}`,vid=`${DEP}.${vault}`;
  const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
  const MKT=`${DEP}.markets-sbtc-stx-jing-v6-3`;
@@ -91,6 +98,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  const proof=await fetchLazerUpdateAny();
  const update=Cl.buffer(Buffer.from(proof.hex.replace(/^0x/,''),'hex'));
  const tip=(await (await fetch(`${NODE}/extended/v1/block?limit=1`)).json()).results[0];
+ const forkBlock=await juiceForkBlock(NODE);
  const read=async(id,fn,args=[])=>{
   const [address,name]=id.split('.');
   const r=await fetch(`${NODE}/v2/contracts/call-read/${address}/${name}/${fn}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sender:DEP,arguments:args.map(cv=>'0x'+serializeCV(cv).replace(/^0x/,''))})});
@@ -99,11 +107,16 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  };
  const cycle=Number((await read(POX,'current-pox-reward-cycle')).value)-1;
  const sellers={value:[]},buyers={value:[]}; // Fresh v6-3 books are empty.
- const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(tip.height).withSender(DEP);
+ const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(forkBlock).withSender(DEP);
  const plan=[],sourceHashes={};
- appendJingStack(builder,plan,sourceHashes);
+ appendJingStack(builder,plan,sourceHashes,forkBlock);
  const jingRouterSlots=[];
- const deploy=(name,path)=>{builder.addContractDeploy({contract_name:name,source_code:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8')),clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy unchanged ${name}`,kind:'deploy'});};
+ const deploy=(name,path)=>{
+  // Juice: repo source with only the two contract names rewritten (see _juice-fork.mjs).
+  const j=kind==='juice'?juiceSource(path.endsWith('juice-pool-swap-vault.clar')?'juice-pool-swap-vault':'juice-pool-stx-signer-stx-rewards',path,sourceHashes):null;
+  const source=j?j.source:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8'));
+  if(j&&j.name!==name)throw new Error(`fork name mismatch ${j.name} vs ${name}`);
+  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:j?`deploy ${name} (repo source, names only rewritten)`:`deploy unchanged ${name}`,kind:'deploy'});};
  const call=(label,id,fn,args,want,sender=DEP)=>{if (/^deposit-token-[xy]$/.test(fn)&&args.length===6)args=args.filter((_,i)=>i!==3);builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(pid,vid,id,fn,args,Cl),sender});plan.push({label,kind:'tx',want});return plan.length-1;};
  const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
  const advance=(n)=>{builder.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:`advance ${n} burn blocks, compressed timestamps`,kind:'advance'});};
@@ -222,7 +235,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   checks.push({label:`${plan[slot].label}: no AMM fallback or unsold remainder`,passed:value('dlmm-in')===0n&&value('xyk-in')===0n&&value('velar-in')===0n&&value('unsold')===0n,actual:routing?`dlmm ${value('dlmm-in')}, xyk ${value('xyk-in')}, velar ${value('velar-in')}, unsold ${value('unsold')}`:'router print missing'});
  }
  mkdirSync(resultDirectory,{recursive:true});
- const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind,mode:`real-token-venue-${profile}`,block:9021103,observedTip:tip,proofTimestamp:proof.ts,productionSourcesUnmodified:true,sourceHashes,fixtures:['PoX earned rewards and 1:3 shares seeded with Eval; no STX lock admission tested',profile==='maker'?'maker fill completes without advancing burn blocks':'Vault funding clock aged by 288 blocks; one burn block advances for router cooldown; production freshness unchanged','Fresh exact v6-3 stack deployed; no old market state inherited'],checks,result};
+ const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind,mode:`real-token-venue-${profile}`,block:forkBlock,observedTip:tip,proofTimestamp:proof.ts,productionSourcesUnmodified:true,sourceHashes,fixtures:['PoX earned rewards and 1:3 shares seeded with Eval; no STX lock admission tested',profile==='maker'?'maker fill completes without advancing burn blocks':'Vault funding clock aged by 288 blocks; one burn block advances for router cooldown; production freshness unchanged','Fresh exact v6-3 stack deployed; no old market state inherited'],checks,result};
  writeFileSync(resolve(resultDirectory,`${kind}-${profile}.json`),JSON.stringify(report,null,2));
  if(checks.some(c=>!c.passed))throw new Error(`${kind} ${profile}: ${checks.filter(c=>!c.passed).length} lifecycle checks failed`);
  console.log(`${kind} ${profile}: ${checks.length}/${checks.length} lifecycle checks passed`);return report;
