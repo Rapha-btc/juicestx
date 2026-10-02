@@ -9,13 +9,13 @@ files={p.stem:p.read_text() for p in (here/'fixtures').glob('*.clar') if p.stem!
 files['mock-signer-trait']='(define-trait signer-manager-trait ((validate-stake! (principal uint uint uint uint bool (optional (buff 500))) (response bool uint))))'
 hashes={}
 files['juice-swap-vault-trait']=(root/'contracts/pox-5/juice-swap-vault-trait.clar').read_text();hashes['juice-swap-vault-trait']=hashlib.sha256(files['juice-swap-vault-trait'].encode()).hexdigest()
-for n in ['juice-pool-stx-signer-stx-rewards','juice-pool-swap-vault']:
+for n in ['juice-pool-sbtc-signer','juice-sbtc-autoswap']:
  s=(root/f'contracts/pox-5/{n}.clar').read_text();hashes[n]=hashlib.sha256(s.encode()).hexdigest();files[n]=s
 for n,s in files.items():
  for a,b in replacements.items():s=s.replace(a,b)
  s=s.replace('.mock-pox.signer-manager-trait','.mock-signer-trait.signer-manager-trait')
  if n=='v6-market':s+='\n(define-public (rv-park-x-for-test (who principal)) (park-token-x (var-get current-cycle) (contract-call? .mock-lazer-oracle get-mid) who (get-token-x-depositors (var-get current-cycle))))\n'
- if n=='juice-pool-stx-signer-stx-rewards':
+ if n=='juice-pool-sbtc-signer':
   if '(define-public (router-swap-split-dia' not in s:s+='\n'+(here/'fixtures/pool-emergency-wrappers.clar').read_text()
   s+='\n(define-public (test-fund (amount uint) (vault <swap-vault-interface>)) (begin (try! (assert-admin)) (try! (assert-active-vault vault)) (as-contract? ((with-ft .mock-ft "mock-ft" amount)) (try! (contract-call? vault fund amount)))))\n(define-public (test-finish (vault <swap-vault-interface>)) (begin (try! (assert-admin)) (try! (assert-active-vault vault)) (contract-call? vault finish)))\n'
  if n=='v6-market':
@@ -35,7 +35,7 @@ for n in files:manifest+=f'\n[contracts.{n}]\npath = "contracts/{n}.clar"\nclari
 (out/'Clarinet.toml').write_text(manifest);shutil.copy(root/'settings/Devnet.toml',out/'settings/Devnet.toml');(out/'source-hashes.json').write_text(json.dumps(hashes,indent=2)+'\n');print('Built current-source vault fixtures:',out)
 
 if __import__('sys').argv[-1]=='--rv':
- p=out/'contracts/juice-pool-swap-vault.clar'
- s=p.read_text().replace('(define-constant POOL .juice-pool-stx-signer-stx-rewards)', "(define-constant POOL 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)")
+ p=out/'contracts/juice-sbtc-autoswap.clar'
+ s=p.read_text().replace('(define-constant POOL .juice-pool-sbtc-signer)', "(define-constant POOL 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)")
  p.write_text(s+'\n'+(here/'rv.invariants.clar').read_text())
  print('RV ONLY: pool principal bound to the deployer actor; original equality guards unchanged; eight invariants appended')

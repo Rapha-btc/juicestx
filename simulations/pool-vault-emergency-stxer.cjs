@@ -24,7 +24,7 @@ const plan=[],sourceHashes={};
 const ev=(label,id,code)=>{b.addEvalCode(id,code);plan.push({label,kind:'eval'});};
 const call=(label,id,fn,args,sender=DEP)=>{b.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(POOL,VAULT,id,fn,args,Cl),sender});plan.push({label,kind:'tx'});};
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
-for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){const {name,source}=juiceSource(repoName,base+'/contracts/pox-5/'+repoName+'.clar',sourceHashes);
+for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){const {name,source}=juiceSource(repoName,base+'/contracts/pox-5/'+repoName+'.clar',sourceHashes);
 b.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:'deploy local '+name+' (names only rewritten)',kind:'tx'});}
 ev('raw DIA STX/USD',VAULT,`(contract-call? '${DIA} get-value "STX/USD")`);
 ev('raw DIA BTC/USD',VAULT,`(contract-call? '${DIA} get-value "BTC/USD")`);

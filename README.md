@@ -104,8 +104,8 @@ TBD
 
 ## PoX-5 pool rewards converted to STX
 
-The Juice pool variant in [juice-pool-stx-signer-stx-rewards.clar](contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar)
-routes claimed sBTC through [juice-pool-swap-vault.clar](contracts/pox-5/juice-pool-swap-vault.clar)
+The Juice pool variant in [juice-pool-sbtc-signer.clar](contracts/pox-5/juice-pool-sbtc-signer.clar)
+routes claimed sBTC through [juice-sbtc-autoswap.clar](contracts/pox-5/juice-sbtc-autoswap.clar)
 before paying stakers native STX. After 4,320 Bitcoin blocks, admin recovery can
 return the remaining sBTC and converted STX to their original tranche. The vault
 can then fund another batch, even while earlier recovered payouts are uncollected.

@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 const dir=fileURLToPath(new URL('.',import.meta.url));
 const sim=await initSimnet(dir+'.build/Clarinet.toml');
 const accounts=sim.getAccounts(),admin=accounts.get('deployer'),alice=accounts.get('wallet_1');
-const P='juice-pool-stx-signer-stx-rewards',OLD='juice-pool-swap-vault',NEXT='sim-next-vault',OTHER='sim-other-vault';
+const P='juice-pool-sbtc-signer',OLD='juice-sbtc-autoswap',NEXT='sim-next-vault',OTHER='sim-other-vault';
 const u=Cl.uint,cp=n=>Cl.contractPrincipal(admin,n),principal=n=>`${admin}.${n}`;
 let checks=0;const call=(n,f,a=[],sender=admin)=>sim.callPublicFn(n,f,a,sender);
 const pool=(f,a=[],sender=admin)=>call(P,f,a,sender);

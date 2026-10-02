@@ -27,7 +27,7 @@ function ok(r){assert.equal(r.result.type,'ok',cvToString(r.result));return r.re
 function err(r,code){assert.equal(cvToString(r.result),`(err u${code})`)}
 function read(n,f,a=[]){return sim.callReadOnlyFn(n,f,a,admin).result}
 function stx(w){return sim.getAssetsMap().get('STX').get(w)||0n}
-const J='juice-pool-stx-signer-stx-rewards',JV='juice-pool-swap-vault',F='fastpool-stx-vault-signer',FV='fastpool-swap-vault';
+const J='juice-pool-sbtc-signer',JV='juice-sbtc-autoswap',F='fastpool-stx-vault-signer',FV='fastpool-swap-vault';
 const VAULT_FUNCTIONS=new Set([...POOL_VAULT_FUNCTIONS,'test-fund','test-finish']);
 const vaultArgs=(n,f,a)=>n===J&&VAULT_FUNCTIONS.has(f)?[...a,cp(JV)]:a;
 const poolTx=(f,a,sender)=>tx.callPublicFn(J,f,vaultArgs(J,f,a),sender);
@@ -415,9 +415,9 @@ assert.equal(cvToString(upgradeStatus.pool),cvToString(cp(J)));
 assert.equal(upgradeStatus['batch-start'].type,'none');
 const directory=resolve(projectRoot,'tests/vault/results');mkdirSync(directory,{recursive:true});
 const report=sim.collectReport(false,'');
-const vaultRecord=report.coverage.split('end_of_record').find(r=>r.includes('/juice-pool-swap-vault.clar'));
+const vaultRecord=report.coverage.split('end_of_record').find(r=>r.includes('/juice-sbtc-autoswap.clar'));
 assert.ok(vaultRecord,'vault coverage missing');
-const normalized=vaultRecord.replace(/^SF:.*juice-pool-swap-vault.clar$/m,'SF:contracts/pox-5/juice-pool-swap-vault.clar')+'end_of_record\n';
+const normalized=vaultRecord.replace(/^SF:.*juice-sbtc-autoswap.clar$/m,'SF:contracts/pox-5/juice-sbtc-autoswap.clar')+'end_of_record\n';
 writeFileSync(resolve(directory,'runtime.lcov'),normalized);
 const lineCounts=[...normalized.matchAll(/^DA:(\d+),(\d+)$/gm)].map(m=>({line:Number(m[1]),hits:Number(m[2])}));
 const branchTotal=Number(normalized.match(/^BRF:(\d+)$/m)[1]),branchHits=Number(normalized.match(/^BRH:(\d+)$/m)[1]);

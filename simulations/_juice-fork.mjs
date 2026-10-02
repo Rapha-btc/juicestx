@@ -1,13 +1,14 @@
 // Juice fork setup at the current mainnet tip.
-// The production vault and pool names are already taken on mainnet by an older
-// deployment, so the fork deploys the repo sources under the -v1 names below.
-// Only the two contract names and the references to them are rewritten, in
-// memory; mapping the names back must give the repo file byte for byte.
+// The vault and pool deploy under their production names (free on mainnet), so
+// the map below is the identity and the fork deploys the repo file byte for byte.
+// Kept as a map so a taken name can be redirected again: then only the two
+// contract names and their references are rewritten, in memory, and mapping the
+// names back must give the repo file byte for byte.
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 export const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
-export const JUICE_RENAMES={'juice-pool-swap-vault':'juice-pool-swap-vault-v1','juice-pool-stx-signer-stx-rewards':'juice-pool-stx-signer-stx-rewards-v1'};
-export const VAULT_NAME=JUICE_RENAMES['juice-pool-swap-vault'],POOL_NAME=JUICE_RENAMES['juice-pool-stx-signer-stx-rewards'];
+export const JUICE_RENAMES={'juice-sbtc-autoswap':'juice-sbtc-autoswap','juice-pool-sbtc-signer':'juice-pool-sbtc-signer'};
+export const VAULT_NAME=JUICE_RENAMES['juice-sbtc-autoswap'],POOL_NAME=JUICE_RENAMES['juice-pool-sbtc-signer'];
 export const VAULT_ID=`${DEP}.${VAULT_NAME}`,POOL_ID=`${DEP}.${POOL_NAME}`;
 const sha=s=>createHash('sha256').update(s).digest('hex');
 // `.name` covers both the short form and the fully qualified 'DEP.name form;
@@ -15,6 +16,7 @@ const sha=s=>createHash('sha256').update(s).digest('hex');
 const swap=(src,map)=>src.replace(new RegExp(`\\.(${Object.keys(map).join('|')})(?![A-Za-z0-9_-])`,'g'),(_,n)=>'.'+map[n]);
 const inverse=Object.fromEntries(Object.entries(JUICE_RENAMES).map(([a,b])=>[b,a]));
 export function renameJuice(source){
+ if(Object.entries(JUICE_RENAMES).every(([a,b])=>a===b))return source;
  for(const n of Object.values(JUICE_RENAMES))if(source.includes(n))throw new Error(`source already contains ${n}`);
  const out=swap(source,JUICE_RENAMES),back=swap(out,inverse);
  if(back!==source||sha(back)!==sha(source))throw new Error('renamed source does not map back to the repo file');

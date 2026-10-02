@@ -66,7 +66,7 @@ const vaultStx=(label,want)=>ev(label,VAULT,'(stx-get-balance current-contract)'
 const age=(label,blocks)=>ev(`${label}: fixture ages the funding clock by ${blocks} blocks`,VAULT,`(begin (var-set batch-start (some (- burn-block-height u${blocks}))) true)`,'true');
 const donate=(label,n)=>call(label,SBTC,'transfer',[u(n),Cl.principal(WHALE),Cl.principal(VAULT),Cl.none()],'(ok true)',WHALE);
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
-for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){
+for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){
  const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});

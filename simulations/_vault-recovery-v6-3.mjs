@@ -18,10 +18,10 @@ const ok=s=>s.startsWith('(ok'),uint=s=>BigInt(s.slice(1)),FUND=100000n;
 const decode=r=>r.Eval?.Ok?cvToString(deserializeCV(r.Eval.Ok)):r.Transaction?.Ok&&!r.Transaction.Ok.vm_error&&!r.Transaction.Ok.post_condition_aborted?cvToString(deserializeCV(r.Transaction.Ok.result)):`ENGINE ${JSON.stringify(r)}`;
 export async function runRecoveryMatrix(kind) {
  const city=kind==='citycoins',juice=kind==='juice';
- const repoName=city?'ccd016-swap-vault-mia-v2':juice?'juice-pool-swap-vault':'fastpool-swap-vault',name=juice?VAULT_NAME:repoName;
+ const repoName=city?'ccd016-swap-vault-mia-v2':juice?'juice-sbtc-autoswap':'fastpool-swap-vault',name=juice?VAULT_NAME:repoName;
  const vault=DEP+'.'+name,pool=city?TREASURY:DEP+'.'+(juice?POOL_NAME:'signer-manager-vault-stx-rewards');
  const vaultPath=resolve(root,city?'contracts/extensions/'+repoName+'.clar':juice?'contracts/pox-5/'+repoName+'.clar':'contracts/'+repoName+'.clar');
- const poolPath=city?null:resolve(root,juice?'contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar':'contracts/signer-manager-vault-stx-rewards.clar');
+ const poolPath=city?null:resolve(root,juice?'contracts/pox-5/juice-pool-sbtc-signer.clar':'contracts/signer-manager-vault-stx-rewards.clar');
  const reports=[],checks=[];let sid,caseName,step=0,sourceHashes={};
  const forkBlock=await juiceForkBlock(NODE);
  const resultDir=resolve(root,'simulations/results/v6-3-recovery');mkdirSync(resultDir,{recursive:true});
@@ -42,8 +42,8 @@ export async function runRecoveryMatrix(kind) {
   // and the pool's real dynamic call verify its zero-argument recovery ABI.
   if(city)await deploy('ccd015-redemption-book-mia-stx',resolve(root,'contracts/extensions/ccd015-redemption-book-mia-stx.clar'));
   // Juice: repo sources under the fork names, only the names rewritten; both hashes recorded.
-  if(juice){const v=juiceSource('juice-pool-swap-vault',vaultPath),q=juiceSource('juice-pool-stx-signer-stx-rewards',poolPath);
-   sourceHashes['juice-pool-swap-vault']=v.repoSha256;sourceHashes['juice-pool-stx-signer-stx-rewards']=q.repoSha256;
+  if(juice){const v=juiceSource('juice-sbtc-autoswap',vaultPath),q=juiceSource('juice-pool-sbtc-signer',poolPath);
+   sourceHashes['juice-sbtc-autoswap']=v.repoSha256;sourceHashes['juice-pool-sbtc-signer']=q.repoSha256;
    await deploy(v.name,null,v.source);await deploy(q.name,null,q.source);}
   else await deploy(name,vaultPath);
   if(!city){if(!juice)await deploy(pool.split('.')[1],poolPath);}

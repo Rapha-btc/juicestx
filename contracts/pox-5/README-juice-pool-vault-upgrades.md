@@ -1,6 +1,6 @@
 # Juice STX rewards pool: delayed swap-vault rotation
 
-The pool starts with `.juice-pool-swap-vault` but stores its active destination
+The pool starts with `.juice-sbtc-autoswap` but stores its active destination
 in `swap-vault`. Its current admin can select a compatible future vault after
 **4,032 Bitcoin burn blocks** (about 28 days). This is a proposal delay, not a
 pause in rewards or a change to the router's per-swap cooldown. It lets this

@@ -33,7 +33,7 @@ function call(label,id,fn,args=[],want=ok,sender=DEP){
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
-for(const repoName of ['juice-pool-swap-vault','juice-pool-stx-signer-stx-rewards']){
+for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){
  const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});

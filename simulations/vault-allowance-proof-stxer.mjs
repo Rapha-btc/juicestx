@@ -1,14 +1,14 @@
 // Mainnet fork only (stxer), at the tip. Measures whether the Void Kael #8
-// allowance extra in juice-pool-swap-vault `router-swap` is still needed now
+// allowance extra in juice-sbtc-autoswap `router-swap` is still needed now
 // that the market sizes the rebate exactly (net = amount*BPS/(BPS+bps)).
 //
 // The production names are taken on mainnet by an older deployment, so the
 // repo sources deploy under the -v1 fork names (_juice-fork.mjs: only the
 // contract names are rewritten; mapping them back gives the repo file).
 // Two vaults from the same source file:
-//   juice-pool-swap-vault-v1       the repo file, names rewritten (allowance:
+//   juice-sbtc-autoswap-v1       the repo file, names rewritten (allowance:
 //                                  amount + min-x + JING_REBATE_DUST_SATS u51)
-//   juice-pool-swap-vault-oldallow TEST-ONLY VARIANT: identical except
+//   juice-sbtc-autoswap-oldallow TEST-ONLY VARIANT: identical except
 //                                  JING_REBATE_DUST_SATS removed from the
 //                                  allowance (amount + min-x). Never deploy.
 // Both vaults get the same state (funded through their real `fund` from the
@@ -43,7 +43,7 @@ const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-3`;
 const CORE=`${DEP}.jing-core-v6`;
 const POOL=POOL_ID;
 const NEWV=VAULT_ID;
-const OLDV=`${DEP}.juice-pool-swap-vault-oldallow`;
+const OLDV=`${DEP}.juice-sbtc-autoswap-oldallow`;
 const SBTC_WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
 const STX_WHALE='SP2XXSW2KPPTY7KJDYS9RQ868D7JH58QSZKK8KXAV';
 const MAKERS=[1,2,3].map(n=>getAddressFromPrivateKey(String(930+n).repeat(22).slice(0,64)+'01','mainnet'));
@@ -64,8 +64,8 @@ const CASES=[
 
 // ---- the two sources ----
 const sourceHashes={};
-const newVault=juiceSource('juice-pool-swap-vault',resolve(directory,'../contracts/pox-5/juice-pool-swap-vault.clar'),sourceHashes);
-const newPool=juiceSource('juice-pool-stx-signer-stx-rewards',resolve(directory,'../contracts/pox-5/juice-pool-stx-signer-stx-rewards.clar'),sourceHashes);
+const newVault=juiceSource('juice-sbtc-autoswap',resolve(directory,'../contracts/pox-5/juice-sbtc-autoswap.clar'),sourceHashes);
+const newPool=juiceSource('juice-pool-sbtc-signer',resolve(directory,'../contracts/pox-5/juice-pool-sbtc-signer.clar'),sourceHashes);
 const newSource=newVault.source;
 // the test copy: JING_REBATE_DUST_SATS taken out of the router-swap allowance
 const NEW_ALLOW=/\(\+ amount \(get min-token-x mins\)\s+JING_REBATE_DUST_SATS\s*\)/g;
@@ -73,7 +73,7 @@ if((newSource.match(NEW_ALLOW)||[]).length!==1)throw new Error('allowance with J
 const oldSource=newSource.replace(NEW_ALLOW,'(+ amount (get min-token-x mins))');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 console.log(`vault repo sha256 ${newVault.repoSha256}, deployed as ${newVault.name} sha256 ${newVault.deployedSha256}`);
-console.log(`TEST-ONLY VARIANT juice-pool-swap-vault-oldallow sha256 ${sha(oldSource)}: allowance without JING_REBATE_DUST_SATS: (+ amount (get min-token-x mins))`);
+console.log(`TEST-ONLY VARIANT juice-sbtc-autoswap-oldallow sha256 ${sha(oldSource)}: allowance without JING_REBATE_DUST_SATS: (+ amount (get min-token-x mins))`);
 
 const cp=id=>Cl.contractPrincipal(...id.split('.'));
 const u=Cl.uint,sbtcCv=cp(SBTC),wstxCv=cp(WSTX);
@@ -87,7 +87,7 @@ const forkBlock=await juiceForkBlock(NODE);
 const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing:true}).useBlockHeight(forkBlock).withSender(DEP);
 const plan=[];
 appendJingStack(builder,plan,sourceHashes,forkBlock);
-for(const [name,src] of [[newVault.name,newSource],[newPool.name,newPool.source],['juice-pool-swap-vault-oldallow',oldSource]]){
+for(const [name,src] of [[newVault.name,newSource],[newPool.name,newPool.source],['juice-sbtc-autoswap-oldallow',oldSource]]){
  builder.withSender(DEP).addContractDeploy({contract_name:name,source_code:src,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${name}`,kind:'deploy'});
 }
 const bcall=(label,sender,id,fn,args,want)=>{builder.withSender(sender).addContractCall({contract_id:id,function_name:fn,function_args:args});plan.push({label,kind:'tx',want});};
@@ -244,7 +244,7 @@ for(const v of verdict)console.log(`case ${v.case}: old ${v.oldOk?'ok':'ABORT'},
 const passed=verdict.every(v=>v.oldOk&&v.newOk&&v.rebateMatchesModel&&v.refundWithinDust&&v.grossWithinNewAllowance);
 const dir=resolve(directory,'results/pool-vault-stx');mkdirSync(dir,{recursive:true});
 writeFileSync(resolve(dir,'vault-allowance-proof.json'),JSON.stringify({sid,url:`https://stxer.xyz/simulations/mainnet/${sid}`,block:forkBlock,
- sourceHashes:{...sourceHashes,'juice-pool-swap-vault-oldallow (TEST-ONLY)':sha(oldSource)},rows,verdict,passed},null,2)+'\n');
+ sourceHashes:{...sourceHashes,'juice-sbtc-autoswap-oldallow (TEST-ONLY)':sha(oldSource)},rows,verdict,passed},null,2)+'\n');
 console.log(`View: https://stxer.xyz/simulations/mainnet/${sid}`);
 console.log(passed?'allowance proof: all cases as expected':'allowance proof: NOT as expected');
 if(!passed)process.exitCode=1;

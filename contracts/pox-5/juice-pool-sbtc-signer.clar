@@ -25,7 +25,7 @@
 (define-constant ERR_SWAP_VAULT_BUSY (err u120))
 (define-constant ERR_VAULT_TRANSFER_MISMATCH (err u121))
 
-(define-data-var swap-vault principal .juice-pool-swap-vault)
+(define-data-var swap-vault principal .juice-sbtc-autoswap)
 (define-data-var pending-swap-vault (optional principal) none)
 (define-data-var pending-swap-vault-height uint u0)
 (define-constant POX5 'SP000000000000000000002Q6VF78.pox-5)

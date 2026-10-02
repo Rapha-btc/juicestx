@@ -31,7 +31,7 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
  appendJingStack(builder,plan,sourceHashes,forkBlock);
  const deploy=(name,path)=>{
   // Juice: repo source with only the two contract names rewritten (see _juice-fork.mjs).
-  const j=kind==='juice'?juiceSource(path.endsWith('juice-pool-swap-vault.clar')?'juice-pool-swap-vault':'juice-pool-stx-signer-stx-rewards',path,sourceHashes):null;
+  const j=kind==='juice'?juiceSource(path.endsWith('juice-sbtc-autoswap.clar')?'juice-sbtc-autoswap':'juice-pool-sbtc-signer',path,sourceHashes):null;
   const source=j?j.source:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8'));
   if(j&&j.name!==name)throw new Error(`fork name mismatch ${j.name} vs ${name}`);
   builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:j?`deploy ${name} (repo source, names only rewritten)`:`deploy unchanged ${name}`,kind:'deploy'});};
@@ -113,7 +113,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  const jingRouterSlots=[];
  const deploy=(name,path)=>{
   // Juice: repo source with only the two contract names rewritten (see _juice-fork.mjs).
-  const j=kind==='juice'?juiceSource(path.endsWith('juice-pool-swap-vault.clar')?'juice-pool-swap-vault':'juice-pool-stx-signer-stx-rewards',path,sourceHashes):null;
+  const j=kind==='juice'?juiceSource(path.endsWith('juice-sbtc-autoswap.clar')?'juice-sbtc-autoswap':'juice-pool-sbtc-signer',path,sourceHashes):null;
   const source=j?j.source:((source)=>{sourceHashes[name]=createHash('sha256').update(source).digest('hex');return source;})(readFileSync(path,'utf8'));
   if(j&&j.name!==name)throw new Error(`fork name mismatch ${j.name} vs ${name}`);
   builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:j?`deploy ${name} (repo source, names only rewritten)`:`deploy unchanged ${name}`,kind:'deploy'});};

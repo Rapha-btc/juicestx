@@ -32,7 +32,7 @@
 ;; trades in full and only this rounding comes back.
 (define-constant JING_REBATE_DUST_SATS u51)
 
-(define-constant POOL .juice-pool-stx-signer-stx-rewards)
+(define-constant POOL .juice-pool-sbtc-signer)
 (define-constant SBTC_TOKEN 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)
 (define-constant ASSET_SBTC "sbtc-token")
 (define-constant WSTX_TOKEN 'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2)
