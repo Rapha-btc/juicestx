@@ -26,7 +26,7 @@ const helpers=`
 (define-public (test-rest)
  (begin (asserts! (is-eq tx-sender '${admin}) (err u999))
  (as-contract? ((with-ft .mock-ft "mock-ft" u1000))
-  (try! (contract-call? JING_MARKET deposit-token-x u1000 u30400000000000 (some u0) 0x SBTC_TOKEN ASSET_SBTC)))))
+  (try! (contract-call? JING_MARKET deposit-token-x u1000 u30400000000000 (some u0) SBTC_TOKEN ASSET_SBTC)))))
 (define-public (test-reclaim)
  (begin (asserts! (is-eq tx-sender '${admin}) (err u999))
  (as-contract? () (try! (contract-call? JING_MARKET cancel-token-x-deposit SBTC_TOKEN ASSET_SBTC)))))
@@ -91,6 +91,8 @@ ok(call('mock-pox','next-dist'));ok(call('mock-pox','stake-test',[cp(P),Cl.princ
 ok(pool('set-vault-window-blocks',[u(0),cp(NEXT)]));ok(pool('pox-claim-rewards',[Cl.list([]),u(202),cp(NEXT)],alice));
 eq(ft(OLD),1n);eq(ft(NEXT),1000001n);
 eq(read(P,'get-stx-pot',[u(202),u(0)]).value,0n); // no early attribution
+// the vault's default chunk is 1M sats (20fb4f1): raise it to sell 1M + 1 in one leg
+ok(pool('set-vault-max-chunk-sats',[u(5000000),cp(NEXT)]));
 sim.mineEmptyBurnBlock();ok(pool('router-swap-split-dia',[u(1000001),u(1000001),u(0),u(0),cp(NEXT)]));
 ok(pool('finalize-swap',[cp(NEXT)],alice));eq(read(P,'get-stx-pot',[u(202),u(0)]).value,3200003201n);
 eq(ft(NEXT),0n);eq(ft(OLD),1n);eq(read(P,'get-pending-swap').type,'none');

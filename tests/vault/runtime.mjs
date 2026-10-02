@@ -31,6 +31,19 @@ const J='juice-pool-sbtc-signer',JV='juice-sbtc-autoswap',F='fastpool-stx-vault-
 const VAULT_FUNCTIONS=new Set([...POOL_VAULT_FUNCTIONS,'test-fund','test-finish']);
 const vaultArgs=(n,f,a)=>n===J&&VAULT_FUNCTIONS.has(f)?[...a,cp(JV)]:a;
 const poolTx=(f,a,sender)=>tx.callPublicFn(J,f,vaultArgs(J,f,a),sender);
+// Juice router-swap takes only the update (20fb4f1): it sells min(balance,
+// max-chunk-sats). FastPool's historical fixture keeps (amount, update).
+// Juice finish refuses until the batch is empty (ready-to-finish, 6890471):
+// u16032; the FastPool fixture still checks remaining funds (u16043).
+const NOT_READY=16032;
+const routerSwapArgs=vault=>vault===JV?[update]:null;
+// Sell exactly `amount` from the Juice vault: cap the chunk, sell, restore.
+function chunkSale(amount,restore=5000000){
+ ok(call(J,'set-vault-max-chunk-sats',[u(amount)],admin));
+ const r=call(JV,'router-swap',[update]);
+ ok(call(J,'set-vault-max-chunk-sats',[u(restore)],admin));
+ return r;
+}
 const eventChecks={
  [`${J}.propose-admin`]:['propose-admin'],
  [`${J}.accept-admin`]:['accept-admin'],
@@ -77,30 +90,31 @@ for(const [pool,vault,cycle] of [[J,JV,140],[F,FV,141]]){
   err(call(J,'jing-take',[u(100000),update],admin),16031);
  }
  err(call(vault,'finish'),16000);
- err(call(vault,'router-swap',[u(500000),update]),16031);
+ err(call(vault,'router-swap',routerSwapArgs(vault)??[u(500000),update]),16031);
  ok(call(vault,'jing-place',[update]));
  err(call(vault,'jing-reclaim'),16031);
- err(call(pool,pool===J?'finalize-swap':'finalize-swap-vault'),16043);
+ err(call(pool,pool===J?'finalize-swap':'finalize-swap-vault'),pool===J?NOT_READY:16043);
  sim.mineEmptyBurnBlocks(288);
  ok(call(vault,'jing-reclaim'));
  // DIA divergence and staleness fail closed.
  ok(call('mock-dia','set-skew',[u(13000)]));
- err(call(vault,'router-swap',[u(500000),update]),16037);
+ err(call(vault,'router-swap',routerSwapArgs(vault)??[u(500000),update]),16037);
  ok(call('mock-dia','set-skew',[u(10000)]));
  ok(call('mock-dia','set-stale',[Cl.bool(true)]));
- err(call(vault,'router-swap',[u(500000),update]),16036);
+ err(call(vault,'router-swap',routerSwapArgs(vault)??[u(500000),update]),16036);
  ok(call('mock-dia','set-stale',[Cl.bool(false)]));
- err(call(vault,'router-swap',[u(5000001),update]),16039);
+ // A caller-chosen amount over the chunk exists only on the FastPool fixture.
+ if(vault===FV)err(call(vault,'router-swap',[u(5000001),update]),16039);
  // Two sales in the same burn block: exactly one succeeds.
  if(pool===J){
   err(call(J,'router-swap-split',[u(500001),...split.slice(1)],admin),16040);
   err(call(J,'router-swap-split',[u(5000001),u(5000001),u(0),u(0),u(0),update],admin),16039);
  }
  const first=pool===J?poolTx('router-swap-split',split,admin):tx.callPublicFn(vault,'router-swap',[u(500000),update],alice);
- const batch=sim.mineBlock([first,tx.callPublicFn(vault,'router-swap',[u(500000),update],bob)]);
+ const batch=sim.mineBlock([first,tx.callPublicFn(vault,'router-swap',routerSwapArgs(vault)??[u(500000),update],bob)]);
  ok(batch[0]);err(batch[1],16044);
- err(call(pool,pool===J?'finalize-swap':'finalize-swap-vault'),16043);
- sim.mineEmptyBurnBlock();ok(call(vault,'router-swap',[u(500000),update]));
+ err(call(pool,pool===J?'finalize-swap':'finalize-swap-vault'),pool===J?NOT_READY:16043);
+ sim.mineEmptyBurnBlock();ok(call(vault,'router-swap',routerSwapArgs(vault)??[u(500000),update]));
  const final=ok(call(pool,pool===J?'finalize-swap':'finalize-swap-vault'));
  assert.equal(final.value,3200000000n);
  const a=stx(alice),b=stx(bob);
@@ -120,6 +134,8 @@ ok(call(J,'propose-fee-bips',[u(500)],admin));sim.mineEmptyBurnBlocks(144);ok(ca
 ok(call(J,'pox-claim-rewards',[Cl.list([]),u(142)]));ok(call(JV,'jing-place',[update]));
 err(call(JV,'jing-refloor',[update]),16000);err(call(J,'refloor-vault',[update]),100);ok(call(J,'refloor-vault',[update],admin));
 ok(call('v6-market','swap',[u(3206412825),u(32000000000000),update,cp('mock-ft'),Cl.stringAscii('mock-ft'),cp('mock-ft'),Cl.stringAscii('mock-ft'),Cl.bool(false)],bob));
+// A maker fill does not pass through the vault: anyone closes the emptied batch.
+ok(call(JV,'close-batch'));
 const makerOut=ok(call(J,'finalize-swap')).value;assert.equal(makerOut,3203212825n);
 const aliceMaker=makerOut/4n, bobMaker=makerOut*3n/4n, juiceFee=bobMaker/20n;
 let a=stx(alice),b=stx(bob);
@@ -164,8 +180,12 @@ console.log('Juice: bounded admin setters, stable active deadline, split allocat
 err(call(JV,'jing-take',[u(1000007),update],admin),16000);
 err(call(J,'jing-take',[u(1000007),update]),100);
 sim.mineEmptyBurnBlocks(288);
+// A balance within one chunk is swept whole (sweep-amount); the requested
+// amount only applies above the chunk, so check its bounds there.
+ok(call(J,'set-vault-max-chunk-sats',[u(1000000)],admin));
 err(call(J,'jing-take',[u(0),update],admin),16006);
 err(call(J,'jing-take',[u(1000008),update],admin),16006);
+ok(call(J,'set-vault-max-chunk-sats',[u(5000000)],admin));
 ok(call('v6-market','deposit-token-y',[u(4000000000),u(32000000000000),Cl.some(u(0)),update,cp('mock-ft'),Cl.stringAscii('mock-ft')],bob));
 const beforeTake=stx(`${admin}.${JV}`);
 const taken=ok(call(J,'jing-take',[u(1000007),update],admin));
@@ -173,16 +193,21 @@ const received=taken.value.payload.value.out.value;
 assert.ok(received>0n);
 assert.equal(stx(`${admin}.${JV}`)-beforeTake,received);
 assert.equal(cvToString(read(JV,'is-empty')),'true');
-assert.equal(cvToString(read(JV,'get-clock')).includes('(window-elapsed true)'),true);
+// A take that empties the vault closes the batch at once (close-if-empty).
+assert.equal(cvToString(read(JV,'get-clock')).includes('(batch-start none)'),true);
+assert.equal(cvToString(read(JV,'get-clock')).includes('(ready-to-finish true)'),true);
 assert.equal(read(J,'get-pending-swap').type,'some');
 assert.equal(ok(call(J,'finalize-swap')).value,received);
 assert.equal(cvToString(read(JV,'get-clock')).includes('(batch-start none)'),true);
-console.log('Juice: admin Jing take, native STX receipt, retained batch clock and finalization passed');
+console.log('Juice: admin Jing take, native STX receipt, batch closed on empty and finalization passed');
 
-// Emergency recovery: fixed age, only admin, no oracle, paused Jing withdrawals.
+// Emergency recovery: fixed age (RECOVERY_DELAY_BLOCKS u432), permissionless
+// since 8fac7c0, no oracle, paused Jing withdrawals.
+const RECOVERY=432;
 const ft=w=>ok({result:read('mock-ft','get-balance',[Cl.principal(w)])}).value;
 err(call(JV,'emergency-recover',[],admin),16000);
-err(call(J,'emergency-recover'),100);
+// any caller reaches the pending-batch check: nothing is pending yet
+err(call(J,'emergency-recover'),115);
 err(call(J,'emergency-recover',[],admin),115);
 err(call(J,'pay-recovered-sbtc-stakers',[Cl.list([Cl.principal(alice)]),u(143),u(0)]),116);
 // Remove the remaining bid from the previous Jing-take test.
@@ -203,9 +228,23 @@ for(const [cycle,kind] of [[160,'resting'],[161,'parked'],[162,'mixed'],[163,'st
  }
  if(kind==='mixed'||kind==='stx-only'){
   sim.mineEmptyBurnBlocks(288);
-  ok(call(JV,'router-swap',[u(kind==='mixed'?500000:1000000),update]));
+  ok(kind==='mixed'?chunkSale(500000):call(JV,'router-swap',[update]));
  }
- sim.mineEmptyBurnBlocks(start+4319-sim.burnBlockHeight);
+ if(kind==='stx-only'){
+  // Selling the whole balance empties the vault and closes the batch
+  // (close-if-empty), so nothing is left to recover: emergency-recover finds
+  // no clock even after the delay, and the normal finalize path pays STX.
+  assert.equal(cvToString(read(JV,'get-clock')).includes('(batch-start none)'),true);
+  sim.mineEmptyBurnBlocks(start+RECOVERY-sim.burnBlockHeight);
+  err(call(J,'emergency-recover',[],admin),16032);
+  assert.equal(ok(call(J,'finalize-swap')).value,3200000000n);
+  const stxA=stx(alice),stxB=stx(bob);
+  ok(call(J,'pay-stx-stakers',[Cl.list([Cl.principal(alice),Cl.principal(bob)]),u(cycle),u(0)]));
+  assert.equal(stx(alice)-stxA,800000000n);assert.equal(stx(bob)-stxB,2400000000n-120000000n);
+  console.log('Juice: stx-only batch closes on its full sale; finalize pays STX, emergency-recover has no clock');
+  continue;
+ }
+ sim.mineEmptyBurnBlocks(start+RECOVERY-1-sim.burnBlockHeight);
  err(call(J,'emergency-recover',[],admin),16046);
  sim.mineEmptyBurnBlock();
  // Oracle disagreement cannot obstruct the emergency exit.
@@ -258,7 +297,7 @@ for(const [cycle,kind] of [[160,'resting'],[161,'parked'],[162,'mixed'],[163,'st
  if(fees>0n)ok(call(J,'withdraw-sbtc-fees',[u(fees),Cl.principal(admin)],admin));
  ok(call('mock-dia','set-skew',[u(10000)]));
  ok(call('v6-market','set-paused',[Cl.bool(false)],admin));
- console.log(`Juice: ${kind} recovery at 4320 blocks, paused withdrawals, mixed-asset payouts and replay passed`);
+ console.log(`Juice: ${kind} recovery at ${RECOVERY} blocks, paused withdrawals, mixed-asset payouts and replay passed`);
 }
 // Recovery dust and a subsequent normal batch coexist without mixing assets.
 ok(call('mock-ft','mint',[u(7),cp(JV)]));
@@ -273,7 +312,7 @@ ok(call(J,'pay-recovered-sbtc-stakers',[Cl.list([Cl.principal(alice),Cl.principa
 assert.equal(ok(call(J,'sweep-recovered-sbtc-dust',[u(164),u(0)],admin)).value,1n);
 err(call(J,'sweep-recovered-sbtc-dust',[u(164),u(0)],admin),105);
 sim.mineEmptyBurnBlocks(288);
-ok(call(JV,'router-swap',[u(1000000),update]));
+ok(call(JV,'router-swap',[update]));
 assert.equal(ok(call(J,'finalize-swap')).value,3200000000n);
 ok(call(J,'pay-stx-stakers',[Cl.list([Cl.principal(alice),Cl.principal(bob)]),u(164),u(1)]));
 assert.equal(cvToString(read(JV,'is-empty')),'true');
@@ -326,7 +365,7 @@ ok(call('mock-pox','next-dist'));ok(call(J,'pox-claim-rewards',[Cl.list([]),u(16
 err(call(J,'test-fund',[u(1)],admin),16045);
 ok(call(J,'set-vault-dia-band-bps',[u(0)],admin));
 ok(call('mock-dia','set-failed',[Cl.bool(true)]));
-ok(call(JV,'router-swap',[u(100000),update]));
+ok(chunkSale(100000));
 ok(call('mock-dia','set-failed',[Cl.bool(false)]));
 ok(call(J,'set-vault-dia-band-bps',[u(1000)],admin));
 ok(call('mock-dia','set-skew',[u(7000)]));err(call(J,'refloor-vault',[update],admin),16037);
@@ -334,7 +373,7 @@ ok(call('mock-dia','set-skew',[u(10000)]));
 ok(call('v6-market','test-zero-price',[Cl.bool(true)],admin));err(call(J,'refloor-vault',[update],admin),16013);
 ok(call('v6-market','test-zero-price',[Cl.bool(false)],admin));
 ok(call(J,'set-vault-router-cooldown',[u(0)],admin));
-ok(call(JV,'router-swap',[u(900000),update]));ok(call(J,'finalize-swap'));
+ok(call(JV,'router-swap',[update]));ok(call(J,'finalize-swap'));
 // Positive DIA cross can still round its slippage floor to zero: fail closed.
 ok(call('mock-lazer-oracle','set-mid',[u(1)]));err({result:read(JV,'get-no-pyth-price')},16013);
 ok(call('mock-dia','set-stx-usd',[u(200000000)]));err({result:read(JV,'get-dia-price')},16013);
@@ -346,8 +385,11 @@ ok(call('mock-pox','next-dist'));ok(call(J,'pox-claim-rewards',[Cl.list([]),u(16
 ok(call(JV,'jing-place',[update]));ok(call('v6-market','test-park-extra',[cp(JV),u(7)],admin));
 sim.mineEmptyBurnBlocks(4320);
 const recoveryClock=cvToString(read(JV,'get-clock')),recoveryPosition=cvToString(read('v6-market','get-token-x-deposit',[read('v6-market','get-current-cycle'),cp(JV)]));
+// Withhold 3 units: above the vault's DUST_SATS (2) residue tolerance.
+ok(call('mock-ft','set-short-by',[u(3)],admin));
 ok(call('mock-ft','set-short-transfer',[Cl.bool(true)],admin));
 err(call(J,'emergency-recover',[],admin),16043);
+ok(call('mock-ft','set-short-by',[u(1)],admin));
 assert.equal(cvToString(read(JV,'get-clock')),recoveryClock);
 assert.equal(cvToString(read('v6-market','get-token-x-deposit',[read('v6-market','get-current-cycle'),cp(JV)])),recoveryPosition);
 ok(call('mock-ft','set-short-transfer',[Cl.bool(false)],admin));
@@ -409,6 +451,40 @@ ok(call('mock-ft','set-blocked-recipient',[Cl.none()],admin));
 ok(call(J,'router-swap-split-dia',[u(900000),u(300000),u(300000),u(300000)],admin));
 ok(call(J,'finalize-swap'));assert.equal(read(JV,'is-empty').type,'true');
 console.log('Juice emergency: zero window, amount/auth/chunk guards, DIA/native boundaries, rollback, balance conservation and full drain passed');
+// Paths added after the 09-18 suite: close-batch, funding while a closed
+// batch awaits finalize, router floor checks, recovery of an all-STX batch.
+ok(call(J,'set-vault-window-blocks',[u(288)],admin));
+// A maker fill leaves the batch open holding only STX; recovery returns it.
+for(const [who,amount]of [[alice,1],[bob,3]])ok(call('mock-pox','stake-test',[cp(J),Cl.principal(who),u(171),u(amount)]));
+ok(call('mock-pox','next-dist'));ok(call(J,'pox-claim-rewards',[Cl.list([]),u(171)]));
+ok(call(JV,'jing-place',[update]));
+ok(call('v6-market','swap',[u(3206412825),u(32000000000000),update,cp('mock-ft'),Cl.stringAscii('mock-ft'),cp('mock-ft'),Cl.stringAscii('mock-ft'),Cl.bool(false)],bob));
+assert.equal(read(JV,'get-clock').value['batch-start'].type,'some');
+sim.mineEmptyBurnBlocks(RECOVERY);
+const allStx=ok(call(J,'emergency-recover',[],admin));
+assert.equal(allStx.value.sbtc.value,0n);assert.ok(allStx.value.stx.value>0n);
+err(call(JV,'close-batch'),16032);
+for(const [who,amount]of [[alice,1],[bob,3]])ok(call('mock-pox','stake-test',[cp(J),Cl.principal(who),u(172),u(amount)]));
+ok(call('mock-pox','next-dist'));ok(call(J,'pox-claim-rewards',[Cl.list([]),u(172)]));
+err(call(JV,'close-batch'),16043);
+ok(call('v6-market','test-park-extra',[cp(JV),u(1)],admin));
+err(call(JV,'close-batch'),16043);
+sim.mineEmptyBurnBlocks(288);
+ok(call('mock-router','set-refuse',[Cl.bool(true)],admin));
+err(call(JV,'router-swap',[update]),16047);
+ok(call('mock-router','set-refuse',[Cl.bool(false)],admin));
+ok(call('mock-router','set-haircut-bps',[u(2000)],admin));
+err(call(JV,'router-swap',[update]),16047);
+ok(call('mock-router','set-haircut-bps',[u(0)],admin));
+// The sale empties the wallet; the 1-sat parked order keeps the batch open.
+ok(call(JV,'router-swap',[update]));
+assert.equal(read(JV,'get-clock').value['batch-start'].type,'some');
+// close-batch cancels market dust home (<= DUST_SATS) and closes the batch.
+ok(call(JV,'close-batch'));
+assert.equal(cvToString(read(JV,'get-clock')).includes('(ready-to-finish true)'),true);
+err(call(J,'test-fund',[u(1)],admin),16045);
+assert.equal(ok(call(J,'finalize-swap')).value,3200000000n);
+console.log('Juice: close-batch (no clock, funds left, dust cancel), busy funding before finalize, both router floor refusals, all-STX recovery passed');
 const upgradeStatus=ok({result:read(JV,'get-upgrade-status')}).value;
 assert.equal(upgradeStatus.empty.type,'true');
 assert.equal(cvToString(upgradeStatus.pool),cvToString(cp(J)));
@@ -421,7 +497,8 @@ const normalized=vaultRecord.replace(/^SF:.*juice-sbtc-autoswap.clar$/m,'SF:cont
 writeFileSync(resolve(directory,'runtime.lcov'),normalized);
 const lineCounts=[...normalized.matchAll(/^DA:(\d+),(\d+)$/gm)].map(m=>({line:Number(m[1]),hits:Number(m[2])}));
 const branchTotal=Number(normalized.match(/^BRF:(\d+)$/m)[1]),branchHits=Number(normalized.match(/^BRH:(\d+)$/m)[1]);
-assert.equal(branchHits,branchTotal,'current vault branch coverage regressed');
+const missedBranches=[...normalized.matchAll(/^BRDA:(\d+),(\d+),(\d+),(-|0)$/gm)].map(m=>`${m[1]},${m[2]},${m[3]}`);
+assert.equal(branchHits,branchTotal,`current vault branch coverage regressed; unhit (line,block,arm): ${missedBranches.join(' ')}`);
 writeFileSync(resolve(directory,'coverage.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,'.build/source-hashes.json'))),
  branchTotal,branchHits,lineTotal:lineCounts.length,lineHits:lineCounts.filter(c=>c.hits>0).length,
  zeroHitLines:lineCounts.filter(c=>!c.hits).map(c=>c.line),

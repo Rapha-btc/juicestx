@@ -1,6 +1,6 @@
 # Current Juice vault runtime and Rendezvous tests
 
-[Four-week vault rotation](../../contracts/pox-5/README-juice-pool-vault-upgrades.md) is pushed in `fc58b61`. Current local runtime coverage reaches **129/129 branch outcomes** and **292/294 line counters**, with **97 passing migration checks**. [Current Stxer verification](../../simulations/README-pool-vault-stx.md) passes **570/570 checks** across 11 forks. The Rendezvous counts below remain archived pre-rotation results.
+[Four-week vault rotation](../../contracts/pox-5/README-juice-pool-vault-upgrades.md) is pushed in `fc58b61`. Current local runtime coverage (2026-10-01, vault on the v6-3 market / v5-3 router interface) reaches **144/144 branch outcomes** and **455/475 line counters**, with **98 passing migration checks**. See [harness update](#2026-10-01-harness-update). [Current Stxer verification](../../simulations/README-pool-vault-stx.md) passes **570/570 checks** across 11 forks. The Rendezvous counts below remain archived pre-rotation results.
 
 Target: `contracts/pox-5/juice-sbtc-autoswap.clar`.
 
@@ -68,10 +68,40 @@ Artifacts:
 - [runtime.lcov](results/runtime.lcov): only the target vault coverage record.
 - [runtime.json](results/runtime.json): status, source hashes and scope.
 
-The two zero-hit line counters at 272/336 are the `mins` tuple binding and the
-native contract literal. Both paths execute and their values are asserted;
-this is why line instrumentation remains 286/288 while branch outcomes are 129/129.
-No contract patch was required to achieve these results.
+The 20 zero-hit line counters are tuple labels (`payload: {`, `(mins {`) and the
+static principal / function-name lines of literal `contract-call?` forms
+(native price, market getters in `is-empty` and `get-upgrade-status`). All
+enclosing expressions execute and their values are asserted; branch outcomes
+are 144/144. No contract patch was required to achieve these results.
+
+## 2026-10-01 harness update
+
+`npm run test:vault` had failed on a clean HEAD since the vault moved to the
+v6-3 market: the fixture market had no `get-token-x-pending-deposit`, so the
+read-only `is-empty` failed analysis as a writing call. Harness-only changes:
+
+- `build.py` gives the `v6-market` fixture the v6-3 entry points the vault
+  calls: `get-token-x-pending-deposit` (always `none`, the fixture admits at
+  once), `deposit-token-x` / `set-token-x-limit` without an update (wrapping
+  the v6 bodies with an empty update the mock oracle ignores), and a one-call
+  `cancel-token-x-deposit` returning resting + parked. The FastPool snapshot
+  and the fixture's own RV wrappers keep the v6 shapes (`-v6` names).
+- `runtime.mjs` follows the vault changes since 2026-09-18: `router-swap`
+  takes only the update and sells min(balance, max-chunk) (`20fb4f1`; exact
+  partial sales set the chunk first); finalize refuses an open batch with
+  u16032 (`ready-to-finish`); a maker fill needs `close-batch`; a balance
+  within one chunk is swept whole by `jing-take`; a take or sale that empties
+  the vault closes the batch; `emergency-recover` is permissionless after
+  432 blocks (`8fac7c0`); an all-STX batch closes on its sale.
+- New cases for the branches added since: `close-batch` (no clock, funds
+  left, dust cancelled home), funding refused while a closed batch awaits
+  finalize, both router floor refusals (nothing sold, output under the
+  floor) and recovery of an all-STX batch. `mock-router` gains test-only
+  `set-refuse` / `set-haircut-bps`; `mock-ft` gains `set-short-by` (the vault
+  now tolerates DUST_SATS = 2 of residue, so the emptiness-guard fault
+  withholds 3 units).
+- `migration.mjs`: the test-rest helper uses the v6-3 deposit shape, and the
+  replacement vault's chunk is raised before a 1M + 1 sat sale (default 1M).
 
 ## Rendezvous scope
 

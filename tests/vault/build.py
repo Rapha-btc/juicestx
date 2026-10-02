@@ -18,8 +18,37 @@ for n,s in files.items():
  if n=='juice-pool-sbtc-signer':
   if '(define-public (router-swap-split-dia' not in s:s+='\n'+(here/'fixtures/pool-emergency-wrappers.clar').read_text()
   s+='\n(define-public (test-fund (amount uint) (vault <swap-vault-interface>)) (begin (try! (assert-admin)) (try! (assert-active-vault vault)) (as-contract? ((with-ft .mock-ft "mock-ft" amount)) (try! (contract-call? vault fund amount)))))\n(define-public (test-finish (vault <swap-vault-interface>)) (begin (try! (assert-admin)) (try! (assert-active-vault vault)) (contract-call? vault finish)))\n'
+ if n=='fastpool-swap-vault':
+  # historical v6 snapshot: keep it on the fixture's v6-shaped entry points
+  for fn in ['deposit-token-x','set-token-x-limit','cancel-token-x-deposit']:
+   assert s.count(f'JING_MARKET {fn} ')==1,fn
+   s=s.replace(f'JING_MARKET {fn} ',f'JING_MARKET {fn}-v6 ')
  if n=='v6-market':
   s+='\n(define-public (test-park-extra (who principal) (amount uint)) (begin (try! (contract-call? .mock-ft mint amount current-contract)) (ok (map-set token-x-parked who amount))))\n'
+  # v6-3 getter the vault reads (is-empty, market-total, recovery): the fixture
+  # has no pending-escrow stage, so it always answers none. Without it the
+  # read-only is-empty fails analysis as a writing call.
+  if '(define-read-only (get-token-x-pending-deposit' not in s:
+   s+='\n(define-map token-x-pending-deposits principal {amount: uint, limit: uint, spread-bps: (optional uint), submitted-at: uint})\n(define-read-only (get-token-x-pending-deposit (depositor principal)) (map-get? token-x-pending-deposits depositor))\n'
+  # v6-3 entry points the vault calls take no update (submit, then a keeper
+  # settles). The fixture admits at once through its v6 body with an empty
+  # update, which the mock Lazer oracle ignores.
+  for fn,sig,args in [('deposit-token-x','(amount uint) (limit-price uint) (spread-bps (optional uint)) (t <ft-trait>) (asset-name (string-ascii 128))','amount limit-price spread-bps 0x t asset-name'),
+                      ('set-token-x-limit','(limit-price uint) (spread-bps (optional uint))','limit-price spread-bps 0x')]:
+   assert s.count(f'(define-public ({fn}\n')==1,fn
+   s=s.replace(f'(define-public ({fn}\n',f'(define-public ({fn}-v6\n')
+   # the fixture's own RV wrappers call the v6 shape
+   assert s.count(f'  ({fn} ')==1,fn
+   s=s.replace(f'  ({fn} ',f'  ({fn}-v6 ')
+   s+=f'(define-public ({fn} {sig}) ({fn}-v6 {args}))\n'
+  # v6-3 cancel returns pending + resting + parked in one call; the v6 body
+  # returns resting first, parked on a second call. Chain the two.
+  fn='cancel-token-x-deposit'
+  assert s.count(f'(define-public ({fn}\n')==1 and s.count(f'  ({fn} ')==1,fn
+  s=s.replace(f'(define-public ({fn}\n',f'(define-public ({fn}-v6\n').replace(f'  ({fn} ',f'  ({fn}-v6 ')
+  s+=('(define-public (cancel-token-x-deposit (t <ft-trait>) (asset-name (string-ascii 128)))\n'
+      '  (let ((first (try! (cancel-token-x-deposit-v6 t asset-name))))\n'
+      '    (if (> (get-token-x-parked tx-sender) u0) (ok (+ first (try! (cancel-token-x-deposit-v6 t asset-name)))) (ok first))))\n')
   start=s.index('(define-public (refresh-mid');count=0
   for i in range(start,len(s)):
    if s[i]=='(':count+=1

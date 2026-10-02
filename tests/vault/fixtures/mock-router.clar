@@ -10,6 +10,12 @@
 (use-trait ft-trait .sip-010-trait.sip-010-trait)
 
 (define-constant SCALE u10000000000)
+;; Test-only fault knobs for the vault's floor checks: refuse every sale
+;; (all unsold), or pay `haircut-bps` under the mid.
+(define-data-var refuse bool false)
+(define-data-var haircut-bps uint u0)
+(define-public (set-refuse (b bool)) (ok (var-set refuse b)))
+(define-public (set-haircut-bps (b uint)) (ok (var-set haircut-bps b)))
 
 (define-private (sell
     (amount uint)
@@ -17,10 +23,10 @@
   )
   (let (
       (mid (contract-call? .mock-lazer-oracle get-mid))
-      (out (/ (* amount mid) SCALE))
+      (out (/ (* (/ (* amount mid) SCALE) (- u10000 (var-get haircut-bps))) u10000))
       (taker tx-sender)
     )
-    (if (or (is-eq amount u0) (> out (stx-get-balance current-contract)))
+    (if (or (var-get refuse) (is-eq amount u0) (> out (stx-get-balance current-contract)))
       (begin (asserts! (is-eq min-out u0) (err u3002)) (ok { out: u0, unsold: amount }))
       (begin
         (asserts! (>= out min-out) (err u3002))
