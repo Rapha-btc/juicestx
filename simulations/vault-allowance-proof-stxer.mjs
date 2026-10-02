@@ -6,7 +6,7 @@
 // repo sources deploy under the -v1 fork names (_juice-fork.mjs: only the
 // contract names are rewritten; mapping them back gives the repo file).
 // Two vaults from the same source file:
-//   juice-sbtc-autoswap-v1       the repo file, names rewritten (allowance:
+//   juice-sbtc-autoswap       the repo file, names rewritten (allowance:
 //                                  amount + min-x + JING_REBATE_DUST_SATS u51)
 //   juice-sbtc-autoswap-oldallow TEST-ONLY VARIANT: identical except
 //                                  JING_REBATE_DUST_SATS removed from the

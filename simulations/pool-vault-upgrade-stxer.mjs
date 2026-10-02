@@ -26,7 +26,7 @@ const advance=n=>{b.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin
 let vaultSource;
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
 for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){const j=juiceSource(repoName,new URL('../contracts/pox-5/'+repoName+'.clar',import.meta.url),sourceHashes);deploy(j.name,j.source,false);if(j.name===VAULT_NAME)vaultSource=j.source;}
-deploy('sim-upgrade-next',vaultSource,false);deploy('sim-upgrade-wrong',vaultSource.replace('(define-constant POOL .juice-pool-sbtc-signer-v1)',`(define-constant POOL '${OTHER})`),false);
+deploy('sim-upgrade-next',vaultSource,false);deploy('sim-upgrade-wrong',vaultSource.replace('(define-constant POOL .juice-pool-sbtc-signer)',`(define-constant POOL '${OTHER})`),false);
 ev('initial active vault',P,'(get-swap-vault)',V);
 call('no proposal', 'confirm-swap-vault',[cp(V),cp(N)],'(err u118)');
 for(const [fn,args]of [['propose-swap-vault',[cp(N)]],['cancel-swap-vault-proposal',[]],['confirm-swap-vault',[cp(V),cp(N)]]])call('outsider '+fn,fn,args,'(err u100)',OTHER);
