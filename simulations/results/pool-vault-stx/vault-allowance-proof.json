@@ -1,16 +1,15 @@
 {
-  "sid": "783ca0c1f687ebc7c473d0ab560c17d2",
-  "url": "https://stxer.xyz/simulations/mainnet/783ca0c1f687ebc7c473d0ab560c17d2",
-  "block": 9210675,
+  "sid": "49660ccdf18b4db3a96f3f3df9d4da66",
+  "url": "https://stxer.xyz/simulations/mainnet/49660ccdf18b4db3a96f3f3df9d4da66",
+  "block": 9219913,
   "sourceHashes": {
-    "juice-sbtc-autoswap": "ff0a45868897397187106fe284ed72ab64f2d3718adb238addf8d7c1a5909033",
-    "juice-pool-sbtc-signer": "a0a28431f61e2e329a8b5af6b98d37cb0d0575f4e18821fd3de3777fca56195a",
-    "jing-core-v6": "973482e429cf7d9110847227fdc701443d8d9884b448dce5273579e23ea7fdff",
-    "jing-ladder-v1": "6a5e204d47d865047fcb7d80d97e57d13b23fc1bf843958323c8c7d0d10d0dd7",
-    "markets-sbtc-stx-jing-v6-3": "7b2f0f44fca1feaf1e8c30f195d0a639a3daf102db4f4c84060c8062132f5f4c",
-    "swap-router-sbtc-stx-jing-v5-3": "3e457866be8d4f6216e5e17fd87c9aa6fb2285a23909e7957a354c4af8e3b9b4",
-    "juice-swap-vault-trait-v2": "655b22cb792a8204699d8292803eee8364d15e0a32d827ebb85b9687c4a50657",
-    "juice-sbtc-autoswap-oldallow (TEST-ONLY)": "be00d392cb427593e12ffd0999775d49e42d13e056a6074b240135e07723c3e3"
+    "juice-sbtc-autoswap": "62e46c1673a926b058d4de670a93e43bd3eafe69273dff41009390a1d4c2b522",
+    "juice-pool-sbtc-signer": "bd43f4467e6a40991bf722c8a9d0f53cc9da81c06537c9edeb9555c5aff761e0",
+    "live:juice-swap-vault-trait-v2": "de229849f1823c5e3006ea0b410e806b6da28792ff47d1e308a648980bc84063",
+    "live:juice-pool-sbtc-signer": "9b0cdd5bb6274ca4aeef34834e01cfb18bfa3a6120527dc9fbfb849031b1aebe",
+    "live:juice-sbtc-autoswap": "eb4cd0f7497b62181b1b3527cc4db71ef86e43f32bf8d9466eff56c790ad68d5",
+    "juice-swap-vault-trait-v2": "65e6e81a3a29233606809786590834bf82f7f3dd66238150d514fd657af207de",
+    "juice-sbtc-autoswap-oldallow (TEST-ONLY)": "bb7f754ca32f1dab9e3e67919544dc83d77f537e7f4e26b9916da5864a63de8e"
   },
   "rows": [
     {
@@ -19,31 +18,31 @@
       "chunk": "1000000",
       "printAge": "5",
       "rebateBps": "20",
-      "mid": "19108445417460",
+      "mid": "19266268239575",
       "vaults": {
         "old": {
           "vault": "juice-sbtc-autoswap-oldallow",
           "testOnly": true,
           "amount": "1000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u18917360963285) (mid u19108445417460) (out u1904399441) (unsold u2)))))",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u19073605557179) (mid u19266268239575) (out u1920128490) (unsold u2)))))",
           "balanceBefore": "250000000",
           "balanceAfter": "249000002",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "955422270",
-              "limit": "19104623728376"
+              "amount": "963313411",
+              "limit": "19262414985927"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "764337816",
-              "limit": "19098891194751"
+              "amount": "770650729",
+              "limit": "19256635105455"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "573253362",
-              "limit": "19093158661126"
+              "amount": "577988046",
+              "limit": "19250855224983"
             }
           ],
           "marketRebateBpsVar": "u20",
@@ -59,33 +58,33 @@
           "allowOld": "1001000",
           "allowNew": "1001058",
           "allowance": "1001000",
-          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1904399441) (limit-price u18917360963285) (out u1904399441) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1920128490) (limit-price u19073605557179) (out u1920128490) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         },
         "new": {
           "vault": "juice-sbtc-autoswap",
           "testOnly": false,
           "amount": "1000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u18917360963285) (mid u19108445417460) (out u1904399441) (unsold u2)))))",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u19073605557179) (mid u19266268239575) (out u1920128490) (unsold u2)))))",
           "balanceBefore": "250000000",
           "balanceAfter": "249000002",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "955422270",
-              "limit": "19104623728376"
+              "amount": "963313411",
+              "limit": "19262414985927"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "764337816",
-              "limit": "19098891194751"
+              "amount": "770650729",
+              "limit": "19256635105455"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "573253362",
-              "limit": "19093158661126"
+              "amount": "577988046",
+              "limit": "19250855224983"
             }
           ],
           "marketRebateBpsVar": "u20",
@@ -101,9 +100,9 @@
           "allowOld": "1001000",
           "allowNew": "1001058",
           "allowance": "1001058",
-          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1904399441) (limit-price u18917360963285) (out u1904399441) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1920128490) (limit-price u19073605557179) (out u1920128490) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         }
       }
     },
@@ -113,31 +112,31 @@
       "chunk": "100000000",
       "printAge": "5",
       "rebateBps": "20",
-      "mid": "19111297178759",
+      "mid": "19271220502688",
       "vaults": {
         "old": {
           "vault": "juice-sbtc-autoswap-oldallow",
           "testOnly": true,
           "amount": "100000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u18920184206971) (mid u19111297178759) (out u190468554354) (unsold u1)))))",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u19078508297661) (mid u19271220502688) (out u192062395108) (unsold u1)))))",
           "balanceBefore": "249000002",
           "balanceAfter": "149000003",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "95556485893",
-              "limit": "19107474919323"
+              "amount": "96356102513",
+              "limit": "19267366258587"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "76445188714",
-              "limit": "19101741530169"
+              "amount": "77084882010",
+              "limit": "19261584892436"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "57333891536",
-              "limit": "19096008141015"
+              "amount": "57813661507",
+              "limit": "19255803526285"
             }
           ],
           "marketRebateBpsVar": "u20",
@@ -153,40 +152,40 @@
           "allowOld": "100001000",
           "allowNew": "100001058",
           "allowance": "100001000",
-          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u190468554354) (limit-price u18920184206971) (out u190468554354) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u192062395108) (limit-price u19078508297661) (out u192062395108) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         },
         "new": {
           "vault": "juice-sbtc-autoswap",
           "testOnly": false,
           "amount": "100000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u18920184206971) (mid u19111297178759) (out u190468554354) (unsold u1)))))",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u19078508297661) (mid u19271220502688) (out u192056035746) (unsold u2)))))",
           "balanceBefore": "249000002",
-          "balanceAfter": "149000003",
+          "balanceAfter": "149000004",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "95556485893",
-              "limit": "19107474919323"
+              "amount": "96356102513",
+              "limit": "19266728029725"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "76445188714",
-              "limit": "19101741530169"
+              "amount": "77084882010",
+              "limit": "19260946855081"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "57333891536",
-              "limit": "19096008141015"
+              "amount": "57813661507",
+              "limit": "19255165680438"
             }
           ],
           "marketRebateBpsVar": "u20",
           "gross": "100000000",
-          "refunded": "1",
+          "refunded": "2",
           "rest": "0",
-          "crumbs": "1",
+          "crumbs": "2",
           "rebateTransfer": "199601",
           "toMarket": [
             "199601",
@@ -195,9 +194,9 @@
           "allowOld": "100001000",
           "allowNew": "100001058",
           "allowance": "100001058",
-          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u190468554354) (limit-price u18920184206971) (out u190468554354) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999998) (jing-ok true) (jing-out u192056035746) (limit-price u19078508297661) (out u192056035746) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         }
       }
     },
@@ -207,31 +206,31 @@
       "chunk": "1000000",
       "printAge": "79",
       "rebateBps": "69",
-      "mid": "19109827250303",
+      "mid": "19270279726427",
       "vaults": {
         "old": {
           "vault": "juice-sbtc-autoswap-oldallow",
           "testOnly": true,
           "amount": "1000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u18918728977799) (mid u19109827250303) (out u1895274121) (unsold u2)))))",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u19077576929162) (mid u19270279726427) (out u1911187476) (unsold u2)))))",
           "balanceBefore": "149000003",
           "balanceAfter": "148000005",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "955491362",
-              "limit": "19106005284852"
+              "amount": "963513986",
+              "limit": "19266425670481"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "764393090",
-              "limit": "19100272336677"
+              "amount": "770811188",
+              "limit": "19260644586563"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "573294817",
-              "limit": "19094539388502"
+              "amount": "578108391",
+              "limit": "19254863502645"
             }
           ],
           "marketRebateBpsVar": "u69",
@@ -247,33 +246,33 @@
           "allowOld": "1001000",
           "allowNew": "1001058",
           "allowance": "1001000",
-          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1895274121) (limit-price u18918728977799) (out u1895274121) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1911187476) (limit-price u19077576929162) (out u1911187476) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         },
         "new": {
           "vault": "juice-sbtc-autoswap",
           "testOnly": false,
           "amount": "1000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u18918728977799) (mid u19109827250303) (out u1895274121) (unsold u2)))))",
-          "balanceBefore": "149000003",
-          "balanceAfter": "148000005",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u1000000) (limit-price u19077576929162) (mid u19270279726427) (out u1911187476) (unsold u2)))))",
+          "balanceBefore": "149000004",
+          "balanceAfter": "148000006",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "955491362",
-              "limit": "19106005284852"
+              "amount": "963513986",
+              "limit": "19266425670481"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "764393090",
-              "limit": "19100272336677"
+              "amount": "770811188",
+              "limit": "19260644586563"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "573294817",
-              "limit": "19094539388502"
+              "amount": "578108391",
+              "limit": "19254863502645"
             }
           ],
           "marketRebateBpsVar": "u69",
@@ -289,9 +288,9 @@
           "allowOld": "1001000",
           "allowNew": "1001058",
           "allowance": "1001058",
-          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1895274121) (limit-price u18918728977799) (out u1895274121) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u1000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u1000000) (jing-in u999998) (jing-ok true) (jing-out u1911187476) (limit-price u19077576929162) (out u1911187476) (topic \"smart-swap-sbtc-for-stx\") (unsold u2) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         }
       }
     },
@@ -301,31 +300,31 @@
       "chunk": "100000000",
       "printAge": "79",
       "rebateBps": "69",
-      "mid": "19110938837376",
+      "mid": "19299265913347",
       "vaults": {
         "old": {
           "vault": "juice-sbtc-autoswap-oldallow",
           "testOnly": true,
           "amount": "100000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u18919829449002) (mid u19110938837376) (out u189538490095) (unsold u1)))))",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u19106273254213) (mid u19299265913347) (out u191406280576) (unsold u1)))))",
           "balanceBefore": "148000005",
           "balanceAfter": "48000006",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "95554694186",
-              "limit": "19107116649608"
+              "amount": "96496329566",
+              "limit": "19295406060164"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "76443755349",
-              "limit": "19101383367957"
+              "amount": "77197063653",
+              "limit": "19289616280390"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "57332816511",
-              "limit": "19095650086306"
+              "amount": "57897797739",
+              "limit": "19283826500616"
             }
           ],
           "marketRebateBpsVar": "u69",
@@ -341,33 +340,33 @@
           "allowOld": "100001000",
           "allowNew": "100001058",
           "allowance": "100001000",
-          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u189538490095) (limit-price u18919829449002) (out u189538490095) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u191406280576) (limit-price u19106273254213) (out u191406280576) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap-oldallow) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         },
         "new": {
           "vault": "juice-sbtc-autoswap",
           "testOnly": false,
           "amount": "100000000",
-          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u18919829449002) (mid u19110938837376) (out u189538490095) (unsold u1)))))",
-          "balanceBefore": "148000005",
-          "balanceAfter": "48000006",
+          "result": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u100000000) (limit-price u19106273254213) (mid u19299265913347) (out u191406280576) (unsold u1)))))",
+          "balanceBefore": "148000006",
+          "balanceAfter": "48000007",
           "capacity": "ENGINE {\"Eval\":{\"Err\":\"RuntimeCheck(IncorrectArgumentCount(5, 4))\"}}",
           "book": [
             {
               "maker": "SPPY316RH2W5Q5319818CJ027FXVB3FNSRWE8YWQ",
-              "amount": "95554694186",
-              "limit": "19107116649608"
+              "amount": "96496329566",
+              "limit": "19295406060164"
             },
             {
               "maker": "SP1HMJWAMPNH2TGBT9J5PB5BWFKQ7BF8YKT19MJEB",
-              "amount": "76443755349",
-              "limit": "19101383367957"
+              "amount": "77197063653",
+              "limit": "19289616280390"
             },
             {
               "maker": "SP1SX3KQVPAZBYY17F6E66V0WVXMVR8855GH2XK34",
-              "amount": "57332816511",
-              "limit": "19095650086306"
+              "amount": "57897797739",
+              "limit": "19283826500616"
             }
           ],
           "marketRebateBpsVar": "u69",
@@ -383,9 +382,9 @@
           "allowOld": "100001000",
           "allowNew": "100001058",
           "allowance": "100001058",
-          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u189538490095) (limit-price u18919829449002) (out u189538490095) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
-          "events": 31,
-          "committed": 31
+          "router": "(tuple (amount u100000000) (dlmm-cap u0) (dlmm-in u0) (dlmm-out u0) (jing-cap u100000000) (jing-in u99999999) (jing-ok true) (jing-out u191406280576) (limit-price u19106273254213) (out u191406280576) (topic \"smart-swap-sbtc-for-stx\") (unsold u1) (user SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-sbtc-autoswap) (velar-cap u0) (velar-in u0) (velar-out u0) (xyk-cap u0) (xyk-in u0) (xyk-out u0))",
+          "events": 50,
+          "committed": 50
         }
       }
     }
@@ -415,7 +414,7 @@
       "modelRebate": "199601",
       "rebateTransfer": "199601",
       "rebateMatchesModel": true,
-      "rebateRefunded": "1",
+      "rebateRefunded": "2",
       "refundWithinDust": true,
       "gross": "100000000",
       "grossWithinNewAllowance": true,

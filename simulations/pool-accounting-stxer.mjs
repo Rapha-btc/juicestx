@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendJingStack } from './_jing-v6-3.mjs';
-import { POOL_NAME, VAULT_NAME, juiceSource, juiceForkBlock, traitSource } from './_juice-fork.mjs';
+import { POOL_NAME, VAULT_NAME, juiceSource, juiceForkBlock, traitSource, JUICE_LIVE, verifyLiveJuice } from './_juice-fork.mjs';
 import { withVaultArgument } from './_pool-vault-interface.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -109,6 +109,8 @@ const fixture = (rc) => {
 };
 
 // -- 1. contracts + guards -----------------------------------------------------
+if (JUICE_LIVE) await verifyLiveJuice(NODE, sourceHashes); // live trait, vault, pool at DEP
+else {
 const trait = traitSource(sourceHashes);
 builder.addContractDeploy({ contract_name: trait.name, source_code: trait.source, clarity_version: ClarityVersion.Clarity6 });
 plan.push({ label: `deploy ${trait.name} (repo source, new trait)`, kind: 'deploy' });
@@ -116,6 +118,7 @@ for (const repoName of ['juice-sbtc-autoswap', 'juice-pool-sbtc-signer']) {
   const j = juiceSource(repoName, resolve(directory, `../contracts/pox-5/${repoName}.clar`), sourceHashes);
   builder.addContractDeploy({ contract_name: j.name, source_code: j.source, clarity_version: ClarityVersion.Clarity6 });
   plan.push({ label: `deploy ${j.name} (repo source)`, kind: 'deploy' });
+}
 }
 call('register the pool as a pox-5 signer', PID, 'register-self',
   [Cl.contractPrincipal(DEP, POOL_NAME), Cl.buffer(Buffer.from(signerKey.replace(/^0x/, ''), 'hex')),

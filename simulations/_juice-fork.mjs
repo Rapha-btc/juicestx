@@ -45,6 +45,11 @@ export function traitSource(sourceHashes={}){
 // fetched Lazer update inside the market's 80 s staleness limit after the sims
 // advance ~150 burn blocks (each moves block time 1 s forward).
 export async function juiceForkBlock(node){
+ const h=await juiceForkBlockRaw(node);
+ if(process.env.JUICE_LIVE!=='0'&&h<9219777)throw new Error(`live mode needs a fork block >= 9219777 (juice deploys), got ${h}`);
+ return h;
+}
+async function juiceForkBlockRaw(node){
  if(process.env.JUICE_FORK_BLOCK)return Number(process.env.JUICE_FORK_BLOCK);
  const get=async(path)=>{const r=await fetch(`${node}${path}`,{signal:AbortSignal.timeout(20000)});if(!r.ok)throw new Error(`${path} HTTP ${r.status}`);return r.json();};
  const tip=(await get('/extended/v1/block?limit=1')).results[0];
@@ -53,4 +58,31 @@ export async function juiceForkBlock(node){
  let lo=tip.height-5000,hi=tip.height;
  while(hi-lo>1){const mid=Math.floor((lo+hi)/2);((await get(`/extended/v2/blocks/${mid}`)).block_time<=target)?lo=mid:hi=mid;}
  return lo;
+}
+
+// LIVE mode (default since 2026-10-15): the trait, vault and pool are on mainnet
+// (trait + pool block 9219775, vault 9219776; the pool is not register-self'd yet),
+// so sims fork at the tip and run against those live bytes instead of deploying
+// the repo files. JUICE_LIVE=0 restores the old deploy-from-repo mode (it needs a
+// JUICE_FORK_BLOCK before 9219775).
+export const JUICE_LIVE=process.env.JUICE_LIVE!=='0';
+export const JUICE_LIVE_FROM=9219777;
+export const JUICE_LIVE_HASHES={
+ 'juice-swap-vault-trait-v2':'de229849f1823c5e3006ea0b410e806b6da28792ff47d1e308a648980bc84063',
+ 'juice-pool-sbtc-signer':'9b0cdd5bb6274ca4aeef34834e01cfb18bfa3a6120527dc9fbfb849031b1aebe',
+ 'juice-sbtc-autoswap':'eb4cd0f7497b62181b1b3527cc4db71ef86e43f32bf8d9466eff56c790ad68d5',
+};
+// Fetches the three live sources, checks sha512/256 against DEPLOYED-VERIFIED.md
+// and records them as sourceHashes['live:<name>']. Returns { name: source }.
+export async function verifyLiveJuice(node,sourceHashes={}){
+ const out={};
+ for(const [name,want] of Object.entries(JUICE_LIVE_HASHES)){
+  const r=await fetch(`${node}/v2/contracts/source/${DEP}/${name}?proof=0`,{signal:AbortSignal.timeout(20000)});
+  if(!r.ok)throw new Error(`live source ${name} HTTP ${r.status}`);
+  const src=(await r.json()).source,h=createHash('sha512-256').update(src).digest('hex');
+  if(h!==want)throw new Error(`live ${name} sha512/256 ${h} != verified ${want}`);
+  sourceHashes[`live:${name}`]=h;out[name]=src;
+ }
+ console.log(`live juice bytes verified (sha512/256): trait ${JUICE_LIVE_HASHES['juice-swap-vault-trait-v2'].slice(0,8)} pool ${JUICE_LIVE_HASHES['juice-pool-sbtc-signer'].slice(0,8)} vault ${JUICE_LIVE_HASHES['juice-sbtc-autoswap'].slice(0,8)}`);
+ return out;
 }

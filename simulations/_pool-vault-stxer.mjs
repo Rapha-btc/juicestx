@@ -1,5 +1,5 @@
 import {appendJingStack} from './_jing-v6-3.mjs';
-import {POOL_NAME,VAULT_NAME,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_NAME,VAULT_NAME,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Shared fork runner; exact production pool/vault sources are deployed unchanged.
 import { createHash } from 'node:crypto';
@@ -37,8 +37,11 @@ export async function runPoolVaultFork({kind,poolSource,vaultSource,resultDirect
   builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});plan.push({label:j?`deploy ${name} (repo source, names only rewritten)`:`deploy unchanged ${name}`,kind:'deploy'});};
  const call=(label,id,fn,args,want,sender=STRANGER)=>{if (/^deposit-token-[xy]$/.test(fn)&&args.length===6)args=args.filter((_,i)=>i!==3);builder.addContractCall({contract_id:id,function_name:fn,function_args:withVaultArgument(pid,vid,id,fn,args,Cl),sender});plan.push({label,kind:'tx',want});};
  const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
+ if(kind==='juice'&&JUICE_LIVE)await verifyLiveJuice(NODE,sourceHashes); // live trait, vault, pool at DEP
+ else{
  if(kind==='juice'){const t=traitSource(sourceHashes);builder.addContractDeploy({contract_name:t.name,source_code:t.source,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${t.name} (repo source, new trait)`,kind:'deploy'});}
  deploy(vault,vaultSource);deploy(pool,poolSource);
+ }
  ev('real PoX-5 cycle',POX,'(current-pox-reward-cycle)',v=>/^u\d+$/.test(v));
  ev('vault clock initially clear',vid,'(get-clock)',v=>v.includes('(batch-start none)')&&v.includes('(window-open false)'));
  call('outsider cannot fund',vid,'fund',[Cl.uint(1)],'(err u16000)');
@@ -91,7 +94,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  const vault=kind==='juice'?VAULT_NAME:'fastpool-swap-vault';
  const pid=`${DEP}.${pool}`,vid=`${DEP}.${vault}`;
  const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
- const MKT=`${DEP}.markets-sbtc-stx-jing-v6-3`;
+ const MKT=`${DEP}.markets-sbtc-stx-jing-v6-4`;
  const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
  const ALICE=getAddressFromPrivateKey('7'.repeat(64)+'01','mainnet');
  const BOB=getAddressFromPrivateKey('8'.repeat(64)+'01','mainnet');
@@ -103,7 +106,8 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  // first chunk and the second chunk hits router err u16047. 9208593 has the depth; checks unchanged.
  // JUICE_FORK_BLOCK overrides.
  const LIQUIDATION_FORK_BLOCK=9208593;
- const forkBlock=(kind==='juice'&&profile==='liquidation'&&!process.env.JUICE_FORK_BLOCK)?LIQUIDATION_FORK_BLOCK:await juiceForkBlock(NODE);
+ // Live mode forks at the tip: the pinned block predates market v6-4 and the juice deploys.
+ const forkBlock=(kind==='juice'&&profile==='liquidation'&&!process.env.JUICE_FORK_BLOCK&&!JUICE_LIVE)?LIQUIDATION_FORK_BLOCK:await juiceForkBlock(NODE);
  const read=async(id,fn,args=[])=>{
   const [address,name]=id.split('.');
   const r=await fetch(`${NODE}/v2/contracts/call-read/${address}/${name}/${fn}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sender:DEP,arguments:args.map(cv=>'0x'+serializeCV(cv).replace(/^0x/,''))})});
@@ -111,7 +115,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   return deserializeCV(body.result);
  };
  const cycle=Number((await read(POX,'current-pox-reward-cycle')).value)-1;
- const sellers={value:[]},buyers={value:[]}; // Fresh v6-3 books are empty.
+ const sellers={value:[]},buyers={value:[]}; // No cleanup: live contract makers (rungs) stay on the book.
  const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing: !process.env.STXER_TRACE}).useBlockHeight(forkBlock).withSender(DEP);
  const plan=[],sourceHashes={};
  appendJingStack(builder,plan,sourceHashes,forkBlock);
@@ -126,8 +130,11 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
  const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});};
  const advance=(n)=>{builder.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:`advance ${n} burn blocks, compressed timestamps`,kind:'advance'});};
  const ok=v=>v.startsWith('(ok');
+ if(kind==='juice'&&JUICE_LIVE)await verifyLiveJuice(NODE,sourceHashes); // live trait, vault, pool at DEP
+ else{
  if(kind==='juice'){const t=traitSource(sourceHashes);builder.addContractDeploy({contract_name:t.name,source_code:t.source,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${t.name} (repo source, new trait)`,kind:'deploy'});}
  deploy(vault,vaultSource);deploy(pool,poolSource);
+ }
  const FUND=100000;
  call('fund real PoX sBTC balance (fork only)',SBTC,'transfer',[Cl.uint(FUND),Cl.principal(WHALE),Cl.principal(POX),Cl.none()],'(ok true)',WHALE);
  const key=`{ reward-cycle: u${cycle}, bond-index: none, signer: '${pid} }`;
@@ -156,6 +163,8 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   call(`fork cleanup existing ${side} maker ${who.slice(0,8)}`,MKT,`cancel-token-${side}-deposit`,[Cl.contractPrincipal(...(side==='x'?SBTC:'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2').split('.')),Cl.stringAscii(side==='x'?'sbtc-token':'wstx')],ok,who);
  }
  call('real Jing maker placement',vid,'jing-place',[update],v=>ok(v)&&v.includes(`(amount u${FUND})`),STRANGER);
+ // Live book: the Y side holds the rung bids, so the placement is pending until a keeper settles it.
+ if(JUICE_LIVE)call('keeper settles the vault placement (live Y book)',MKT,'settle-token-x-deposit',[Cl.principal(vid),update,Cl.contractPrincipal(...SBTC.split('.')),Cl.stringAscii('sbtc-token')],`(ok u${FUND})`,STRANGER);
  call('router forbidden during patience',vid,'router-swap',[update],'(err u16031)',STRANGER);
  call('cannot finalize while reward is resting',pid,kind==='juice'?'finalize-swap':'finalize-swap-vault',[],'(err u16032)');
  if(profile==='maker') {
@@ -163,6 +172,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   const [sbtcAddress,sbtcName]=SBTC.split('.');
   const wstx=Cl.contractPrincipal('SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR','token-stx-v-1-2');
   call('additional real maker depth behind vault',MKT,'deposit-token-x',[Cl.uint(FUND),Cl.uint(mid*101n/100n),Cl.none(),update,Cl.contractPrincipal(sbtcAddress,sbtcName),Cl.stringAscii('sbtc-token')],`(ok u${FUND})`,WHALE);
+  if(JUICE_LIVE)call('keeper settles the depth (live Y book)',MKT,'settle-token-x-deposit',[Cl.principal(WHALE),update,Cl.contractPrincipal(sbtcAddress,sbtcName),Cl.stringAscii('sbtc-token')],`(ok u${FUND})`,STRANGER);
   const take=BigInt(FUND)*mid/10000000000n*150n/100n;
   call('real STX taker fills vault at verified oracle mid',MKT,'swap',[Cl.uint(take),Cl.uint(mid*105n/100n),update,Cl.contractPrincipal(sbtcAddress,sbtcName),Cl.stringAscii('sbtc-token'),wstx,Cl.stringAscii('wstx'),Cl.bool(false)],ok,'SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51');
   ev('vault completely sold in patience phase',vid,'(is-empty)','true');
@@ -232,7 +242,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   let routing;
   for(const raw of events){
    const event=typeof raw==='string'?JSON.parse(raw):raw;
-   if(!event.committed||event.contract_event?.contract_identifier!==`${DEP}.swap-router-sbtc-stx-jing-v5-3`)continue;
+   if(!event.committed||event.contract_event?.contract_identifier!==`${DEP}.swap-router-sbtc-stx-jing-v5-5`)continue;
    const tuple=deserializeCV(event.contract_event.raw_value).value;
    if(tuple?.topic?.value==='smart-swap-sbtc-for-stx')routing=tuple;
   }
@@ -241,7 +251,7 @@ export async function runPoolVaultLifecycle({kind,poolSource,vaultSource,resultD
   checks.push({label:`${plan[slot].label}: no AMM fallback or unsold remainder`,passed:value('dlmm-in')===0n&&value('xyk-in')===0n&&value('velar-in')===0n&&value('unsold')===0n,actual:routing?`dlmm ${value('dlmm-in')}, xyk ${value('xyk-in')}, velar ${value('velar-in')}, unsold ${value('unsold')}`:'router print missing'});
  }
  mkdirSync(resultDirectory,{recursive:true});
- const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind,mode:`real-token-venue-${profile}`,block:forkBlock,observedTip:tip,proofTimestamp:proof.ts,productionSourcesUnmodified:true,sourceHashes,fixtures:['PoX earned rewards and 1:3 shares seeded with Eval; no STX lock admission tested',profile==='maker'?'maker fill completes without advancing burn blocks':'Vault funding clock aged by 288 blocks; one burn block advances for router cooldown; production freshness unchanged','Fresh exact v6-3 stack deployed; no old market state inherited'],checks,result};
+ const report={id,url:`https://stxer.xyz/simulations/mainnet/${id}`,kind,mode:`real-token-venue-${profile}`,block:forkBlock,observedTip:tip,proofTimestamp:proof.ts,productionSourcesUnmodified:true,sourceHashes,fixtures:['PoX earned rewards and 1:3 shares seeded with Eval; no STX lock admission tested',profile==='maker'?'maker fill completes without advancing burn blocks':'Vault funding clock aged by 288 blocks; one burn block advances for router cooldown; production freshness unchanged',JUICE_LIVE?'Live market v6-4 + router v5-5 with the live book; live juice trait/vault/pool bytes':'Fresh exact v6-3 stack deployed; no old market state inherited'],checks,result};
  writeFileSync(resolve(resultDirectory,`${kind}-${profile}.json`),JSON.stringify(report,null,2));
  if(checks.some(c=>!c.passed))throw new Error(`${kind} ${profile}: ${checks.filter(c=>!c.passed).length} lifecycle checks failed`);
  console.log(`${kind} ${profile}: ${checks.length}/${checks.length} lifecycle checks passed`);return report;

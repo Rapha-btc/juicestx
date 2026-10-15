@@ -39,7 +39,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { juiceForkBlock, traitSource } from './_juice-fork.mjs';
+import { juiceForkBlock, traitSource, JUICE_LIVE, verifyLiveJuice } from './_juice-fork.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(resolve(directory, '../package.json'));
@@ -108,10 +108,16 @@ const both = (fn) => Object.fromEntries(TAGS.map((tag) => [tag, fn(tag, POOLS[ta
 
 // -- deploy ---------------------------------------------------------------------
 const sourceHashes = {};
+// Live: trait + NEW pool are the mainnet contracts (NEW = the live pool bytes,
+// whatever NEW_REV says); only OLD deploys, under its suffixed name.
+if (JUICE_LIVE) await verifyLiveJuice(NODE, sourceHashes);
+else {
 const trait = traitSource(sourceHashes);
 builder.addContractDeploy({ contract_name: trait.name, source_code: trait.source, clarity_version: ClarityVersion.Clarity6 });
 push({ label: `deploy ${trait.name}`, kind: 'deploy' });
+}
 for (const [tag, src] of [['NEW', newSource], ['OLD', oldSource]]) {
+  if (JUICE_LIVE && tag === 'NEW') continue;
   const name = POOLS[tag].split('.')[1];
   sourceHashes[name] = sha(src);
   builder.addContractDeploy({ contract_name: name, source_code: src, clarity_version: ClarityVersion.Clarity6 });

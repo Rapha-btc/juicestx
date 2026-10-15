@@ -1,5 +1,5 @@
 import {appendJingStack} from './_jing-v6-3.mjs';
-import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 import {createHash} from 'node:crypto';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, timed propose/accept admin handover.
@@ -33,11 +33,14 @@ function call(label,id,fn,args=[],want=ok,sender=DEP){
 }
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+if(JUICE_LIVE)await verifyLiveJuice(NODE,sourceHashes); // live trait, vault, pool at DEP
+else{
 {const t=traitSource(sourceHashes);builder.addContractDeploy({contract_name:t.name,source_code:t.source,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${t.name} (repo source, new trait)`,kind:'deploy'});}
 for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){
  const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});
+}
 }
 const admin=(label,want)=>ev(label,POOL,'(get-admin)',want);
 const pending=(label,want)=>ev(label,POOL,'(get-pending-admin)',want);

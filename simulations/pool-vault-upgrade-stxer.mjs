@@ -5,7 +5,7 @@ import {Cl,ClarityVersion,deserializeCV,cvToString} from '@stacks/transactions';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {POOL_VAULT_FUNCTIONS} from './_pool-vault-interface.mjs';
-import {POOL_ID,VAULT_ID,VAULT_NAME,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_ID,VAULT_ID,VAULT_NAME,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22',OTHER='SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM';
 const P=POOL_ID,V=VAULT_ID,N=DEP+'.sim-upgrade-next',W=DEP+'.sim-upgrade-wrong';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token',WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
@@ -25,8 +25,12 @@ const cp=id=>Cl.principal(id),u=Cl.uint;
 const advance=n=>{b.addAdvanceBlocks({bitcoin_blocks:n,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:'advance '+n+' burn blocks (synthetic timestamps)',kind:'advance'});};
 let vaultSource;
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+// Live: trait, vault and pool are the mainnet contracts; the candidate copies are built from the live vault bytes.
+if(JUICE_LIVE)vaultSource=(await verifyLiveJuice(NODE,sourceHashes))['juice-sbtc-autoswap'];
+else{
 {const t=traitSource(sourceHashes);deploy(t.name,t.source,false);}
 for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){const j=juiceSource(repoName,new URL('../contracts/pox-5/'+repoName+'.clar',import.meta.url),sourceHashes);deploy(j.name,j.source,false);if(j.name===VAULT_NAME)vaultSource=j.source;}
+}
 deploy('sim-upgrade-next',vaultSource,false);const wrongSource=vaultSource.replace('(define-constant POOL .juice-pool-sbtc-signer)',`(define-constant POOL '${OTHER})`);if(wrongSource===vaultSource)throw Error('wrong-pool fixture did not patch POOL');deploy('sim-upgrade-wrong',wrongSource,false);
 ev('initial active vault',P,'(get-swap-vault)',V);
 call('no proposal', 'confirm-swap-vault',[cp(V),cp(N)],'(err u118)');
@@ -37,7 +41,7 @@ ev('fixture candidate active clock',N,'(var-set batch-start (some burn-block-hei
 call('candidate batch rejected','propose-swap-vault',[cp(N)],'(err u120)');
 ev('fixture clear candidate clock',N,'(var-set batch-start none)','true');
 for(const id of [V,N]){call('donate one satoshi '+id,'transfer',[u(1),cp(WHALE),cp(id),Cl.none()], '(ok true)',WHALE,SBTC);ev('donate one microSTX '+id,P,`(stx-transfer? u1 tx-sender '${id})`,'(ok true)');}
-const MKT=DEP+'.markets-sbtc-stx-jing-v6-3';
+const MKT=DEP+'.markets-sbtc-stx-jing-v6-4';
 const position=(id,kind,n)=>kind==='resting'?`(map-set token-x-deposits {cycle: (var-get current-cycle), depositor: '${id}} u${n})`:`(map-set token-x-parked '${id} u${n})`;
 for(const kind of ['resting','parked']){
  ev('fixture candidate '+kind,MKT,position(N,kind,1),'true');

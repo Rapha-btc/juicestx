@@ -4,7 +4,7 @@
 // current Jing market / core / router, real sBTC, AMMs and PoX-5 claim path.
 // PoX earned rewards and 1:3 shares are Eval fixtures backed by real fork sBTC.
 import {appendJingStack} from './_jing-v6-3.mjs';
-import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
@@ -21,8 +21,8 @@ const TAKER='SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51';
 const POX='SP000000000000000000002Q6VF78.pox-5';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
-const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-3`;
-const ROUTER=`${DEP}.swap-router-sbtc-stx-jing-v5-3`;
+const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-4`;
+const ROUTER=`${DEP}.swap-router-sbtc-stx-jing-v5-5`;
 const POOL=POOL_ID;
 const VAULT=VAULT_ID;
 const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
@@ -70,11 +70,14 @@ const vaultStx=(label,want)=>ev(label,VAULT,'(stx-get-balance current-contract)'
 const age=(label,blocks)=>ev(`${label}: fixture ages the funding clock by ${blocks} blocks`,VAULT,`(begin (var-set batch-start (some (- burn-block-height u${blocks}))) true)`,'true');
 const donate=(label,n)=>call(label,SBTC,'transfer',[u(n),Cl.principal(WHALE),Cl.principal(VAULT),Cl.none()],'(ok true)',WHALE);
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+if(JUICE_LIVE)await verifyLiveJuice(NODE,sourceHashes); // live trait, vault, pool at DEP
+else{
 {const t=traitSource(sourceHashes);builder.addContractDeploy({contract_name:t.name,source_code:t.source,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${t.name} (repo source, new trait)`,kind:'deploy'});}
 for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){
  const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});
+}
 }
 // a real PoX claim of `amount` sats for reward cycle (cycle - offset)
 function claim(label,offset,amount,extra){
@@ -178,6 +181,8 @@ const e7funded=vaultSbtc('#7: vault holds the claim (+ any L-1 dust)',v=>/^\(ok 
 // DEP's unlocked STX on mainnet is under the 2 STX bid (most of it is stacked)
 builder.withSender(TAKER).addSTXTransfer({recipient:DEP,amount:10000000});plan.push({label:'#7: fund DEP with 10 STX for its bid',kind:'tx',want:'(ok true)'});builder.withSender(DEP);
 call('#7: a real STX bid rests far under the ask (Y book not empty)',MARKET,'deposit-token-y',[u(2000000),u(mid*90n/100n),Cl.none(),wstxCv,Cl.stringAscii('wstx')],'(ok u2000000)',DEP);
+// Live book: the X side holds the rung asks, so the bid is pending until settled (it is far under, no cross).
+if(JUICE_LIVE)call('#7: settle the bid so it rests on Y (live X book)',MARKET,'settle-token-y-deposit',[Cl.principal(DEP),update,wstxCv,Cl.stringAscii('wstx')],'(ok u2000000)',STRANGER);
 const e7p1=call('#7: vault places its ask (pending: the Y book is not empty)',VAULT,'jing-place',[update],v=>ok(v),STRANGER);
 call('#7: anyone settles the vault ask live (no cross)',MARKET,'settle-token-x-deposit',[Cl.principal(VAULT),update,sbtcCv,Cl.stringAscii('sbtc-token')],ok,STRANGER);
 const e7live=ev('#7: vault ask is live',VAULT,`(contract-call? '${MARKET} get-token-x-deposit (contract-call? '${MARKET} get-current-cycle) current-contract)`,v=>/^u[1-9]\d*$/.test(v));

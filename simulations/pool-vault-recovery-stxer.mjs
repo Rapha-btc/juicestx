@@ -1,6 +1,6 @@
 if(process.argv.includes('--matrix')) { await (await import('./_vault-recovery-v6-3.mjs')).runRecoveryMatrix('juice'); process.exit(0); }
 import {appendJingStack} from './_jing-v6-3.mjs';
-import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 import {createHash} from 'node:crypto';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 // Mainnet fork only: unchanged Juice sources, real token/market/router contracts.
@@ -16,7 +16,7 @@ const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
 const POX='SP000000000000000000002Q6VF78.pox-5';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
-const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-3`;
+const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-4`;
 const POOL=POOL_ID;
 const VAULT=VAULT_ID;
 const WHALE='SM2RRFN4HXTS7EYP8MHHYKSTG118S3HKGDV8AB8M1';
@@ -43,9 +43,10 @@ const tip=(await tipResponse.json()).results[0];
 // Pinned: at the tip (9207793) the live DLMM/XYK depth is too thin for the 50k-sat
 // chunks (router err u16047). 9207370 has the depth; checks unchanged. JUICE_FORK_BLOCK overrides.
 const RECOVERY_FORK_BLOCK=9207370;
-const forkBlock=process.env.JUICE_FORK_BLOCK?await juiceForkBlock(NODE):RECOVERY_FORK_BLOCK;
+// Live mode forks at the tip: the pinned block predates market v6-4 and the juice deploys.
+const forkBlock=(process.env.JUICE_FORK_BLOCK||JUICE_LIVE)?await juiceForkBlock(NODE):RECOVERY_FORK_BLOCK;
 const cycle=Number((await read(POX,'current-pox-reward-cycle')).value)-1;
-const sellers={value:[]},buyers={value:[]},operator=DEP; // Fresh fork market.
+const sellers={value:[]},buyers={value:[]},operator=DEP; // No cleanup: live rung makers stay on the book.
 const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTracing: !process.env.STXER_TRACE}).useBlockHeight(forkBlock).withSender(DEP);
 const plan=[],batches=[],sourceHashes={};
 appendJingStack(builder,plan,sourceHashes,forkBlock);
@@ -58,11 +59,14 @@ function call(label,id,fn,args=[],want=ok,sender=DEP){
 function ev(label,id,code,want){const slot=plan.length;builder.addEvalCode(id,code);plan.push({label,kind:'eval',want});return slot;}
 function advance(){builder.addAdvanceBlocks({bitcoin_blocks:1,stacks_blocks_per_bitcoin:1,bitcoin_interval_secs:1});plan.push({label:'advance one burn block for router cooldown',kind:'advance'});}
 // Repo sources under the fork names; only the contract names are rewritten (sourceHashes keeps both hashes).
+if(JUICE_LIVE)await verifyLiveJuice(NODE,sourceHashes); // live trait, vault, pool at DEP
+else{
 {const t=traitSource(sourceHashes);builder.addContractDeploy({contract_name:t.name,source_code:t.source,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${t.name} (repo source, new trait)`,kind:'deploy'});}
 for(const repoName of ['juice-sbtc-autoswap','juice-pool-sbtc-signer']){
  const {name,source}=juiceSource(repoName,resolve(directory,'../contracts/pox-5/'+repoName+'.clar'),sourceHashes);
  builder.addContractDeploy({contract_name:name,source_code:source,clarity_version:ClarityVersion.Clarity6});
  plan.push({label:`deploy ${name} (repo source, names only rewritten)`,kind:'deploy'});
+}
 }
 for(const [side,orders] of [['x',sellers],['y',buyers]])for(const order of orders.value){
  if(order.value.includes('.'))throw new Error('Live book contains a contract maker; cannot safely isolate the fork book');

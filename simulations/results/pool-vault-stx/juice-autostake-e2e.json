@@ -1,89 +1,25 @@
 {
-  "id": "23732d55dfc70ab9e82f4d0a0a6111cd",
-  "url": "https://stxer.xyz/simulations/mainnet/23732d55dfc70ab9e82f4d0a0a6111cd",
-  "block": 9210669,
+  "id": "e739cf8ec5b5bb7be62aaa8ab3d44495",
+  "url": "https://stxer.xyz/simulations/mainnet/e739cf8ec5b5bb7be62aaa8ab3d44495",
+  "block": 9219899,
   "rewardCycle": 144,
   "sourceHashes": {
-    "jing-core-v6": "973482e429cf7d9110847227fdc701443d8d9884b448dce5273579e23ea7fdff",
-    "jing-ladder-v1": "6a5e204d47d865047fcb7d80d97e57d13b23fc1bf843958323c8c7d0d10d0dd7",
-    "markets-sbtc-stx-jing-v6-3": "7b2f0f44fca1feaf1e8c30f195d0a639a3daf102db4f4c84060c8062132f5f4c",
-    "swap-router-sbtc-stx-jing-v5-3": "3e457866be8d4f6216e5e17fd87c9aa6fb2285a23909e7957a354c4af8e3b9b4",
-    "juice-swap-vault-trait-v2": "655b22cb792a8204699d8292803eee8364d15e0a32d827ebb85b9687c4a50657",
-    "juice-sbtc-autoswap": "ff0a45868897397187106fe284ed72ab64f2d3718adb238addf8d7c1a5909033",
-    "juice-pool-sbtc-signer": "a0a28431f61e2e329a8b5af6b98d37cb0d0575f4e18821fd3de3777fca56195a",
-    "juice-autostake-safe-auth-helpers-v1": "aabf3ba32c5602b83693f1581adb7a22a2e180df2306673b23f94c61fa61bd70",
-    "juice-autostake-safe": "599192e3cc933485ca03d9b703fd6aaf56c57929815e141f9fe4aabe872c2500"
+    "live:juice-swap-vault-trait-v2": "de229849f1823c5e3006ea0b410e806b6da28792ff47d1e308a648980bc84063",
+    "live:juice-pool-sbtc-signer": "9b0cdd5bb6274ca4aeef34834e01cfb18bfa3a6120527dc9fbfb849031b1aebe",
+    "live:juice-sbtc-autoswap": "eb4cd0f7497b62181b1b3527cc4db71ef86e43f32bf8d9466eff56c790ad68d5",
+    "live:juice-autostake-safe-auth-helpers-v1": "on mainnet",
+    "live:juice-autostake-safe": "on mainnet"
   },
   "checks": [
     {
-      "label": "deploy exact jing-core-v6",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy exact jing-ladder-v1",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy exact markets-sbtc-stx-jing-v6-3",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy exact swap-router-sbtc-stx-jing-v5-3",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "Jing sync-seat-count",
-      "passed": true,
-      "actual": "(ok u10)"
-    },
-    {
-      "label": "Jing set-verified-contract",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "Jing initialize",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-swap-vault-trait-v2 (repo source, new trait)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-sbtc-autoswap (repo source)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-pool-sbtc-signer (repo source)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
       "label": "register the pool as a pox-5 signer (real grant path)",
       "passed": true,
-      "actual": "(ok (tuple (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (signer-key 0x02f25c55b0f537e8892d191ca5c8fb3e7499774b4825e764be5bf13f80b3f7e250)))"
+      "actual": "(ok (tuple (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (signer-key 0x0258da105c8b55f7eefb7b1c2724fba7075c841112087dde26dfb59d7bc4a3921c)))"
     },
     {
       "label": "pox-5 knows the signer",
       "passed": true,
-      "actual": "(some 0x02f25c55b0f537e8892d191ca5c8fb3e7499774b4825e764be5bf13f80b3f7e250)"
-    },
-    {
-      "label": "deploy juice-autostake-safe-auth-helpers-v1 (pillar-wallets source, unchanged)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-autostake-safe (pillar-wallets source, unchanged)",
-      "passed": true,
-      "actual": "(ok true)"
+      "actual": "(some 0x0258da105c8b55f7eefb7b1c2724fba7075c841112087dde26dfb59d7bc4a3921c)"
     },
     {
       "label": "the deployed safe names this pool",
@@ -143,7 +79,7 @@
     {
       "label": "vault rests the sBTC on Jing",
       "passed": true,
-      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u100000) (floor u18121205674589)))))"
+      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u100000) (floor u18411879291075)))))"
     },
     {
       "label": "set chunk cap 50k (two router chunks)",
@@ -163,22 +99,22 @@
     {
       "label": "router sells chunk 1 (50k sats -> STX)",
       "passed": true,
-      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u18884203808256) (mid u19074953341673) (out u95582203) (unsold u0)))))"
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u19187116313857) (mid u19380925569553) (out u96472559) (unsold u1)))))"
     },
     {
-      "label": "router cooldown: advance 1 burn blocks -> offset 930",
+      "label": "router cooldown: advance 1 burn blocks -> offset 1081",
       "passed": true,
       "actual": "ok"
     },
     {
       "label": "router sells chunk 2",
       "passed": true,
-      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u18884203808256) (mid u19074953341673) (out u95117658) (unsold u0)))))"
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u19187116313857) (mid u19380925569553) (out u96356928) (unsold u1)))))"
     },
     {
       "label": "finalize: the STX pot",
       "passed": true,
-      "actual": "(ok u190699861)"
+      "actual": "(ok u192829487)"
     },
     {
       "label": "safe unlocked STX before payout",
@@ -188,12 +124,12 @@
     {
       "label": "pay-stx-stakers pays Alice, Bob and the safe in STX",
       "passed": true,
-      "actual": "(ok u186409113)"
+      "actual": "(ok u188490823)"
     },
     {
       "label": "safe unlocked STX after payout",
       "passed": true,
-      "actual": "(tuple (locked u2000000000) (unlock-height u1174250) (unlocked u95349930))"
+      "actual": "(tuple (locked u2000000000) (unlock-height u1174250) (unlocked u96414743))"
     },
     {
       "label": "a stranger cannot restake (u4001)",
@@ -203,20 +139,20 @@
     {
       "label": "keeper restakes exactly the payout, extend 0",
       "passed": true,
-      "actual": "(ok (tuple (amount u95349930) (cycles-to-extend u0)))"
+      "actual": "(ok (tuple (amount u96414743) (cycles-to-extend u0)))"
     },
     {
       "label": "the payout is locked, nothing unlocked",
       "passed": true,
-      "actual": "(tuple (locked u2095349930) (unlock-height u1174250) (unlocked u0))"
+      "actual": "(tuple (locked u2096414743) (unlock-height u1174250) (unlocked u0))"
     },
     {
       "label": "pox-5 amount grew, still with the pool",
       "passed": true,
-      "actual": "(some (tuple (amount-ustx u2095349930) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+      "actual": "(some (tuple (amount-ustx u2096414743) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
     },
     {
-      "label": "into the next cycle: advance 1190 burn blocks -> offset 20",
+      "label": "into the next cycle: advance 1039 burn blocks -> offset 20",
       "passed": true,
       "actual": "ok"
     },
@@ -228,7 +164,7 @@
     {
       "label": "safe last-activity before the keeper restake",
       "passed": true,
-      "actual": "u971478"
+      "actual": "u971629"
     },
     {
       "label": "keeper restakes it and rolls the lock: extend 1",
@@ -238,7 +174,7 @@
     {
       "label": "pox-5 position after the roll",
       "passed": true,
-      "actual": "(some (tuple (amount-ustx u2120349930) (first-reward-cycle u146) (num-cycles u97) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+      "actual": "(some (tuple (amount-ustx u2121414743) (first-reward-cycle u146) (num-cycles u97) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
     },
     {
       "label": "current cycle",
@@ -248,7 +184,7 @@
     {
       "label": "safe last-activity after the keeper restake",
       "passed": true,
-      "actual": "u971478"
+      "actual": "u971629"
     },
     {
       "label": "a stranger cannot set the keeper (u4001)",
@@ -298,27 +234,27 @@
     {
       "label": "the pool paid the safe its 4/8 share of the STX pot (the safe is an OG: 0% fee)",
       "passed": true,
-      "actual": "95349930 vs 95349930"
+      "actual": "96414743 vs 96414743"
     },
     {
       "label": "restake staked exactly what the pool paid",
       "passed": true,
-      "actual": "95349930 vs 95349930"
+      "actual": "96414743 vs 96414743"
     },
     {
       "label": "pox-5 amount = stake + first payout",
       "passed": true,
-      "actual": "2095349930"
+      "actual": "2096414743"
     },
     {
       "label": "locked = stake + first payout",
       "passed": true,
-      "actual": "(tuple (locked u2095349930) (unlock-height u1174250) (unlocked u0))"
+      "actual": "(tuple (locked u2096414743) (unlock-height u1174250) (unlocked u0))"
     },
     {
       "label": "pox-5 amount = stake + both payouts",
       "passed": true,
-      "actual": "2120349930"
+      "actual": "2121414743"
     },
     {
       "label": "after the roll the unlock is current + 1 + 96",
@@ -328,7 +264,7 @@
     {
       "label": "the keeper restake did not touch last-activity (recovery clock)",
       "passed": true,
-      "actual": "u971478 -> u971478"
+      "actual": "u971629 -> u971629"
     }
   ]
 }

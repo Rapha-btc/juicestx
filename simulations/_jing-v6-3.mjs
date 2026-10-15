@@ -8,7 +8,10 @@ export const JING_SRC=process.env.JING_SRC||resolve(homedir(),'projects/jing-con
 const require=createRequire(resolve(JING_SRC,'../package.json'));
 export const stacks=require('@stacks/transactions'),stxer=require('stxer');
 export const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
-export const MARKET=DEP+'.markets-sbtc-stx-jing-v6-3',CORE=DEP+'.jing-core-v6',LADDER=DEP+'.jing-ladder-v1',ROUTER=DEP+'.swap-router-sbtc-stx-jing-v5-3';
+// LIVE (default): the vault binds the live v6-4 market + v5-5 router (both on
+// jing-core-v6 / jing-ladder-v1). JUICE_LIVE=0 keeps the old fresh v6-3 stack.
+export const JING_LIVE=process.env.JUICE_LIVE!=='0';
+export const MARKET=DEP+(JING_LIVE?'.markets-sbtc-stx-jing-v6-4':'.markets-sbtc-stx-jing-v6-3'),CORE=DEP+'.jing-core-v6',LADDER=DEP+'.jing-ladder-v1',ROUTER=DEP+(JING_LIVE?'.swap-router-sbtc-stx-jing-v5-5':'.swap-router-sbtc-stx-jing-v5-3');
 export const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token',WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
 export const {fetchLazerUpdateAny,lazerFeedTimes}=await import(resolve(JING_SRC,'../simulations/_lazer.js'));
 export function appendJingStack(builder,plan,sourceHashes={},forkBlock) {
@@ -16,6 +19,9 @@ export function appendJingStack(builder,plan,sourceHashes={},forkBlock) {
  // mainnet, so they keep their real names at any height.
  if(!Number.isInteger(forkBlock))throw new Error('appendJingStack: forkBlock required');
  builder.useBlockHeight(forkBlock);
+ // Live: core-v6, ladder-v1, market v6-4 and router v5-5 are deployed and
+ // initialized on mainnet; nothing to deploy (v6-3 is live too and paused).
+ if(JING_LIVE)return;
  const {Cl,ClarityVersion}=stacks,cp=id=>Cl.contractPrincipal(...id.split('.'));
  for(const name of ['jing-core-v6','jing-ladder-v1','markets-sbtc-stx-jing-v6-3','swap-router-sbtc-stx-jing-v5-3']) {
   const source=readFileSync(resolve(JING_SRC,name+'.clar'),'utf8');

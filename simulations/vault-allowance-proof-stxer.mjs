@@ -25,7 +25,7 @@
 //
 // Run: PYTH_API_KEY=... node simulations/vault-allowance-proof-stxer.mjs
 import {appendJingStack,fetchLazerUpdateAny,lazerFeedTimes} from './_jing-v6-3.mjs';
-import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_ID,VAULT_ID,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
@@ -40,7 +40,7 @@ const DEP='SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22';
 const STRANGER='SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
-const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-3`;
+const MARKET=`${DEP}.markets-sbtc-stx-jing-v6-4`;
 const CORE=`${DEP}.jing-core-v6`;
 const POOL=POOL_ID;
 const NEWV=VAULT_ID;
@@ -68,7 +68,9 @@ const CASES=[
 const sourceHashes={};
 const newVault=juiceSource('juice-sbtc-autoswap',resolve(directory,'../contracts/pox-5/juice-sbtc-autoswap.clar'),sourceHashes);
 const newPool=juiceSource('juice-pool-sbtc-signer',resolve(directory,'../contracts/pox-5/juice-pool-sbtc-signer.clar'),sourceHashes);
-const newSource=newVault.source;
+// Live: the NEW vault is the mainnet contract; the test copy is built from its live bytes.
+const liveSources=JUICE_LIVE?await verifyLiveJuice(NODE,sourceHashes):null;
+const newSource=JUICE_LIVE?liveSources['juice-sbtc-autoswap']:newVault.source;
 // the test copy: the dust and rest-rebate terms taken out of the router-swap allowance
 // Whitespace-insensitive: matches the commented repo file and the formatted deploy bytes.
 const NEW_ALLOW=/\(\+\s+amount\s+\(get\s+min-token-x\s+mins\)\s+JING_REBATE_DUST_SATS\s+\(\/\s*\(\+\s*\(\*\s*\(get\s+min-token-x\s+mins\)\s+JING_TAKER_REBATE_MAX_BPS\)\s+\(-\s+BPS_PRECISION\s+u1\)\s*\)\s+BPS_PRECISION\s*\)\s*\)/g;
@@ -91,7 +93,7 @@ const builder=SimulationBuilder.new({stacksNodeAPI:NODE,apiEndpoint:API,skipTrac
 const plan=[];
 appendJingStack(builder,plan,sourceHashes,forkBlock);
 const trait=traitSource(sourceHashes);
-for(const [name,src] of [[trait.name,trait.source],[newVault.name,newSource],[newPool.name,newPool.source],['juice-sbtc-autoswap-oldallow',oldSource]]){
+for(const [name,src] of JUICE_LIVE?[['juice-sbtc-autoswap-oldallow',oldSource]]:[[trait.name,trait.source],[newVault.name,newSource],[newPool.name,newPool.source],['juice-sbtc-autoswap-oldallow',oldSource]]){
  builder.withSender(DEP).addContractDeploy({contract_name:name,source_code:src,clarity_version:ClarityVersion.Clarity6});plan.push({label:`deploy ${name}`,kind:'deploy'});
 }
 const bcall=(label,sender,id,fn,args,want)=>{builder.withSender(sender).addContractCall({contract_id:id,function_name:fn,function_args:args});plan.push({label,kind:'tx',want});};
@@ -159,16 +161,25 @@ async function priceAt(age){
  throw new Error('could not price a print at the requested age');
 }
 
-async function placeBook(chunk,mid){
+async function placeBook(chunk,mid,print){
+ // Live book: the X side holds the rung asks, so each bid goes pending and a
+ // keeper settles it with a print newer than the submission (the case print is
+ // aged behind the fork clock). Limits sit under both mids so the settle does not
+ // refuse a bid "crossing" when the price moved between the two prints.
+ const clock=Number(U(await ev('stacks-block-time')));let fresh=null;
+ for(let i=0;i<60&&!fresh;i++){const q=await retry('lazer',()=>fetchLazerUpdateAny());if((await retry('feed times',()=>lazerFeedTimes(q.hex))).at>clock)fresh=q;else await sleep(3000);}
+ if(!fresh)throw new Error('no print newer than the fork clock');
+ const freshMid=fresh.px*100000000n/fresh.py,low=freshMid<mid?freshMid:mid;
  const value=chunk*mid/10000000000n; // uSTX value of the chunk at mid
- const bids=BOOK.map((b,i)=>({maker:MAKERS[i],amount:value*b.share/100n,limit:mid*(10000n-b.bps)/10000n}));
+ const bids=BOOK.map((b,i)=>({maker:MAKERS[i],amount:value*b.share/100n,limit:low*(10000n-b.bps)/10000n}));
  for(const b of bids){
   const r=await tx(b.maker,MARKET,'deposit-token-y',[u(b.amount),u(b.limit),Cl.none(),wstxCv,Cl.stringAscii('wstx')]);
   if(!r.shown.startsWith('(ok'))throw new Error(`bid failed ${r.shown}`);
   const live=U(await ev(`(get-token-y-deposit (var-get current-cycle) '${b.maker})`));
   if(live!==b.amount){
-   const s=await tx(STRANGER,MARKET,'settle-token-y-deposit',[Cl.principal(b.maker),Cl.buffer(Buffer.alloc(0)),wstxCv,Cl.stringAscii('wstx')]);
-   throw new Error(`bid not live (${live} vs ${b.amount}); ${s.shown}`);
+   const s=await tx(STRANGER,MARKET,'settle-token-y-deposit',[Cl.principal(b.maker),buf(fresh),wstxCv,Cl.stringAscii('wstx')]);
+   const now=U(await ev(`(get-token-y-deposit (var-get current-cycle) '${b.maker})`));
+   if(now!==b.amount){const why=(s.receipt?.events??[]).map(e=>typeof e==='string'?JSON.parse(e):e).filter(e=>e.contract_event).map(e=>cvToString(deserializeCV(e.contract_event.raw_value))).filter(v=>v.includes('reason')).join(' | ');throw new Error(`bid not live (${now} vs ${b.amount}); ${s.shown}; ${why.slice(0,600)}`);}
   }
  }
  return bids;
@@ -188,7 +199,7 @@ function measure(r,vault,amount){
  for(const e of set){const c=e.contract_event;if(!c)continue;
   const v=cvToString(deserializeCV(c.raw_value));
   if(c.contract_identifier===CORE&&v.includes('"refund-x"')&&v.includes(`(depositor ${vault})`))rest+=U(v.match(/\(amount u\d+\)/)[0]);
-  if(c.contract_identifier.endsWith('swap-router-sbtc-stx-jing-v5-3')&&v.includes('smart-swap-sbtc-for-stx'))router=v;}
+  if(c.contract_identifier.endsWith('swap-router-sbtc-stx-jing-v5-5')&&v.includes('smart-swap-sbtc-for-stx'))router=v;}
  const refunded=back.reduce((a,t)=>a+BigInt(t.amount),0n);
  return {events:raw.length,committed:committed.length,gross:out.reduce((a,t)=>a+BigInt(t.amount),0n),refunded,rest,crumbs:refunded-rest,
   rebateTransfer:toMarket.length>=2?toMarket[0]:0n,toMarket:toMarket.map(String),router,
@@ -203,7 +214,7 @@ for(const c of CASES){
  for(const v of [NEWV,OLDV]){const s=await ev(`(contract-call? '${v} set-max-chunk-sats u${c.chunk})`,POOL);if(s!=='(ok true)')throw new Error(`chunk ${s}`);}
  const row={case:c.id,label:c.label,chunk:String(c.chunk),printAge:String(pr.age),rebateBps:String(pr.bps),mid:String(pr.mid),vaults:{}};
  for(const [tag,v] of [['old',OLDV],['new',NEWV]]){
-  const bids=await placeBook(c.chunk,pr.mid);
+  const bids=await placeBook(c.chunk,pr.mid,pr.p);
   const cap=await ev(`(get-taker-capacity u${pr.mid} u${pr.mid*99n/100n} true '${v})`);
   const bal=U(await ev(`(contract-call? '${SBTC} get-balance '${v})`,v));
   const amount=bal<c.chunk?bal:c.chunk;

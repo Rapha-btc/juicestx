@@ -1,72 +1,18 @@
 {
-  "id": "159f73303c06a395f2713bcf153a777d",
-  "url": "https://stxer.xyz/simulations/mainnet/159f73303c06a395f2713bcf153a777d",
-  "block": 9210117,
+  "id": "7449b13a6fb72e221f9f5842f8394a3b",
+  "url": "https://stxer.xyz/simulations/mainnet/7449b13a6fb72e221f9f5842f8394a3b",
+  "block": 9219934,
   "cycle": 145,
   "sourceHashes": {
-    "jing-core-v6": "973482e429cf7d9110847227fdc701443d8d9884b448dce5273579e23ea7fdff",
-    "jing-ladder-v1": "6a5e204d47d865047fcb7d80d97e57d13b23fc1bf843958323c8c7d0d10d0dd7",
-    "markets-sbtc-stx-jing-v6-3": "7b2f0f44fca1feaf1e8c30f195d0a639a3daf102db4f4c84060c8062132f5f4c",
-    "swap-router-sbtc-stx-jing-v5-3": "3e457866be8d4f6216e5e17fd87c9aa6fb2285a23909e7957a354c4af8e3b9b4",
-    "juice-swap-vault-trait-v2": "655b22cb792a8204699d8292803eee8364d15e0a32d827ebb85b9687c4a50657",
-    "juice-sbtc-autoswap": "ff0a45868897397187106fe284ed72ab64f2d3718adb238addf8d7c1a5909033",
-    "juice-pool-sbtc-signer": "a0a28431f61e2e329a8b5af6b98d37cb0d0575f4e18821fd3de3777fca56195a"
+    "live:juice-swap-vault-trait-v2": "de229849f1823c5e3006ea0b410e806b6da28792ff47d1e308a648980bc84063",
+    "live:juice-pool-sbtc-signer": "9b0cdd5bb6274ca4aeef34834e01cfb18bfa3a6120527dc9fbfb849031b1aebe",
+    "live:juice-sbtc-autoswap": "eb4cd0f7497b62181b1b3527cc4db71ef86e43f32bf8d9466eff56c790ad68d5"
   },
   "checks": [
     {
-      "label": "deploy exact jing-core-v6",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy exact jing-ladder-v1",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy exact markets-sbtc-stx-jing-v6-3",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy exact swap-router-sbtc-stx-jing-v5-3",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "Jing sync-seat-count",
-      "passed": true,
-      "actual": "(ok u10)"
-    },
-    {
-      "label": "Jing set-verified-contract",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "Jing initialize",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-swap-vault-trait-v2 (repo source, new trait)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-sbtc-autoswap (repo source)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
-      "label": "deploy juice-pool-sbtc-signer (repo source)",
-      "passed": true,
-      "actual": "(ok true)"
-    },
-    {
       "label": "register the pool as a pox-5 signer (real grant path)",
       "passed": true,
-      "actual": "(ok (tuple (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (signer-key 0x02a22386baf34e44e1a6760eb8b6ee0c54845d8d858ea5495c6adac9227655d1a8)))"
+      "actual": "(ok (tuple (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (signer-key 0x0269a58cfa34dbbe468074dd6df67cdca79cd0c5476f7241cf2128923b26031936)))"
     },
     {
       "label": "OG status starts empty",
@@ -149,7 +95,7 @@
       "actual": "(ok u500)"
     },
     {
-      "label": "fee cooldown: advance 144 burn blocks -> cycle offset 1064",
+      "label": "fee cooldown: advance 144 burn blocks -> cycle offset 1223",
       "passed": true,
       "actual": "ok"
     },
@@ -176,7 +122,7 @@
     {
       "label": "vault rests the sBTC on Jing",
       "passed": true,
-      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u100000) (floor u18211720084767)))))"
+      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u100000) (floor u18408926865770)))))"
     },
     {
       "label": "set chunk cap 50k",
@@ -201,42 +147,42 @@
     {
       "label": "router sells chunk 1",
       "passed": true,
-      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u17253208501358) (mid u19170231668176) (out u95598085) (unsold u0)))))"
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u17440035978098) (mid u19377817753443) (out u96457097) (unsold u1)))))"
     },
     {
-      "label": "router cooldown: advance 1 burn blocks -> cycle offset 1065",
+      "label": "router cooldown: advance 1 burn blocks -> cycle offset 1224",
       "passed": true,
       "actual": "ok"
     },
     {
       "label": "router sells chunk 2",
       "passed": true,
-      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u17253208501358) (mid u19170231668176) (out u95131638) (unsold u0)))))"
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u50000) (limit-price u17440035978098) (mid u19377817753443) (out u96341498) (unsold u1)))))"
     },
     {
       "label": "finalize: the STX pot",
       "passed": true,
-      "actual": "(ok u190729723)"
+      "actual": "(ok u192798595)"
     },
     {
       "label": "OG1 owed (net view)",
       "passed": true,
-      "actual": "u93934389"
+      "actual": "u94953308"
     },
     {
       "label": "PAYER owed (net view)",
       "passed": true,
-      "actual": "u90596618"
+      "actual": "u91579333"
     },
     {
       "label": "pay-stx-stakers pays both",
       "passed": true,
-      "actual": "(ok u184531007)"
+      "actual": "(ok u186532641)"
     },
     {
       "label": "earned fees",
       "passed": true,
-      "actual": "u6198715"
+      "actual": "u6265953"
     },
     {
       "label": "?ref=telegram printed on-chain in validate-stake",
@@ -246,17 +192,17 @@
     {
       "label": "OG1 pays 5% only on the 300 STX above its 700 cover (grown by top-up)",
       "passed": true,
-      "actual": "u93934389 vs 93934389"
+      "actual": "u94953308 vs 94953308"
     },
     {
       "label": "PAYER pays the full 5%",
       "passed": true,
-      "actual": "u90596618 vs 90596618"
+      "actual": "u91579333 vs 91579333"
     },
     {
       "label": "earned fees = both fees",
       "passed": true,
-      "actual": "u6198715 vs 6198715"
+      "actual": "u6265953 vs 6265953"
     }
   ]
 }

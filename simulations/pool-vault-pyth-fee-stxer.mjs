@@ -22,7 +22,7 @@
 // with no float sells on that reserve and refills it.
 // Run: node simulations/pool-vault-pyth-fee-stxer.mjs
 import {appendJingStack,JING_SRC} from './_jing-v6-3.mjs';
-import {POOL_NAME,VAULT_NAME,juiceSource,juiceForkBlock,traitSource} from './_juice-fork.mjs';
+import {POOL_NAME,VAULT_NAME,juiceSource,juiceForkBlock,traitSource,JUICE_LIVE,verifyLiveJuice} from './_juice-fork.mjs';
 import {withVaultArgument} from './_pool-vault-interface.mjs';
 import {createRequire} from 'node:module';
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
@@ -42,13 +42,13 @@ const POX='SP000000000000000000002Q6VF78.pox-5';
 const ORACLE='SPMV5HDZ4EMB8XY7HAYT3XW0DF7DZ4E8XEG2J1T8.pyth-lazer-oracle';
 const SBTC='SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 const WSTX='SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2';
-const MKT=`${DEP}.markets-sbtc-stx-jing-v6-3`,ROUTER=`${DEP}.swap-router-sbtc-stx-jing-v5-3`;
+const MKT=`${DEP}.markets-sbtc-stx-jing-v6-4`,ROUTER=`${DEP}.swap-router-sbtc-stx-jing-v5-5`;
 const pid=`${DEP}.${POOL_NAME}`,vid=`${DEP}.${VAULT_NAME}`;
 const ALICE=getAddressFromPrivateKey('7'.repeat(64)+'01','mainnet');
 const BOB=getAddressFromPrivateKey('8'.repeat(64)+'01','mainnet');
 const FUND=100000,FEE=10,FLOAT=1000,BUDGET=100;
 // verifies per Jing fill, from the market source the fork deploys
-const marketSource=readFileSync(resolve(JING_SRC,'markets-sbtc-stx-jing-v6-3.clar'),'utf8');
+const marketSource=readFileSync(resolve(JING_SRC,JUICE_LIVE?'markets-sbtc-stx-jing-v6-4.clar':'markets-sbtc-stx-jing-v6-3.clar'),'utf8');
 const VERIFIES=marketSource.includes('(settle-with-verified-feeds (get feed-x feeds) (get feed-y feeds)')?1:2;
 const PER_CALL=VERIFIES+1; // + current-mid's refresh-mid, also paid by the vault
 const SHORT=FEE-1; // one uSTX under one verify: each as-contract? scope caps one verify
@@ -79,11 +79,14 @@ const ev=(label,id,code,want)=>{builder.addEvalCode(id,code);plan.push({label,ki
 const send=(label,who,ustx)=>{builder.withSender(STX_WHALE).addSTXTransfer({recipient:who,amount:ustx});plan.push({label,kind:'tx',want:'(ok true)'});builder.withSender(DEP);};
 const vaultStx=label=>ev(label,vid,'(stx-get-balance current-contract)',v=>/^u\d+$/.test(v));
 
+if(JUICE_LIVE)await verifyLiveJuice(NODE,sourceHashes); // live trait, vault, pool at DEP
+else{
 const trait=traitSource(sourceHashes);
 builder.addContractDeploy({contract_name:trait.name,source_code:trait.source,clarity_version:ClarityVersion.Clarity6});
 plan.push({label:`deploy ${trait.name} (repo source, new trait)`,kind:'deploy'});
 deploy('juice-sbtc-autoswap',resolve(here,'../contracts/pox-5/juice-sbtc-autoswap.clar'));
 deploy('juice-pool-sbtc-signer',resolve(here,'../contracts/pox-5/juice-pool-sbtc-signer.clar'));
+}
 ev('vault config starts with pyth-fee-budget u0',vid,'(get-config)',v=>v.includes('(pyth-fee-budget u0)'));
 call('outsider cannot set the budget on the vault',vid,'set-pyth-fee-budget',[Cl.uint(BUDGET)],'(err u16000)',STRANGER);
 call('non-admin cannot set the budget through the pool',pid,'set-vault-pyth-fee-budget',[Cl.uint(BUDGET)],'(err u100)',STRANGER);
@@ -108,6 +111,9 @@ const mid=proof.px*100000000n/proof.py;
 const bid=BigInt(FUND)*mid/10000000000n*150n/100n;
 call('real STX maker bid so the router fills on Jing',MKT,'deposit-token-y',[Cl.uint(bid),Cl.uint(mid*105n/100n),Cl.some(Cl.uint(0)),
  Cl.contractPrincipal(...WSTX.split('.')),Cl.stringAscii('wstx')],`(ok u${bid})`,STX_WHALE);
+// Live book: the X side holds the rung asks, so the bid is pending; a keeper settles it
+// (it rests, or is refunded "crossing" while a rung ask sits at the mid).
+if(JUICE_LIVE)call('keeper settles the STX bid (live X book)',MKT,'settle-token-y-deposit',[Cl.principal(STX_WHALE),update,Cl.contractPrincipal(...WSTX.split('.')),Cl.stringAscii('wstx')],ok,STRANGER);
 ev('fixture: live oracle fee set to u10 (Eval in oracle context)',ORACLE,`(begin (var-set fee u${FEE}) (get-fee))`,`u${FEE}`);
 send(`vault STX float ${FLOAT} uSTX`,vid,FLOAT);
 ev('caller is a fresh account with 0 STX',vid,`(stx-get-balance '${EMPTY})`,'u0');
@@ -138,6 +144,9 @@ call('batch 2: PoX claim flows to the vault',pid,'pox-claim-rewards',[Cl.list([]
 ev('batch 2 fixture: patience clock elapsed, router cooldown passed',vid,'(begin (var-set batch-start (some (- burn-block-height u288))) (var-set last-router-swap u0) true)','true');
 call('batch 2: real STX maker bid',MKT,'deposit-token-y',[Cl.uint(bid),Cl.uint(mid*105n/100n),Cl.some(Cl.uint(0)),
  Cl.contractPrincipal(...WSTX.split('.')),Cl.stringAscii('wstx')],`(ok u${bid})`,STX_WHALE);
+// Live book: the X side holds the rung asks, so the bid is pending; a keeper settles it
+// (it rests, or is refunded "crossing" while a rung ask sits at the mid).
+if(JUICE_LIVE)call('keeper settles the STX bid (live X book)',MKT,'settle-token-y-deposit',[Cl.principal(STX_WHALE),update,Cl.contractPrincipal(...WSTX.split('.')),Cl.stringAscii('wstx')],ok,STRANGER);
 const before2=vaultStx('batch 2: vault STX before the sale (reserve only)');
 const sale2=call('batch 2: 0-STX caller sells; the kept reserve pays the verifies',vid,'router-swap',[update],v=>ok(v)&&v.includes(`(amount u${FUND})`)&&v.includes('(unsold u0)'),EMPTY);
 const after2=vaultStx('batch 2: vault STX after the sale');

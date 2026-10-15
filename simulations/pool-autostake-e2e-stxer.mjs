@@ -21,7 +21,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { appendJingStack } from './_jing-v6-3.mjs';
-import { POOL_NAME, VAULT_NAME, juiceSource, juiceForkBlock, traitSource } from './_juice-fork.mjs';
+import { POOL_NAME, VAULT_NAME, juiceSource, juiceForkBlock, traitSource, JUICE_LIVE, verifyLiveJuice } from './_juice-fork.mjs';
 import { withVaultArgument } from './_pool-vault-interface.mjs';
 
 const require = createRequire(resolve(dirname(fileURLToPath(import.meta.url)), '../package.json'));
@@ -112,17 +112,25 @@ const ok = (v) => v.startsWith('(ok');
 const uintIn = (field) => (v) => BigInt((v.match(new RegExp(`${field} u(\\d+)`)) || [])[1] ?? '-1');
 
 // -- 1. contracts --------------------------------------------------------------
+if (JUICE_LIVE) await verifyLiveJuice(NODE, sourceHashes); // live trait, vault, pool at DEP
+else {
 const trait = traitSource(sourceHashes);
 builder.addContractDeploy({ contract_name: trait.name, source_code: trait.source, clarity_version: ClarityVersion.Clarity6 });
 plan.push({ label: `deploy ${trait.name} (repo source, new trait)`, kind: 'deploy' });
 deployJuice(VAULT_NAME, fileURLToPath(new URL('../contracts/pox-5/juice-sbtc-autoswap.clar', import.meta.url)));
 deployJuice(POOL_NAME, fileURLToPath(new URL('../contracts/pox-5/juice-pool-sbtc-signer.clar', import.meta.url)));
+}
 call('register the pool as a pox-5 signer (real grant path)', PID, 'register-self',
   [Cl.contractPrincipal(DEP, POOL_NAME), Cl.buffer(Buffer.from(signerKey.replace(/^0x/, ''), 'hex')),
    Cl.uint(AUTH_ID), Cl.buffer(Buffer.from(signerSig.replace(/^0x/, ''), 'hex'))], ok);
 ev('pox-5 knows the signer', POX, `(get-signer-info '${PID})`, (v) => v.startsWith('(some'));
-deployFile(HELPER_NAME, `${PILLAR}/${HELPER_NAME}.clar`, ClarityVersion.Clarity4);
-deployFile(SAFE_NAME, `${PILLAR}/${SAFE_NAME}.clar`, CLARITY_6);
+// Live: the helper (block 9219792) and the safe (9219793) are on mainnet, not
+// onboarded; their bytes equal the pillar files modulo comments and whitespace.
+for (const [name, version] of [[HELPER_NAME, ClarityVersion.Clarity4], [SAFE_NAME, CLARITY_6]]) {
+  const live = JUICE_LIVE && (await fetch(`${NODE}/v2/contracts/interface/${DEP}/${name}`, { signal: AbortSignal.timeout(20000) })).ok;
+  if (live) sourceHashes[`live:${name}`] = 'on mainnet';
+  else deployFile(name, `${PILLAR}/${name}.clar`, version);
+}
 ev('the deployed safe names this pool', SAFE, '(get-keeper)', (v) => v.includes(DEP));
 call('core-v2 verifies the safe', CORE, 'set-verified-contract', [Cl.principal(SAFE), Cl.none()], ok);
 builder.withSender(STX_WHALE).addSTXTransfer({ recipient: SAFE, amount: STAKE });
