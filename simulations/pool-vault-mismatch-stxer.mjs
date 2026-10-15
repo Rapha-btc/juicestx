@@ -32,6 +32,7 @@ const FAKE_SRC = `(impl-trait '${DEP}.juice-swap-vault-trait-v2.swap-vault-trait
 (define-public (set-router-cooldown (v uint)) (ok true))
 (define-public (set-no-pyth-slippage-bps (v uint)) (ok true))
 (define-public (set-pyth-fee-budget (v uint)) (ok true))
+(define-public (set-maker-spread-bps (v uint)) (ok true))
 (define-public (jing-take (a uint) (u (buff 8192)))
   (ok { notification: "x", payload: { amount: u0, limit-price: u0, out: u0 } }))
 (define-public (router-swap-split (a uint) (b uint) (c uint) (d uint) (e uint) (u (buff 8192)))

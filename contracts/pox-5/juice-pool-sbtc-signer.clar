@@ -1454,6 +1454,19 @@
   )
 )
 
+(define-public (set-vault-maker-spread-bps
+    (bps uint)
+    (vault <swap-vault-interface>)
+  )
+  (begin
+    (try! (assert-active-vault vault))
+    (begin
+      (try! (assert-admin))
+      (contract-call? vault set-maker-spread-bps bps)
+    )
+  )
+)
+
 (define-public (router-swap-split-dia
     (amount uint)
     (dlmm uint)

@@ -23,6 +23,10 @@ function marketDeposit() {
   return (read("v6-market", "get-token-x-deposit", [cycle, cp(VAULT)]) as any).value as bigint;
 }
 
+function xOrderSpread() {
+  return (read("v6-market", "get-token-x-order", [cp(VAULT)]) as any).value["spread-bps"];
+}
+
 describe("settings", function () {
   const SETTERS: [string, number, number, boolean][] = [
     ["window-blocks", 288, 288, false],
@@ -33,6 +37,7 @@ describe("settings", function () {
     ["router-cooldown", 1, 144, false],
     ["no-pyth-slippage-bps", 1000, 5000, false],
     ["pyth-fee-budget", 0, 10_000_000, false],
+    ["maker-spread-bps", 1, 50, false],
   ];
 
   for (const [name, value, max, positive] of SETTERS) {
@@ -166,6 +171,31 @@ describe("jing-place / jing-reclaim / refloor", function () {
     expect(okValue(pool("refloor-vault", [UPDATE]))).toBeUint((MID * 9500n) / 10000n);
   });
 
+  it("rests the ask at mid + maker-spread-bps (default 1 bp, never spread 0)", function () {
+    // arrange
+    openBatch();
+    // act
+    expectOk(vault("jing-place", [UPDATE]));
+    // assert
+    expect(xOrderSpread()).toBeSome(Cl.uint(1));
+    expectOk(pool("set-vault-maker-spread-bps", [Cl.uint(7)]));
+    expectOk(pool("refloor-vault", [UPDATE]));
+    expect(xOrderSpread()).toBeSome(Cl.uint(7));
+    expectOk(pool("set-vault-maker-spread-bps", [Cl.uint(0)]));
+    expectOk(pool("refloor-vault", [UPDATE]));
+    expect(xOrderSpread()).toBeSome(Cl.uint(0));
+  });
+
+  it("jing-place uses the current maker-spread-bps", function () {
+    // arrange
+    openBatch();
+    expectOk(pool("set-vault-maker-spread-bps", [Cl.uint(50)]));
+    // act
+    expectOk(vault("jing-place", [UPDATE]));
+    // assert
+    expect(xOrderSpread()).toBeSome(Cl.uint(50));
+  });
+
   it("refuses after the window (u16030) and without a batch", function () {
     // arrange
     expectErr(vault("jing-place", [UPDATE]), 16030);
@@ -203,6 +233,8 @@ describe("jing-place / jing-reclaim / refloor", function () {
   it("a maker fill leaves only STX; anyone closes the emptied batch", function () {
     // arrange
     openBatch();
+    // spread 0: the fixture taker buys at exactly mid (no spread-0 bid rests here)
+    expectOk(pool("set-vault-maker-spread-bps", [Cl.uint(0)]));
     expectOk(vault("jing-place", [UPDATE]));
     expectOk(call("v6-market", "swap", [Cl.uint(3_206_412_825n), Cl.uint(MID), UPDATE, ...MOCK_FT, ...MOCK_FT, Cl.bool(false)], bob));
     // act
@@ -535,6 +567,8 @@ describe("emergency-recover (vault side)", function () {
   it("an all-STX batch (maker fill) recovers STX only", function () {
     // arrange
     openBatch();
+    // spread 0: the fixture taker buys at exactly mid (no spread-0 bid rests here)
+    expectOk(pool("set-vault-maker-spread-bps", [Cl.uint(0)]));
     expectOk(vault("jing-place", [UPDATE]));
     expectOk(call("v6-market", "swap", [Cl.uint(3_206_412_825n), Cl.uint(MID), UPDATE, ...MOCK_FT, ...MOCK_FT, Cl.bool(false)], bob));
     simnet.mineEmptyBurnBlocks(RECOVERY);

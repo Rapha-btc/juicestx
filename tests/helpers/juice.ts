@@ -29,7 +29,7 @@ const VAULT_ARG = new Set([
   "set-vault-window-blocks", "set-vault-leeway-bps", "set-vault-slippage-bps",
   "set-vault-max-chunk-sats", "set-vault-dia-band-bps", "set-vault-router-cooldown",
   "set-vault-no-pyth-slippage-bps", "jing-take", "router-swap-split", "router-swap-split-dia",
-  "set-vault-pyth-fee-budget",
+  "set-vault-pyth-fee-budget", "set-vault-maker-spread-bps",
   // harness-only wrappers appended by tests/vault/build.py
   "test-fund", "test-finish",
 ]);
@@ -165,6 +165,7 @@ export const FAKE_VAULT_SOURCE = `
 (define-public (set-router-cooldown (v uint)) (ok true))
 (define-public (set-no-pyth-slippage-bps (v uint)) (ok true))
 (define-public (set-pyth-fee-budget (v uint)) (ok true))
+(define-public (set-maker-spread-bps (v uint)) (ok true))
 (define-public (jing-take (a uint) (update (buff 8192)))
   (ok { notification: "jing-take", payload: { amount: a, limit-price: u0, out: u0 } }))
 (define-public (router-swap-split (a uint) (j uint) (d uint) (x uint) (v uint) (update (buff 8192)))
