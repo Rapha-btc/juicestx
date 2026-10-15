@@ -8,6 +8,7 @@ The Jing v6-3 findings are reviewed in jing-contracts-v3.
 |---|---|---|---|---|---|
 | 1 | Diamond Lance | Nilo | Fee on a past cycle reads the cover at payout, so a seat taken after the cycle ends skips that cycle's fee | Does not hold, by design | Rejected, no change |
 | 2 | Calm Forge, Rare Io M-1 | Calm Forge, Rare Io | Passkey stake hash does not bind `signer-calldata` | Holds, Info (pool only prints it) | Fixed in pillar-wallets `5b1aa6b`: `juice-safe-auth-helpers-v2`. Deployed 2026-10-15 |
+| 3 | Steady Cache | Steady Cache | `confirm-transfer-wallet` skips the token lock, so a passkey can take over a locked wallet | Does not hold: the passkey cannot pick the new owner | Rejected, no change |
 
 ## 1. Diamond Lance (Nilo): seat taken after the cycle ends skips the fee
 
@@ -44,3 +45,33 @@ in the safes, not the pool: `juice-safe-auth-helpers-v2` binds
 juice-autostake-safe call it (pillar-wallets `5b1aa6b`, tests `d4b4ff0`).
 helpers-v2 and juice-safe-v8 are on mainnet since 2026-10-15
 (pillar-wallets DEPLOYED-VERIFIED.md).
+
+## 3. Steady Cache: `confirm-transfer-wallet` skips the token lock
+
+Claim (HIGH): eleven passkey paths check `token-lock-enabled`, but
+`confirm-transfer-wallet` does not, in juice-autostake-safe or juice-safe-v8.
+The owner proposes ATTACKER, locks the wallet, and the attacker confirms with
+the passkey and becomes owner. Also listed: `propose-recovery`,
+`set-wallet-config` and `confirm-max-gas-amount`.
+
+The missing check is real. The takeover is not. We reject it.
+
+**The passkey cannot pick the new owner.** The confirm hash binds
+`new-admin: pending`. Only the admin key sets `pending-transfer`, in
+`propose-transfer-wallet`. With the passkey alone, an attacker can only
+complete the transfer the owner proposed, to the owner's own address.
+
+**ATTACKER in `pending-transfer` needs the admin key.** Either the owner
+proposed ATTACKER (owner error, not a contract bug), or the attacker holds
+the admin key. The admin key turns the lock off with
+`toggle-token-lock(false)`, which checks only `is-admin-calling tx-sender`.
+The lock was never a defense against the admin key, so the check adds
+nothing against this attacker.
+
+**The owner can clear a pending transfer.** `propose-transfer-wallet` with
+the zero address overwrites `pending-transfer`, and a confirm then fails
+with `err-no-pending-transfer`.
+
+The other three functions have the same limit: each needs the admin key to
+take effect. Not a bounty finding. We may add the lock check to
+`confirm-transfer-wallet` in a later safe version, for consistency only.
