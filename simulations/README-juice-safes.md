@@ -20,6 +20,7 @@ Nothing is broadcast; every run is a stxer fork.
 | Rewards | `juice-safes-rewards-stxer.mjs` | real pox-5 reward round into both safes; Grow swap + keeper restake | 60/60 | https://stxer.xyz/simulations/mainnet/f0cadb2e81b25c0672546e2aeaf3c613 |
 | Limits + passkey + gas | `juice-safes-limits-passkey-stxer.mjs` | over-limit queue / cooldown / veto / execute-now, real P-256 passkey path, replay + domain binding, gas-station edge | 115/115 | https://stxer.xyz/simulations/mainnet/eb4b98e60dc722d3e33c895c992ca240 |
 | Grow STX story (one safe, end to end) | `juice-grow-safe-story-stxer.mjs` | deploy + onboard, stake, two real reward rounds with keeper restake (compounding), unstake, withdraw all | 92/92 | https://stxer.xyz/simulations/mainnet/9de19e827ab998b97e26fab05281edd7 |
+| Grow STX story, maker-fill variant | `juice-grow-safe-story-maker-fill-stxer.mjs` | same story; round 1 filled on Jing by a real taker (phase 1), round 2 sold by the router (phase 2) | 106/106 | https://stxer.xyz/simulations/mainnet/6fe379a92951d30af11d882f326d2be3 |
 
 Earlier runs of the same harnesses: rewards before the bond fix
 `3b0e3e875328d9daef22bbdcc038eab3` (43/60, see "Bonds" below), limits first
@@ -38,6 +39,7 @@ node simulations/juice-safes-happy-path-stxer.mjs
 node simulations/juice-safes-limits-passkey-stxer.mjs
 node simulations/juice-safes-rewards-stxer.mjs   # fetches a Lazer update (keyless route), forks ~35 min back
 node simulations/juice-grow-safe-story-stxer.mjs # two passes, forks ~70 min back, ~10 min total
+node simulations/juice-grow-safe-story-maker-fill-stxer.mjs # same, round 1 filled by a taker
 ```
 
 Env: `STACKS_API_URL` (default the juice box `http://77.42.3.101/stacks-api`, avoids Hiro 429),
@@ -365,3 +367,54 @@ What is real and what is fork-only:
 | 74-79 | 5 EXIT | admin `stx-transfer` all -> queued op u0 (over 100 STX); JS execute-now hash == helper; passkey execute-now (relayed by a stranger) | PASS |
 | 80-81 | 5 EXIT | **safe balance 0**; OUTSIDE +1,008.469848 STX | PASS |
 | + | checks | each payout == get-stx-owed; each restake == payout; locked grows by exactly the payout; round 2 shares = 1,000 + round 1; pool share 1.6393% -> 1.6462%; withdrawn = principal + both rounds | 11/11 PASS |
+
+Correction for section 4: there, `jing-place` left the sBTC in the market's pending
+escrow. Y bids were on the book, so it was not booked at once, and nobody called
+`settle-token-x-deposit`. So phase 1 never really rested on the book. Section 5 adds
+the keeper settle in both rounds.
+
+## 5. Grow STX story, maker-fill variant - `juice-grow-safe-story-maker-fill-stxer.mjs`
+
+https://stxer.xyz/simulations/mainnet/6fe379a92951d30af11d882f326d2be3 - **106/106 PASS**
+(fork block 9236503; pass 1 `3cac8dc80b3e5c3cdec174a187507305` 84/84).
+
+This is the same story as section 4, with the same two passes, the same fork-only
+inputs and the same exit. The difference is that each round uses a different phase
+of `juice-sbtc-autoswap`:
+
+- **Round 1 = PHASE 1 (maker fill).** `jing-place` puts the sBTC in the market's
+  pending escrow. The keeper (SPV9K21) calls `settle-token-x-deposit`, so the order
+  rests on the X book at ask = mid + 1 bp (maker spread `(some u1)`). A fork taker
+  account (funded with 705 STX, fork-only) calls the real `markets-sbtc-stx-jing-v6-4`
+  `swap`: 700 STX -> sBTC, limit mid + 1%. The taker walks the asks: `jing-buy-stx-0`
+  at mid, then the vault, then part of `jing-buy-stx-10`, and gets 319,664 sats. The
+  vault order fills in full. Then `close-batch` (permissionless) and `finalize-swap`.
+  `router-swap` is refused after the fill (u16031).
+- **Round 2 = PHASE 2 (router).** Place + keeper settle, so the order rests on the book.
+  No taker comes. `jing-reclaim` before the window is refused (u16031), because the
+  288-block window is the phase 1 -> phase 2 switch. After 289 blocks: reclaim, then
+  `router-swap`, then finalize.
+
+**Summary: staked 1,000 STX, round 1 +4.236239 STX, round 2 +4.227331 STX, withdrawn 1,008.46357 STX.**
+
+| Round | Phase | sats in | STX out (pot) | Price | vs Lazer mid 218,239.08 |
+|---|---|---|---|---|---|
+| 1 | maker fill on Jing | 118,277 | 258.410595 | 218,479.16 STX/BTC | +11.0 bp |
+| 2 | router | 118,376 | 256.797245 | 216,933.54 STX/BTC | -59.8 bp |
+
+The maker fill paid about 0.6% more STX than the router. The vault ask was mid + 1 bp,
+but the vault received about 11 bp over mid. This sim does not trace where the extra
+~10 bp comes from (the market's 10 bp `FEE_BPS` is a likely cause).
+
+| Steps | Section | What happens | Result |
+|---|---|---|---|
+| 1-18 | 1-2 | deploy + onboard (wizard limits, real passkey), fork-only funding (helpers + taker), stake 1,000 STX | PASS |
+| 19-28 | 3 ROUND 1 (PHASE 1) | cycle 146, calculate-rewards x2, 10 BTC in (fork-only), claim 118,277 sats | PASS |
+| 29-32 | 3 ROUND 1 (PHASE 1) | jing-place -> pending; keeper settle -> rests at ask 21,826,089,907,527 (mid + 1 bp) | PASS |
+| 33-40 | 3 ROUND 1 (PHASE 1) | taker `swap` 700 STX; vault empty; vault STX 0 -> 258,410,595; close-batch; router-swap refused | PASS |
+| 41-49 | 3 ROUND 1 (PHASE 1) | finalize 258,410,595; safe owed and paid 4,236,239; restake; locked 1,004.236239 | PASS |
+| 50-59 | 4 ROUND 2 (PHASE 2) | cycle 147, shares 1,004.236239 (compounding), 10 BTC in, claim 118,376 sats | PASS |
+| 60-69 | 4 ROUND 2 (PHASE 2) | place + settle (rests); early reclaim refused; +289; reclaim; router out 256,797,245 | PASS |
+| 70-78 | 4 ROUND 2 (PHASE 2) | finalize; safe paid 4,227,331; restake; locked 1,008.46357 | PASS |
+| 79-92 | 5 EXIT | unstake; unlock at cycle 148; position none; withdraw all -> queued op u0 -> passkey execute-now; safe 0; OUTSIDE +1,008.46357 | PASS |
+| + | checks | fill STX == pot; maker price >= mid; router out == pot; payouts == owed; restakes == payouts; compounding shares; withdrawn = principal + both rounds | 14/14 PASS |
