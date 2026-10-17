@@ -1,0 +1,427 @@
+{
+  "id": "f0cadb2e81b25c0672546e2aeaf3c613",
+  "url": "https://stxer.xyz/simulations/mainnet/f0cadb2e81b25c0672546e2aeaf3c613",
+  "forkBlock": 9236311,
+  "checks": [
+    {
+      "step": 1,
+      "label": "[1 SETUP] [Earn BTC] deploy SP28MP1HQDJWQAFSQJN2HBAXBVP7H7THD1W2NYZVK.sim-earn-btc-safe (live juice-safe-v9 bytes)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 2,
+      "label": "[1 SETUP] [Earn BTC] fresh safe hash == template verified hash",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 3,
+      "label": "[1 SETUP] [Earn BTC] onboard with REAL P-256 passkey 0338a66ad5..., admin SP9BP4PN...",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 4,
+      "label": "[1 SETUP] [Earn BTC] is-admin-pubkey(passkey)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 5,
+      "label": "[1 SETUP] [Grow STX] deploy SP28MP1HQDJWQAFSQJN2HBAXBVP7H7THD1W2NYZVK.sim-grow-stx-safe (live juice-autostake-safe bytes)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 6,
+      "label": "[1 SETUP] [Grow STX] fresh safe hash == template verified hash",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 7,
+      "label": "[1 SETUP] [Grow STX] onboard with REAL P-256 passkey 0338a66ad5..., admin SP9BP4PN...",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 8,
+      "label": "[1 SETUP] [Grow STX] is-admin-pubkey(passkey)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 9,
+      "label": "[1 SETUP] fund sim-earn-btc-safe 1000 STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 10,
+      "label": "[1 SETUP] fund sim-grow-stx-safe 1000 STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 11,
+      "label": "[1 SETUP] fund SP8K2RZG 30005 STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 12,
+      "label": "[1 SETUP] fund SP29HM6Q 30005 STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 13,
+      "label": "[1 SETUP] [Earn BTC] admin stake-stx-juice 1,000 STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 14,
+      "label": "[1 SETUP] [Earn BTC] pox-5 position",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer)))"
+    },
+    {
+      "step": 15,
+      "label": "[1 SETUP] [Grow STX] admin stake-stx-juice 1,000 STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 16,
+      "label": "[1 SETUP] [Grow STX] pox-5 position",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 17,
+      "label": "[1 SETUP] fork-only staker 1 stakes 30,000 STX with juice-pool-sbtc-signer",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok (tuple (amount-ustx u30000000000) (first-reward-cycle u146) (num-cycles u12) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (staker SP8K2RZGHWTRF29B7DPZFN0FB65R0DSKHSH9PPAR) (unlock-burn-height u997850) (unlock-cycle u158)))"
+    },
+    {
+      "step": 18,
+      "label": "[1 SETUP] fork-only staker 2 stakes 30,000 STX with juice-pool-sbtc-signer",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok (tuple (amount-ustx u30000000000) (first-reward-cycle u146) (num-cycles u12) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (staker SP29HM6QNTKT8B2XBX5SX375T0Z042C9D9P5VN809) (unlock-burn-height u997850) (unlock-cycle u158)))"
+    },
+    {
+      "step": 19,
+      "label": "[1 SETUP] juice-pool-sbtc-signer delegated for cycle 146 >= 50k STX",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "u61000000000"
+    },
+    {
+      "step": 20,
+      "label": "[1 REWARDS] into staked cycle 146: +775 burn -> 972670 (cycle 146 offset 20)",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 21,
+      "label": "[1 REWARDS] current cycle",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "u146"
+    },
+    {
+      "step": 22,
+      "label": "[1 REWARDS] calculate-rewards for the previous half with active bonds (flush; err u30 if mainnet already did it)",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "(ok (tuple (accrued-rewards-per-ustx u184788853015) (bond-periods (list u1 u2)) (calculation-height u972649) (cumulative-rewards-per-ustx u972169689292) (cycle-staked-ustx u483122696760501) (gross-accrued-rewards u149127949) (reserve-balance u385964230) (reserve-deposit u15754533) (stx-cycle u145) (total-bond-rewards u44097727) (total-stx-staker-rewards u89275689)))"
+    },
+    {
+      "step": 23,
+      "label": "[1 REWARDS] juice-pool-stx-signer shares for 146",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "u1154034860830"
+    },
+    {
+      "step": 24,
+      "label": "[1 REWARDS] juice-pool-sbtc-signer shares for 146 (counted signer)",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "u61000000000"
+    },
+    {
+      "step": 25,
+      "label": "[1 REWARDS] all pox-5 STX shares for 146",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "u419045609130682"
+    },
+    {
+      "step": 26,
+      "label": "[1 REWARDS] rewards arrive: 10 BTC of sBTC into pox-5 (fork-only input)",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 27,
+      "label": "[1 REWARDS] into the second half of 146: +1035 burn -> 973705 (cycle 146 offset 1055)",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 28,
+      "label": "[1 REWARDS] calculate-rewards books the first half of 146",
+      "section": "1 REWARDS",
+      "passed": true,
+      "actual": "(ok (tuple (accrued-rewards-per-ustx u1938970162903) (bond-periods (list u1 u2)) (calculation-height u973699) (cumulative-rewards-per-ustx u1938970162903) (cycle-staked-ustx u419045609130682) (gross-accrued-rewards u1000000000) (reserve-balance u529349570) (reserve-deposit u143385340) (stx-cycle u146) (total-bond-rewards u44097727) (total-stx-staker-rewards u812516933)))"
+    },
+    {
+      "step": 29,
+      "label": "[1a EARN] stx pool tranche index before claim",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "u0"
+    },
+    {
+      "step": 30,
+      "label": "[1a EARN] juice-pool-stx-signer pox-claim-rewards(146) (permissionless)",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "(ok (tuple (bond-rewards (list )) (bond-totals u0) (stx-rewards (tuple (earned u2237639) (rewards-per-token u1938970162903))) (total-rewards u2237639)))"
+    },
+    {
+      "step": 31,
+      "label": "[1a EARN] [Earn BTC] get-stx-owed for the claimed tranche",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "u1938"
+    },
+    {
+      "step": 32,
+      "label": "[1a EARN] [Earn BTC] safe sBTC before payout",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "u0"
+    },
+    {
+      "step": 33,
+      "label": "[1a EARN] [Earn BTC] pay-stx-stakers([safe]) (permissionless)",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "(ok u1938)"
+    },
+    {
+      "step": 34,
+      "label": "[1a EARN] [Earn BTC] safe sBTC after payout",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "u1938"
+    },
+    {
+      "step": 35,
+      "label": "[1a EARN] [Earn BTC] paying the safe twice moves nothing",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "(ok u0)"
+    },
+    {
+      "step": 36,
+      "label": "[1a EARN] [Earn BTC] admin can withdraw the reward (within limit)",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 37,
+      "label": "[1b GROW] stacks-block-time at claim (vs Lazer update time)",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "u1792261997"
+    },
+    {
+      "step": 38,
+      "label": "[1b GROW] juice-pool-sbtc-signer pox-claim-rewards(146) -> sBTC into the autoswap vault",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok (tuple (bond-rewards (list )) (bond-totals u0) (stx-rewards (tuple (earned u118277) (rewards-per-token u1938970162903))) (total-rewards u118277)))"
+    },
+    {
+      "step": 39,
+      "label": "[1b GROW] vault rests the sBTC on Jing (jing-place, Lazer update)",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u118277) (floor u20829136285720)))))"
+    },
+    {
+      "step": 40,
+      "label": "[1b GROW] vault patience window (288 blocks): +289 burn -> 973994 (cycle 146 offset 1344)",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 41,
+      "label": "[1b GROW] vault reclaims from Jing",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"jing-reclaim\") (payload (tuple (amount u118277)))))"
+    },
+    {
+      "step": 42,
+      "label": "[1b GROW] stacks-block-time at router sale",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "u1792262286"
+    },
+    {
+      "step": 43,
+      "label": "[1b GROW] router sells the sBTC for STX (router-swap, Lazer update)",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u118277) (limit-price u21706152550382) (mid u21925406616548) (out u257781061) (unsold u0)))))"
+    },
+    {
+      "step": 44,
+      "label": "[1b GROW] router cooldown: +1 burn -> 973995 (cycle 146 offset 1345)",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 45,
+      "label": "[1b GROW] router-swap again (only if a chunk is left; err is fine)",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(err u16031)"
+    },
+    {
+      "step": 46,
+      "label": "[1b GROW] finalize-swap: the STX pot",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok u257781061)"
+    },
+    {
+      "step": 47,
+      "label": "[1b GROW] [Grow STX] get-stx-owed (uSTX) for the safe",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "u4225919"
+    },
+    {
+      "step": 48,
+      "label": "[1b GROW] [Grow STX] safe before payout",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1000000000) (unlock-height u1174250) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 49,
+      "label": "[1b GROW] [Grow STX] pay-stx-stakers([safe, staker1, staker2]) in STX",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok u257781059)"
+    },
+    {
+      "step": 50,
+      "label": "[1b GROW] [Grow STX] safe after payout",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1000000000) (unlock-height u1174250) (unlocked u4225919))) (balance u4225919))"
+    },
+    {
+      "step": 51,
+      "label": "[1b GROW] tranche fully paid",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 52,
+      "label": "[1b GROW] [Grow STX] a stranger cannot restake -> u4001",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(err u4001)"
+    },
+    {
+      "step": 53,
+      "label": "[1b GROW] [Grow STX] keeper (chavita SPV9K21) restake()",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(ok (tuple (amount u4225919) (cycles-to-extend u1)))"
+    },
+    {
+      "step": 54,
+      "label": "[1b GROW] [Grow STX] all STX locked again",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1004225919) (unlock-height u1176350) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 55,
+      "label": "[1b GROW] [Grow STX] pox-5 position after restake",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1004225919) (first-reward-cycle u146) (num-cycles u97) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": null,
+      "label": "Earn BTC safe sBTC grew by exactly get-stx-owed",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "+1938 sats (owed 1938)"
+    },
+    {
+      "step": null,
+      "label": "Earn BTC share matches stake / pool shares x claim (fee 0)",
+      "section": "1a EARN",
+      "passed": true,
+      "actual": "1938 vs 1938.97 (claim 2237639)"
+    },
+    {
+      "step": null,
+      "label": "Grow STX safe got exactly get-stx-owed in STX",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "+4225919 uSTX (owed 4225919, pot 257781061)"
+    },
+    {
+      "step": null,
+      "label": "restake locked exactly the payout",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "4225919 vs 4225919"
+    },
+    {
+      "step": null,
+      "label": "pox-5 amount = 1,000 STX + payout",
+      "section": "1b GROW",
+      "passed": true,
+      "actual": "1004225919"
+    }
+  ]
+}

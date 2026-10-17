@@ -1,0 +1,811 @@
+{
+  "id": "eb4b98e60dc722d3e33c895c992ca240",
+  "url": "https://stxer.xyz/simulations/mainnet/eb4b98e60dc722d3e33c895c992ca240",
+  "checks": [
+    {
+      "step": 1,
+      "label": "[1 SETUP] [Earn BTC] deploy SP28MP1HQDJWQAFSQJN2HBAXBVP7H7THD1W2NYZVK.sim-earn-btc-safe (live juice-safe-v9 bytes)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 2,
+      "label": "[1 SETUP] [Earn BTC] fresh safe hash == template verified hash",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 3,
+      "label": "[1 SETUP] [Earn BTC] onboard with REAL P-256 passkey 035bf426dc..., admin SP9BP4PN...",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 4,
+      "label": "[1 SETUP] [Earn BTC] is-admin-pubkey(passkey)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 5,
+      "label": "[1 SETUP] [Grow STX] deploy SP28MP1HQDJWQAFSQJN2HBAXBVP7H7THD1W2NYZVK.sim-grow-stx-safe (live juice-autostake-safe bytes)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 6,
+      "label": "[1 SETUP] [Grow STX] fresh safe hash == template verified hash",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 7,
+      "label": "[1 SETUP] [Grow STX] onboard with REAL P-256 passkey 035bf426dc..., admin SP9BP4PN...",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 8,
+      "label": "[1 SETUP] [Grow STX] is-admin-pubkey(passkey)",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 9,
+      "label": "[1 SETUP] fund sim-earn-btc-safe 13200 STX from SP2ADT4T...",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 10,
+      "label": "[1 SETUP] fund sim-grow-stx-safe 13200 STX from SP2ADT4T...",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 11,
+      "label": "[1 SETUP] [Earn BTC] fund 400000 sats sBTC",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 12,
+      "label": "[1 SETUP] [Grow STX] fund 400000 sats sBTC",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 13,
+      "label": "[1 SETUP] OUTSIDE STX before",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u68805000))) (balance u68805000))"
+    },
+    {
+      "step": 14,
+      "label": "[1 SETUP] OUTSIDE sBTC before",
+      "section": "1 SETUP",
+      "passed": true,
+      "actual": "u0"
+    },
+    {
+      "step": 15,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin stx-transfer 6,000 STX (> 5,000 limit) -> queued, op u0",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 16,
+      "label": "[2 OVER-LIMIT] [Earn BTC] op u0 is a pending stx-transfer, admin-created",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u6000000000) (execute-after u972042) (executed false) (extension none) (op-type \"stx-transfer\") (passkey-created false) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token none) (vetoed false)))"
+    },
+    {
+      "step": 17,
+      "label": "[2 OVER-LIMIT] [Earn BTC] safe still holds all 13200 STX (nothing moved)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u13200000000))) (balance u13200000000))"
+    },
+    {
+      "step": 18,
+      "label": "[2 OVER-LIMIT] [Earn BTC] execute op u0 before cooldown -> err-cooldown-not-passed u4017",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4017)"
+    },
+    {
+      "step": 19,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin sBTC transfer 150,000 sats (> 100,000 limit) -> queued, op u1",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 20,
+      "label": "[2 OVER-LIMIT] [Earn BTC] op u1 is a pending sbtc-transfer",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u150000) (execute-after u972042) (executed false) (extension none) (op-type \"sbtc-transfer\") (passkey-created false) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token (some SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)) (vetoed false)))"
+    },
+    {
+      "step": 21,
+      "label": "[2 OVER-LIMIT] [Earn BTC] safe still holds 400000 sats",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "u400000"
+    },
+    {
+      "step": 22,
+      "label": "[2 OVER-LIMIT] [Earn BTC] execute sBTC op u1 before cooldown -> u4017",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4017)"
+    },
+    {
+      "step": 23,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin queues stx op u2",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 24,
+      "label": "[2 OVER-LIMIT] [Earn BTC] stranger cannot veto -> u4001",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4001)"
+    },
+    {
+      "step": 25,
+      "label": "[2 OVER-LIMIT] [Earn BTC] ADMIN key vetoes op u2",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 26,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin queues sBTC op u3",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 27,
+      "label": "[2 OVER-LIMIT] [Earn BTC] PASSKEY vetoes op u3 (build-veto-operation-hash, sent by a stranger as relay)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 28,
+      "label": "[2 OVER-LIMIT] [Earn BTC] op u2 and u3 vetoed",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(tuple (a true) (b true))"
+    },
+    {
+      "step": 29,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin stx-transfer 6,000 STX (> 5,000 limit) -> queued, op u0",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 30,
+      "label": "[2 OVER-LIMIT] [Grow STX] op u0 is a pending stx-transfer, admin-created",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u6000000000) (execute-after u972042) (executed false) (extension none) (op-type \"stx-transfer\") (passkey-created false) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token none) (vetoed false)))"
+    },
+    {
+      "step": 31,
+      "label": "[2 OVER-LIMIT] [Grow STX] safe still holds all 13200 STX (nothing moved)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u13200000000))) (balance u13200000000))"
+    },
+    {
+      "step": 32,
+      "label": "[2 OVER-LIMIT] [Grow STX] execute op u0 before cooldown -> err-cooldown-not-passed u4017",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4017)"
+    },
+    {
+      "step": 33,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin sBTC transfer 150,000 sats (> 100,000 limit) -> queued, op u1",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 34,
+      "label": "[2 OVER-LIMIT] [Grow STX] op u1 is a pending sbtc-transfer",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u150000) (execute-after u972042) (executed false) (extension none) (op-type \"sbtc-transfer\") (passkey-created false) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token (some SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token)) (vetoed false)))"
+    },
+    {
+      "step": 35,
+      "label": "[2 OVER-LIMIT] [Grow STX] safe still holds 400000 sats",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "u400000"
+    },
+    {
+      "step": 36,
+      "label": "[2 OVER-LIMIT] [Grow STX] execute sBTC op u1 before cooldown -> u4017",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4017)"
+    },
+    {
+      "step": 37,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin queues stx op u2",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 38,
+      "label": "[2 OVER-LIMIT] [Grow STX] stranger cannot veto -> u4001",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4001)"
+    },
+    {
+      "step": 39,
+      "label": "[2 OVER-LIMIT] [Grow STX] ADMIN key vetoes op u2",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 40,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin queues sBTC op u3",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 41,
+      "label": "[2 OVER-LIMIT] [Grow STX] PASSKEY vetoes op u3 (build-veto-operation-hash, sent by a stranger as relay)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 42,
+      "label": "[2 OVER-LIMIT] [Grow STX] op u2 and u3 vetoed",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(tuple (a true) (b true))"
+    },
+    {
+      "step": 43,
+      "label": "[2 OVER-LIMIT] past the 144-block cooldown: +145 burn -> 972043 (cycle 145 offset 1493)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 44,
+      "label": "[2 OVER-LIMIT] [Earn BTC] stranger cannot execute op u0 after cooldown -> u4001",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4001)"
+    },
+    {
+      "step": 45,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin executes op u0 after cooldown",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 46,
+      "label": "[2 OVER-LIMIT] [Earn BTC] op u0 again -> err-already-executed u4014",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4014)"
+    },
+    {
+      "step": 47,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin executes sBTC op u1 after cooldown",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 48,
+      "label": "[2 OVER-LIMIT] [Earn BTC] vetoed op u2 -> err-vetoed u4015",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4015)"
+    },
+    {
+      "step": 49,
+      "label": "[2 OVER-LIMIT] [Earn BTC] vetoed sBTC op u3 -> u4015",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4015)"
+    },
+    {
+      "step": 50,
+      "label": "[2 OVER-LIMIT] [Grow STX] stranger cannot execute op u0 after cooldown -> u4001",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4001)"
+    },
+    {
+      "step": 51,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin executes op u0 after cooldown",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 52,
+      "label": "[2 OVER-LIMIT] [Grow STX] op u0 again -> err-already-executed u4014",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4014)"
+    },
+    {
+      "step": 53,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin executes sBTC op u1 after cooldown",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 54,
+      "label": "[2 OVER-LIMIT] [Grow STX] vetoed op u2 -> err-vetoed u4015",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4015)"
+    },
+    {
+      "step": 55,
+      "label": "[2 OVER-LIMIT] [Grow STX] vetoed sBTC op u3 -> u4015",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4015)"
+    },
+    {
+      "step": 56,
+      "label": "[2 OVER-LIMIT] OUTSIDE STX after the two cooldown executes",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u12068805000))) (balance u12068805000))"
+    },
+    {
+      "step": 57,
+      "label": "[2 OVER-LIMIT] OUTSIDE sBTC after the two cooldown executes",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "u300000"
+    },
+    {
+      "step": 58,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin queues stx op u4",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 59,
+      "label": "[2 OVER-LIMIT] [Earn BTC] JS execute-now hash == mm-safe-auth-helpers-v1 in the safe",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 60,
+      "label": "[2 OVER-LIMIT] [Earn BTC] PASSKEY execute-pending-stx-transfer-now op u4 -> immediate",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 61,
+      "label": "[2 OVER-LIMIT] [Earn BTC] admin queues sBTC op u5",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 62,
+      "label": "[2 OVER-LIMIT] [Earn BTC] PASSKEY execute-pending-sbtc-transfer-now op u5 -> immediate",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 63,
+      "label": "[2 OVER-LIMIT] [Earn BTC] PASSKEY-signed 6,000 STX transfer -> queued op u6 (passkey-created)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 64,
+      "label": "[2 OVER-LIMIT] [Earn BTC] op u6 passkey-created true",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u6000000000) (execute-after u972187) (executed false) (extension none) (op-type \"stx-transfer\") (passkey-created true) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token none) (vetoed false)))"
+    },
+    {
+      "step": 65,
+      "label": "[2 OVER-LIMIT] [Earn BTC] passkey execute-now on a passkey-created op -> err-forbidden u4003",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4003)"
+    },
+    {
+      "step": 66,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin queues stx op u4",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 67,
+      "label": "[2 OVER-LIMIT] [Grow STX] JS execute-now hash == mm-safe-auth-helpers-v1 in the safe",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 68,
+      "label": "[2 OVER-LIMIT] [Grow STX] PASSKEY execute-pending-stx-transfer-now op u4 -> immediate",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 69,
+      "label": "[2 OVER-LIMIT] [Grow STX] admin queues sBTC op u5",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 70,
+      "label": "[2 OVER-LIMIT] [Grow STX] PASSKEY execute-pending-sbtc-transfer-now op u5 -> immediate",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 71,
+      "label": "[2 OVER-LIMIT] [Grow STX] PASSKEY-signed 6,000 STX transfer -> queued op u6 (passkey-created)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 72,
+      "label": "[2 OVER-LIMIT] [Grow STX] op u6 passkey-created true",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u6000000000) (execute-after u972187) (executed false) (extension none) (op-type \"stx-transfer\") (passkey-created true) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token none) (vetoed false)))"
+    },
+    {
+      "step": 73,
+      "label": "[2 OVER-LIMIT] [Grow STX] passkey execute-now on a passkey-created op -> err-forbidden u4003",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(err u4003)"
+    },
+    {
+      "step": 74,
+      "label": "[2 OVER-LIMIT] OUTSIDE STX after execute-now",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u24068805000))) (balance u24068805000))"
+    },
+    {
+      "step": 75,
+      "label": "[2 OVER-LIMIT] OUTSIDE sBTC after execute-now",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "u600000"
+    },
+    {
+      "step": 76,
+      "label": "[3 PASSKEY] [Earn BTC] JS stx-transfer hash == smart-wallet-standard-auth-helpers-v7 in the safe",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 77,
+      "label": "[3 PASSKEY] [Earn BTC] OUTSIDE before passkey transfer",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u24068805000))) (balance u24068805000))"
+    },
+    {
+      "step": 78,
+      "label": "[3 PASSKEY] [Earn BTC] PASSKEY stx-transfer 100 STX (within limit, relayed by a stranger)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 79,
+      "label": "[3 PASSKEY] [Earn BTC] OUTSIDE after passkey transfer",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u24168805000))) (balance u24168805000))"
+    },
+    {
+      "step": 80,
+      "label": "[3 PASSKEY] [Earn BTC] REPLAY of the same sig-auth -> err-signature-replay u4006",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(err u4006)"
+    },
+    {
+      "step": 81,
+      "label": "[3 PASSKEY] [Grow STX] JS stx-transfer hash == smart-wallet-standard-auth-helpers-v7 in the safe",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 82,
+      "label": "[3 PASSKEY] [Grow STX] OUTSIDE before passkey transfer",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u24168805000))) (balance u24168805000))"
+    },
+    {
+      "step": 83,
+      "label": "[3 PASSKEY] [Grow STX] PASSKEY stx-transfer 100 STX (within limit, relayed by a stranger)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 84,
+      "label": "[3 PASSKEY] [Grow STX] OUTSIDE after passkey transfer",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u24268805000))) (balance u24268805000))"
+    },
+    {
+      "step": 85,
+      "label": "[3 PASSKEY] [Grow STX] REPLAY of the same sig-auth -> err-signature-replay u4006",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(err u4006)"
+    },
+    {
+      "step": 86,
+      "label": "[3 PASSKEY] [Grow STX] Earn-safe signature submitted to the Grow safe -> err-invalid-signature u4002 (domain = safe)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(err u4002)"
+    },
+    {
+      "step": 87,
+      "label": "[3 PASSKEY] [Earn BTC] PASSKEY stake-stx-juice 1,000 STX (juice-safe-auth-helpers-v2)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 88,
+      "label": "[3 PASSKEY] [Earn BTC] pox-5 position with juice-pool-stx-signer",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer)))"
+    },
+    {
+      "step": 89,
+      "label": "[3 PASSKEY] [Earn BTC] PASSKEY unstake (juice-safe-auth-helpers-v1)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 90,
+      "label": "[3 PASSKEY] [Earn BTC] pox-5 position after unstake (unlocks next cycle)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u0) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-stx-signer)))"
+    },
+    {
+      "step": 91,
+      "label": "[3 PASSKEY] [Grow STX] PASSKEY stake-stx-juice 1,000 STX (juice-safe-auth-helpers-v2)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 92,
+      "label": "[3 PASSKEY] [Grow STX] pox-5 position with juice-pool-sbtc-signer",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 93,
+      "label": "[3 PASSKEY] [Grow STX] PASSKEY unstake (juice-safe-auth-helpers-v1)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 94,
+      "label": "[3 PASSKEY] [Grow STX] pox-5 position after unstake (unlocks next cycle)",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u0) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 95,
+      "label": "[3 PASSKEY] [Grow STX] JS set-keeper hash == juice-autostake-safe-auth-helpers-v1",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 96,
+      "label": "[3 PASSKEY] [Grow STX] PASSKEY set-keeper -> OUTSIDE",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 97,
+      "label": "[3 PASSKEY] [Grow STX] get-keeper",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM"
+    },
+    {
+      "step": 98,
+      "label": "[3 PASSKEY] [Grow STX] same set-keeper sig replayed -> u4006",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "(err u4006)"
+    },
+    {
+      "step": 99,
+      "label": "[4 GAS] [Earn BTC] safe sBTC = 100000",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "u100000"
+    },
+    {
+      "step": 100,
+      "label": "[4 GAS] gas sponsor sBTC before",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "u62"
+    },
+    {
+      "step": 101,
+      "label": "[4 GAS] [Earn BTC] PASSKEY send FULL 100000 sats WITH gas -> gas takes 20 first, transfer fails sbtc-token err u1 (KNOWN UX BUG)",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "(err u1)"
+    },
+    {
+      "step": 102,
+      "label": "[4 GAS] [Earn BTC] safe sBTC unchanged (whole tx rolled back)",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "u100000"
+    },
+    {
+      "step": 103,
+      "label": "[4 GAS] [Earn BTC] PASSKEY send 99980 sats (balance - gas) WITH gas -> ok",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 104,
+      "label": "[4 GAS] [Earn BTC] safe sBTC is 0",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "u0"
+    },
+    {
+      "step": 105,
+      "label": "[4 GAS] gas sponsor sBTC after",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "u82"
+    },
+    {
+      "step": 106,
+      "label": "[4 GAS] [Grow STX] ADMIN sends 1,000 sats WITH the gas param -> ok, but gas is only charged on the passkey path",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 107,
+      "label": "[4 GAS] gas sponsor sBTC after the admin send (unchanged)",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "u82"
+    },
+    {
+      "step": null,
+      "label": "OUTSIDE got 2 x 6,000 STX after the cooldown (one per safe)",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "12000000000"
+    },
+    {
+      "step": null,
+      "label": "OUTSIDE got 2 x 150,000 sats after the cooldown",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "300000"
+    },
+    {
+      "step": null,
+      "label": "execute-now moved 2 x 6,000 STX immediately",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "12000000000"
+    },
+    {
+      "step": null,
+      "label": "execute-now moved 2 x 150,000 sats immediately",
+      "section": "2 OVER-LIMIT",
+      "passed": true,
+      "actual": "300000"
+    },
+    {
+      "step": null,
+      "label": "gas sponsor received exactly the gas fee once",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "20"
+    },
+    {
+      "step": null,
+      "label": "admin path ignored the gas param (sponsor unchanged)",
+      "section": "4 GAS",
+      "passed": true,
+      "actual": "82 -> 82"
+    },
+    {
+      "step": null,
+      "label": "[Earn BTC] passkey transfer landed 100 STX",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "100000000"
+    },
+    {
+      "step": null,
+      "label": "[Grow STX] passkey transfer landed 100 STX",
+      "section": "3 PASSKEY",
+      "passed": true,
+      "actual": "100000000"
+    }
+  ]
+}

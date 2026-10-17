@@ -8,6 +8,9 @@ The original signer results in the first sections are from **2026-07-30**, the d
 against `SP000000000000000000002Q6VF78.pox-5` as a genuine mainnet boot contract —
 no shim, no injected code.
 
+**Juice safes (Earn BTC / Grow STX):** happy path, real reward rounds, over-limit
+queue + passkey signing + gas edge -> see [README-juice-safes.md](README-juice-safes.md).
+
 ### Run links
 
 | Sim | stxer |
