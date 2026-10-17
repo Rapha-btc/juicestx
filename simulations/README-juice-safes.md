@@ -19,6 +19,7 @@ Nothing is broadcast; every run is a stxer fork.
 | Happy path (baseline) | `juice-safes-happy-path-stxer.mjs` | deploy, onboard (dummy pubkey), fund, admin stake 1,000 STX, advance, unstake, unlock, withdraw | all PASS | https://stxer.xyz/simulations/mainnet/ab4d78476d6bc5393452839c2aaee5e0 |
 | Rewards | `juice-safes-rewards-stxer.mjs` | real pox-5 reward round into both safes; Grow swap + keeper restake | 60/60 | https://stxer.xyz/simulations/mainnet/f0cadb2e81b25c0672546e2aeaf3c613 |
 | Limits + passkey + gas | `juice-safes-limits-passkey-stxer.mjs` | over-limit queue / cooldown / veto / execute-now, real P-256 passkey path, replay + domain binding, gas-station edge | 115/115 | https://stxer.xyz/simulations/mainnet/eb4b98e60dc722d3e33c895c992ca240 |
+| Grow STX story (one safe, end to end) | `juice-grow-safe-story-stxer.mjs` | deploy + onboard, stake, two real reward rounds with keeper restake (compounding), unstake, withdraw all | 92/92 | https://stxer.xyz/simulations/mainnet/9de19e827ab998b97e26fab05281edd7 |
 
 Earlier runs of the same harnesses: rewards before the bond fix
 `3b0e3e875328d9daef22bbdcc038eab3` (43/60, see "Bonds" below), limits first
@@ -36,6 +37,7 @@ cd ~/projects/juicestx
 node simulations/juice-safes-happy-path-stxer.mjs
 node simulations/juice-safes-limits-passkey-stxer.mjs
 node simulations/juice-safes-rewards-stxer.mjs   # fetches a Lazer update (keyless route), forks ~35 min back
+node simulations/juice-grow-safe-story-stxer.mjs # two passes, forks ~70 min back, ~10 min total
 ```
 
 Env: `STACKS_API_URL` (default the juice box `http://77.42.3.101/stacks-api`, avoids Hiro 429),
@@ -309,3 +311,57 @@ Rules confirmed (from the source and the run):
 | + | admin path ignored the gas param (sponsor unchanged) | `82 -> 82` | PASS |
 | + | [Earn BTC] passkey transfer landed 100 STX | `100000000` | PASS |
 | + | [Grow STX] passkey transfer landed 100 STX | `100000000` | PASS |
+
+## 4. Grow STX story - `juice-grow-safe-story-stxer.mjs`
+
+https://stxer.xyz/simulations/mainnet/9de19e827ab998b97e26fab05281edd7 - **92/92 PASS**
+(fork block 9236404, cycles 146 -> 148). One Auto-compound safe, read top to bottom:
+deploy, two reward rounds, exit.
+
+**Summary: staked 1,000 STX, round 1 +4.228461 STX, round 2 +4.241387 STX, withdrawn 1,008.469848 STX.**
+
+What is real and what is fork-only:
+- **Real (live mainnet code):** the safe bytes (hash checked against core-v2), onboard,
+  the admin's own 1,000 STX (no top-up was needed), `stake-stx-juice`, pox-5
+  `calculate-rewards` with the active bonds `(list u1 u2)`, `pox-claim-rewards`,
+  `juice-sbtc-autoswap` Jing place / reclaim / router sale with a live Lazer update,
+  `finalize-swap`, `pay-stx-stakers`, keeper `restake()`, `unstake`, the over-limit
+  queue, and the passkey `execute-pending-stx-transfer-now`.
+- **Fork-only:** (1) 10 BTC of sBTC sent to pox-5 by a whale before each round (the
+  reward money). (2) Two throwaway accounts stake 30,000 STX each with
+  `juice-pool-sbtc-signer`, because on mainnet the pool is below the 50k signer minimum.
+- **Limits:** we use the /safe wizard defaults (100 STX / 100,000 sats / 144 blocks). The
+  final 1,008 STX withdrawal is over the limit, so it queues as op u0. The passkey then
+  co-signs execute-now, which runs it at once (both keys = immediate). The cooldown path
+  is covered in the limits sim.
+- **Two passes:** the payouts depend on the swap, so pass 1 (same fork block, same Lazer
+  update) finds the exact unlocked balance. Pass 2 is the story and withdraws exactly that
+  amount. Only pass 2 is reported (pass 1: 73/73, `87209c8d3aac2a9e95fa91bd310c7203`).
+- **Time:** stxer advances 1 s per burn block. The fork is taken about planned blocks +
+  240 s back, so the round 2 router sale lands just before the Lazer publish time. Round 1
+  sees a "future" publish time, which the market and pyth-lazer-oracle accept. The total
+  advance (about 4,200 blocks) stays under the vault's DIA max age of 7,200 s.
+- **Notes:** both rounds use the same Lazer update, so the mid is the same
+  (21,938.6 STX/BTC). On the fork nobody fills the Jing order, so the whole claim is sold
+  through the router each time.
+
+| Steps | Section | What happens | Result |
+|---|---|---|---|
+| 1-7 | 1 DEPLOY+ONBOARD | deploy `sim-grow-stx-story` from live bytes; hash == core-v2 verified; onboard with a real P-256 passkey + admin `SP9BP4PN...`; passkey is admin; owner; keeper = SPV9K21; core-v2 whitelist | PASS |
+| 8-9 | 2 FUND+STAKE | (fork-only) fund the two helper stakers | PASS |
+| 10-14 | 2 FUND+STAKE | admin sends 1,000 STX; `stake-stx-juice`; **locked 1,000 STX**; pox-5 position at juice-pool-sbtc-signer, 96 cycles | PASS |
+| 15-17 | 2 FUND+STAKE | (fork-only) helpers stake 2 x 30,000; pool delegated 61,000 STX for cycle 146 | PASS |
+| 18-22 | 3 ROUND 1 | into cycle 146; flush calculate-rewards; safe shares 1,000 STX of 61,000 | PASS |
+| 23-25 | 3 ROUND 1 | (fork-only) 10 BTC into pox-5; advance to offset 1055; calculate-rewards books the first half of 146 | PASS |
+| 26-34 | 3 ROUND 1 | pool claims **118,277 sats** into the vault; Jing place; +289; reclaim; router sale **-> 257.936140 STX**; finalize | PASS |
+| 35-39 | 3 ROUND 1 | owed 4,228,461 uSTX; pay-stx-stakers; safe +4.228461 STX unlocked; tranche fully paid | PASS |
+| 40-42 | 3 ROUND 1 | keeper `restake()` amount 4,228,461; **locked 1,000 -> 1,004.228461 STX** | PASS |
+| 43-47 | 4 ROUND 2 | into cycle 147; flush calc (booked 0); **safe shares 1,004.228461 STX** (compounding) | PASS |
+| 48-50 | 4 ROUND 2 | (fork-only) 10 BTC into pox-5; calculate-rewards books the first half of 147 | PASS |
+| 51-59 | 4 ROUND 2 | claim **118,376 sats**; Jing place / reclaim; router sale **-> 257.653117 STX**; finalize | PASS |
+| 60-67 | 4 ROUND 2 | owed 4,241,387; paid; keeper restake; **locked 1,004.228461 -> 1,008.469848 STX** | PASS |
+| 68-70 | 5 EXIT | admin `unstake`; num-cycles 2; still locked until 976,850 | PASS |
+| 71-73 | 5 EXIT | advance to cycle 148; **unlocked 1,008.469848 STX**, locked 0; pox-5 position `none` | PASS |
+| 74-79 | 5 EXIT | admin `stx-transfer` all -> queued op u0 (over 100 STX); JS execute-now hash == helper; passkey execute-now (relayed by a stranger) | PASS |
+| 80-81 | 5 EXIT | **safe balance 0**; OUTSIDE +1,008.469848 STX | PASS |
+| + | checks | each payout == get-stx-owed; each restake == payout; locked grows by exactly the payout; round 2 shares = 1,000 + round 1; pool share 1.6393% -> 1.6462%; withdrawn = principal + both rounds | 11/11 PASS |

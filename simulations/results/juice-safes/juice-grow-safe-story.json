@@ -1,0 +1,651 @@
+{
+  "id": "9de19e827ab998b97e26fab05281edd7",
+  "url": "https://stxer.xyz/simulations/mainnet/9de19e827ab998b97e26fab05281edd7",
+  "forkBlock": 9236404,
+  "checks": [
+    {
+      "step": 1,
+      "label": "[1 DEPLOY+ONBOARD] deploy SP28MP1HQDJWQAFSQJN2HBAXBVP7H7THD1W2NYZVK.sim-grow-stx-story from the live juice-autostake-safe bytes",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 2,
+      "label": "[1 DEPLOY+ONBOARD] safe code hash == juice-autostake-safe hash verified in fakfun-wallet-core-v2",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 3,
+      "label": "[1 DEPLOY+ONBOARD] onboard (FAKFUN-DEPLOYER): passkey 0385bde9e9..., admin SP9BP4PN..., wizard limits 100 STX / 100,000 sats / 144 blocks",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 4,
+      "label": "[1 DEPLOY+ONBOARD] passkey is an admin key",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 5,
+      "label": "[1 DEPLOY+ONBOARD] admin wallet is the owner",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "(ok SP9BP4PN74CNR5XT7CMAMBPA0GWC9HMB69HVVV51)"
+    },
+    {
+      "step": 6,
+      "label": "[1 DEPLOY+ONBOARD] keeper = chavita (SPV9K21)",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22"
+    },
+    {
+      "step": 7,
+      "label": "[1 DEPLOY+ONBOARD] core-v2 whitelisted the safe",
+      "section": "1 DEPLOY+ONBOARD",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 8,
+      "label": "[2 FUND+STAKE] (fork-only) top up SP8K2RZG... 30005 STX",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 9,
+      "label": "[2 FUND+STAKE] (fork-only) top up SP29HM6Q... 30005 STX",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 10,
+      "label": "[2 FUND+STAKE] admin wallet sends 1,000 STX to the safe",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 11,
+      "label": "[2 FUND+STAKE] safe holds 1,000 STX unlocked",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u1000000000))) (balance u1000000000))"
+    },
+    {
+      "step": 12,
+      "label": "[2 FUND+STAKE] admin stake-stx-juice 1,000 STX (sig-auth none)",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 13,
+      "label": "[2 FUND+STAKE] LOCKED: 1,000 STX, unlocked 0",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1000000000) (unlock-height u1174250) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 14,
+      "label": "[2 FUND+STAKE] pox-5 position: juice-pool-sbtc-signer, 1,000 STX",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1000000000) (first-reward-cycle u146) (num-cycles u96) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 15,
+      "label": "[2 FUND+STAKE] (fork-only) staker 1 stakes 30,000 STX with the pool (pool needs 50k to be a counted signer)",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(ok (tuple (amount-ustx u30000000000) (first-reward-cycle u146) (num-cycles u12) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (staker SP8K2RZGHWTRF29B7DPZFN0FB65R0DSKHSH9PPAR) (unlock-burn-height u997850) (unlock-cycle u158)))"
+    },
+    {
+      "step": 16,
+      "label": "[2 FUND+STAKE] (fork-only) staker 2 stakes 30,000 STX with the pool (pool needs 50k to be a counted signer)",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "(ok (tuple (amount-ustx u30000000000) (first-reward-cycle u146) (num-cycles u12) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer) (staker SP29HM6QNTKT8B2XBX5SX375T0Z042C9D9P5VN809) (unlock-burn-height u997850) (unlock-cycle u158)))"
+    },
+    {
+      "step": 17,
+      "label": "[2 FUND+STAKE] pool delegated for cycle 146 >= 50k STX",
+      "section": "2 FUND+STAKE",
+      "passed": true,
+      "actual": "u61000000000"
+    },
+    {
+      "step": 18,
+      "label": "[3 ROUND 1] into the staked cycle 146: +773 burn -> 972670 (cycle 146 offset 20)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 19,
+      "label": "[3 ROUND 1] current cycle",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "u146"
+    },
+    {
+      "step": 20,
+      "label": "[3 ROUND 1] calculate-rewards: close the previous half (flush; err u30 if already done)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (accrued-rewards-per-ustx u184788853015) (bond-periods (list u1 u2)) (calculation-height u972649) (cumulative-rewards-per-ustx u972169689292) (cycle-staked-ustx u483122696760501) (gross-accrued-rewards u149127949) (reserve-balance u385964230) (reserve-deposit u15754533) (stx-cycle u145) (total-bond-rewards u44097727) (total-stx-staker-rewards u89275689)))"
+    },
+    {
+      "step": 21,
+      "label": "[3 ROUND 1] [safe] pox-5 shares in cycle 146",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "u1000000000"
+    },
+    {
+      "step": 22,
+      "label": "[3 ROUND 1] pool shares in cycle 146",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "u61000000000"
+    },
+    {
+      "step": 23,
+      "label": "[3 ROUND 1] (fork-only) rewards arrive: 10 BTC of sBTC into pox-5",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 24,
+      "label": "[3 ROUND 1] to the reward point (second half of 146): +1035 burn -> 973705 (cycle 146 offset 1055)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 25,
+      "label": "[3 ROUND 1] calculate-rewards books the first half of 146 (bonds [1,2])",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (accrued-rewards-per-ustx u1938974790024) (bond-periods (list u1 u2)) (calculation-height u973699) (cumulative-rewards-per-ustx u1938974790024) (cycle-staked-ustx u419044609130682) (gross-accrued-rewards u1000000000) (reserve-balance u529349570) (reserve-deposit u143385340) (stx-cycle u146) (total-bond-rewards u44097727) (total-stx-staker-rewards u812516933)))"
+    },
+    {
+      "step": 26,
+      "label": "[3 ROUND 1] pool tranche index for this claim",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "u0"
+    },
+    {
+      "step": 27,
+      "label": "[3 ROUND 1] pool pox-claim-rewards(146) -> sBTC into juice-sbtc-autoswap (SATS IN)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (bond-rewards (list )) (bond-totals u0) (stx-rewards (tuple (earned u118277) (rewards-per-token u1938974790024))) (total-rewards u118277)))"
+    },
+    {
+      "step": 28,
+      "label": "[3 ROUND 1] vault rests the sBTC on Jing (jing-place, Lazer update)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u118277) (floor u20841679767213)))))"
+    },
+    {
+      "step": 29,
+      "label": "[3 ROUND 1] vault patience window (288 blocks): +289 burn -> 973994 (cycle 146 offset 1344)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 30,
+      "label": "[3 ROUND 1] vault reclaims the unfilled sBTC from Jing",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"jing-reclaim\") (payload (tuple (amount u118277)))))"
+    },
+    {
+      "step": 31,
+      "label": "[3 ROUND 1] router sells the sBTC for STX (router-swap, Lazer update)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u118277) (limit-price u21719224178464) (mid u21938610281277) (out u257936140) (unsold u0)))))"
+    },
+    {
+      "step": 32,
+      "label": "[3 ROUND 1] router cooldown: +1 burn -> 973995 (cycle 146 offset 1345)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 33,
+      "label": "[3 ROUND 1] router-swap again (only if a chunk is left; err is fine)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(err u16031)"
+    },
+    {
+      "step": 34,
+      "label": "[3 ROUND 1] finalize-swap: STX pot for the stakers (STX OUT)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok u257936140)"
+    },
+    {
+      "step": 35,
+      "label": "[3 ROUND 1] [safe] get-stx-owed (uSTX)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "u4228461"
+    },
+    {
+      "step": 36,
+      "label": "[3 ROUND 1] [safe] before payout",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1000000000) (unlock-height u1174250) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 37,
+      "label": "[3 ROUND 1] pay-stx-stakers([safe, staker1, staker2]) in STX (permissionless)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok u257936139)"
+    },
+    {
+      "step": 38,
+      "label": "[3 ROUND 1] [safe] after payout: reward sits unlocked",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1000000000) (unlock-height u1174250) (unlocked u4228461))) (balance u4228461))"
+    },
+    {
+      "step": 39,
+      "label": "[3 ROUND 1] tranche fully paid",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 40,
+      "label": "[3 ROUND 1] keeper (chavita SPV9K21) restake()",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(ok (tuple (amount u4228461) (cycles-to-extend u1)))"
+    },
+    {
+      "step": 41,
+      "label": "[3 ROUND 1] [safe] LOCKED after restake (unlocked 0)",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1004228461) (unlock-height u1176350) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 42,
+      "label": "[3 ROUND 1] [safe] pox-5 position after restake",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1004228461) (first-reward-cycle u146) (num-cycles u97) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 43,
+      "label": "[4 ROUND 2] into cycle 147 (the restaked amount now counts): +775 burn -> 974770 (cycle 147 offset 20)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 44,
+      "label": "[4 ROUND 2] current cycle",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "u147"
+    },
+    {
+      "step": 45,
+      "label": "[4 ROUND 2] calculate-rewards: close the previous half (flush; err u30 if already done)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (accrued-rewards-per-ustx u0) (bond-periods (list u1 u2)) (calculation-height u974749) (cumulative-rewards-per-ustx u1938974790024) (cycle-staked-ustx u419044609130682) (gross-accrued-rewards u0) (reserve-balance u529349570) (reserve-deposit u0) (stx-cycle u146) (total-bond-rewards u0) (total-stx-staker-rewards u0)))"
+    },
+    {
+      "step": 46,
+      "label": "[4 ROUND 2] [safe] pox-5 shares in cycle 147",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "u1004228461"
+    },
+    {
+      "step": 47,
+      "label": "[4 ROUND 2] pool shares in cycle 147",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "u61004228461"
+    },
+    {
+      "step": 48,
+      "label": "[4 ROUND 2] (fork-only) rewards arrive: 10 BTC of sBTC into pox-5",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 49,
+      "label": "[4 ROUND 2] to the reward point (second half of 147): +1035 burn -> 975805 (cycle 147 offset 1055)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 50,
+      "label": "[4 ROUND 2] calculate-rewards books the first half of 147 (bonds [1,2])",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (accrued-rewards-per-ustx u1940459828247) (bond-periods (list u1 u2)) (calculation-height u975799) (cumulative-rewards-per-ustx u1940459828247) (cycle-staked-ustx u418723913359143) (gross-accrued-rewards u1000000000) (reserve-balance u672734910) (reserve-deposit u143385340) (stx-cycle u147) (total-bond-rewards u44097727) (total-stx-staker-rewards u812516933)))"
+    },
+    {
+      "step": 51,
+      "label": "[4 ROUND 2] pool tranche index for this claim",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "u0"
+    },
+    {
+      "step": 52,
+      "label": "[4 ROUND 2] pool pox-claim-rewards(147) -> sBTC into juice-sbtc-autoswap (SATS IN)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (bond-rewards (list )) (bond-totals u0) (stx-rewards (tuple (earned u118376) (rewards-per-token u1940459828247))) (total-rewards u118376)))"
+    },
+    {
+      "step": 53,
+      "label": "[4 ROUND 2] vault rests the sBTC on Jing (jing-place, Lazer update)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"jing-place\") (payload (tuple (amount u118376) (floor u20841679767213)))))"
+    },
+    {
+      "step": 54,
+      "label": "[4 ROUND 2] vault patience window (288 blocks): +289 burn -> 976094 (cycle 147 offset 1344)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 55,
+      "label": "[4 ROUND 2] vault reclaims the unfilled sBTC from Jing",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"jing-reclaim\") (payload (tuple (amount u118376)))))"
+    },
+    {
+      "step": 56,
+      "label": "[4 ROUND 2] router sells the sBTC for STX (router-swap, Lazer update)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (notification \"router-swap\") (payload (tuple (amount u118376) (limit-price u21719224178464) (mid u21938610281277) (out u257653117) (unsold u2)))))"
+    },
+    {
+      "step": 57,
+      "label": "[4 ROUND 2] router cooldown: +1 burn -> 976095 (cycle 147 offset 1345)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 58,
+      "label": "[4 ROUND 2] router-swap again (only if a chunk is left; err is fine)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(err u16031)"
+    },
+    {
+      "step": 59,
+      "label": "[4 ROUND 2] finalize-swap: STX pot for the stakers (STX OUT)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok u257653117)"
+    },
+    {
+      "step": 60,
+      "label": "[4 ROUND 2] [safe] get-stx-owed (uSTX)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "u4241387"
+    },
+    {
+      "step": 61,
+      "label": "[4 ROUND 2] [safe] before payout",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1004228461) (unlock-height u1176350) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 62,
+      "label": "[4 ROUND 2] pay-stx-stakers([safe, staker1, staker2]) in STX (permissionless)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok u257653115)"
+    },
+    {
+      "step": 63,
+      "label": "[4 ROUND 2] [safe] after payout: reward sits unlocked",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1004228461) (unlock-height u1176350) (unlocked u4241387))) (balance u4241387))"
+    },
+    {
+      "step": 64,
+      "label": "[4 ROUND 2] tranche fully paid",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 65,
+      "label": "[4 ROUND 2] keeper (chavita SPV9K21) restake()",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(ok (tuple (amount u4241387) (cycles-to-extend u1)))"
+    },
+    {
+      "step": 66,
+      "label": "[4 ROUND 2] [safe] LOCKED after restake (unlocked 0)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1008469848) (unlock-height u1178450) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 67,
+      "label": "[4 ROUND 2] [safe] pox-5 position after restake",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1008469848) (first-reward-cycle u146) (num-cycles u98) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 68,
+      "label": "[5 EXIT] admin unstake (sig-auth none)",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 69,
+      "label": "[5 EXIT] pox-5 position after unstake",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(some (tuple (amount-ustx u1008469848) (first-reward-cycle u146) (num-cycles u2) (signer SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.juice-pool-sbtc-signer)))"
+    },
+    {
+      "step": 70,
+      "label": "[5 EXIT] still locked until the next cycle starts",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u1008469848) (unlock-height u976850) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 71,
+      "label": "[5 EXIT] past the unlock height: +760 burn -> 976855 (cycle 148 offset 5)",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "ok"
+    },
+    {
+      "step": 72,
+      "label": "[5 EXIT] STX unlocked back in the safe, locked 0",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u1008469848))) (balance u1008469848))"
+    },
+    {
+      "step": 73,
+      "label": "[5 EXIT] pox-5 position gone",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "none"
+    },
+    {
+      "step": 74,
+      "label": "[5 EXIT] OUTSIDE wallet before",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u68805000))) (balance u68805000))"
+    },
+    {
+      "step": 75,
+      "label": "[5 EXIT] admin stx-transfer ALL 1,008.469848 STX -> OUTSIDE (over the 100 STX limit -> queued as op u0)",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 76,
+      "label": "[5 EXIT] op u0 pending, admin-created, nothing moved yet",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(some (tuple (amount u1008469848) (execute-after u976999) (executed false) (extension none) (op-type \"stx-transfer\") (passkey-created false) (payload (some 0x09)) (recipient SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM) (token none) (vetoed false)))"
+    },
+    {
+      "step": 77,
+      "label": "[5 EXIT] safe still holds everything",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u1008469848))) (balance u1008469848))"
+    },
+    {
+      "step": 78,
+      "label": "[5 EXIT] JS execute-now SIP-018 hash == mm-safe-auth-helpers-v1 inside the safe",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "true"
+    },
+    {
+      "step": 79,
+      "label": "[5 EXIT] PASSKEY co-signs execute-pending-stx-transfer-now op u0 (both keys = immediate, relayed by a stranger)",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(ok true)"
+    },
+    {
+      "step": 80,
+      "label": "[5 EXIT] END: safe balance 0",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u0))) (balance u0))"
+    },
+    {
+      "step": 81,
+      "label": "[5 EXIT] END: OUTSIDE wallet after",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "(tuple (account (tuple (locked u0) (unlock-height u0) (unlocked u1077274848))) (balance u1077274848))"
+    },
+    {
+      "step": null,
+      "label": "R1: safe paid exactly get-stx-owed",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "+4228461 uSTX (owed 4228461)"
+    },
+    {
+      "step": null,
+      "label": "R1: restake locked exactly the payout",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "4228461"
+    },
+    {
+      "step": null,
+      "label": "R1: locked grew 1,000 STX -> 1,000 STX + round 1",
+      "section": "3 ROUND 1",
+      "passed": true,
+      "actual": "1000000000 -> 1004228461"
+    },
+    {
+      "step": null,
+      "label": "R2: safe shares in 147 = 1,000 STX + round 1 (compounding)",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "1004228461 (cycle 146: 1000000000)"
+    },
+    {
+      "step": null,
+      "label": "R2: safe paid exactly get-stx-owed",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "+4241387 uSTX (owed 4241387)"
+    },
+    {
+      "step": null,
+      "label": "R2: restake locked exactly the payout",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "4241387"
+    },
+    {
+      "step": null,
+      "label": "R2: locked grew again to 1,000 STX + round 1 + round 2",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "1004228461 -> 1008469848"
+    },
+    {
+      "step": null,
+      "label": "R2: bigger share of the pool than round 1",
+      "section": "4 ROUND 2",
+      "passed": true,
+      "actual": "1.6393% -> 1.6462%"
+    },
+    {
+      "step": null,
+      "label": "EXIT: unlocked = 1,000 STX + round 1 + round 2",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "1008469848"
+    },
+    {
+      "step": null,
+      "label": "EXIT: OUTSIDE received principal + both rounds",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "+1008469848 uSTX"
+    },
+    {
+      "step": null,
+      "label": "SUMMARY",
+      "section": "5 EXIT",
+      "passed": true,
+      "actual": "staked 1,000 STX, round1 +4.228461 STX, round2 +4.241387 STX, withdrawn 1,008.469848 STX"
+    }
+  ]
+}
