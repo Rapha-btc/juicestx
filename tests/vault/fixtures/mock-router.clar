@@ -74,3 +74,19 @@
     (min-stx-out uint)
   )
   (begin (try! (verify update)) (sell amount min-stx-out)))
+
+;; Router v6 shape (swap-router-sbtc-stx-jing-v6, Zest leg): zest in both AMM
+;; tuples plus a trailing zest route. tests/vault/build.py --v2 points the
+;; autoswap-v2 split calls here; the mock still sells the whole amount at mid.
+(define-public (swap-sbtc-for-stx-v6
+    (amount uint)
+    (jing-amount uint)
+    (limit-price uint)
+    (update (optional (buff 8192)))
+    (fallback (optional uint))
+    (amm-amounts { zest: uint, dlmm: uint, xyk: uint, velar: uint })
+    (amm-mins { zest: uint, dlmm: uint, xyk: uint, velar: uint })
+    (min-stx-out uint)
+    (zest-route { ticks: (list 32 int), price: uint })
+  )
+  (begin (try! (verify update)) (sell amount min-stx-out)))

@@ -10,7 +10,9 @@ const projectRoot=resolve(testDir,'../..');
 const require=createRequire(resolve(projectRoot,'package.json'));
 const { initSimnet, tx }=require('@stacks/clarinet-sdk');
 const { Cl, cvToString }=require('@stacks/transactions');
-const manifest=resolve(testDir,'.build/Clarinet.toml');
+// JUICE_VAULT=v2: tests/vault/build.py --v2 output (autoswap-v2 in the vault slot)
+const BUILD=process.env.JUICE_VAULT==='v2'?'.build-v2':'.build';
+const manifest=resolve(testDir,BUILD+'/Clarinet.toml');
 const sim=await initSimnet(manifest,true,{trackCoverage:true});
 const accounts=sim.getAccounts(), admin=accounts.get('deployer'), alice=accounts.get('wallet_1'), bob=accounts.get('wallet_2');
 const cp=n=>Cl.contractPrincipal(admin,n),u=Cl.uint, update=Cl.buffer(new Uint8Array());
@@ -28,7 +30,7 @@ function err(r,code){assert.equal(cvToString(r.result),`(err u${code})`)}
 function read(n,f,a=[]){return sim.callReadOnlyFn(n,f,a,admin).result}
 function stx(w){return sim.getAssetsMap().get('STX').get(w)||0n}
 const J='juice-pool-sbtc-signer',JV='juice-sbtc-autoswap',F='fastpool-stx-vault-signer',FV='fastpool-swap-vault';
-const VAULT_FUNCTIONS=new Set([...POOL_VAULT_FUNCTIONS,'test-fund','test-finish']);
+const VAULT_FUNCTIONS=new Set([...POOL_VAULT_FUNCTIONS,'test-fund','test-finish','set-vault-maker-spread-bps']);
 const vaultArgs=(n,f,a)=>n===J&&VAULT_FUNCTIONS.has(f)?[...a,cp(JV)]:a;
 const poolTx=(f,a,sender)=>tx.callPublicFn(J,f,vaultArgs(J,f,a),sender);
 // Juice router-swap takes only the update (20fb4f1): it sells min(balance,
@@ -56,7 +58,7 @@ const eventChecks={
  [`${J}.withdraw-sbtc-fees`]:['withdraw-sbtc-fees'],
  [`${J}.refloor-vault`]:['jing-refloor'],
 };
-for(const setting of ['window-blocks','leeway-bps','slippage-bps','max-chunk-sats','dia-band-bps','router-cooldown','pyth-fee-budget']){
+for(const setting of ['window-blocks','leeway-bps','slippage-bps','max-chunk-sats','dia-band-bps','router-cooldown','pyth-fee-budget','maker-spread-bps']){
  eventChecks[`${J}.set-vault-${setting}`]=[`set-${setting}`];
 }
 
@@ -66,7 +68,7 @@ for(const [name,value,max,positive] of [
  ['window-blocks',288,288,false],['leeway-bps',500,1000,false],
  ['slippage-bps',100,1000,false],['max-chunk-sats',5000000,100000000,true],
  ['dia-band-bps',1000,5000,false],['router-cooldown',1,144,false],
- ['pyth-fee-budget',0,10000000,false]]){
+ ['pyth-fee-budget',0,10000000,false],['maker-spread-bps',1,50,false]]){
  err(call(JV,`set-${name}`,[u(value)],admin),16000);
  err(call(J,`set-vault-${name}`,[u(value)]),100);
  err(call(J,`set-vault-${name}`,[u(max+1)],admin),16033);
@@ -77,6 +79,17 @@ for(const [name,value,max,positive] of [
 const split=[u(500000),u(100000),u(100000),u(100000),u(200000),update];
 err(call(JV,'router-swap-split',split,admin),16000);
 err(call(J,'router-swap-split',split),100);
+// v2 only: the Zest split entries take contract-caller = the pool's get-admin
+// (called directly, no pool wrapper); anyone else, the pool included, u16000.
+if(process.env.JUICE_VAULT==='v2'){
+ const zsplit=[u(500000),u(100000),u(0),Cl.list([]),u(100000),u(100000),u(200000),update];
+ const zdia=[u(500000),u(0),Cl.list([]),u(200000),u(100000),u(200000)];
+ err(call(JV,'router-swap-split-zest',zsplit,alice),16000);
+ err(call(JV,'router-swap-split-dia-zest',zdia,alice),16000);
+ err(call(JV,'router-swap-split-zest',[u(500000),u(100000),u(1),Cl.list([]),u(100000),u(100000),u(200000),update],admin),16040);
+ err(call(JV,'router-swap-split-zest',zsplit,admin),16031);
+ err(call(JV,'router-swap-split-dia-zest',zdia,admin),16031);
+}
 
 // No OG minimum or deadline: any stake takes a seat while the 2.1M cap has
 // room. Fill the cap first (an unused cycle) so the fee scenarios below see
@@ -140,10 +153,11 @@ for(const [who,amount] of [[alice,1],[bob,3]])ok(call('mock-pox','stake-test',[c
 ok(call(J,'propose-fee-bips',[u(500)],admin));sim.mineEmptyBurnBlocks(144);ok(call(J,'confirm-fee-bips',[],admin));ok(call(J,'raise-og-cap',[u(2100500000000)],admin));ok(call('mock-pox','stake-test',[cp(J),Cl.principal(alice),u(145),u(500000000)]));
 ok(call(J,'pox-claim-rewards',[Cl.list([]),u(142)]));ok(call(JV,'jing-place',[update]));
 err(call(JV,'jing-refloor',[update]),16000);err(call(J,'refloor-vault',[update]),100);ok(call(J,'refloor-vault',[update],admin));
-ok(call('v6-market','swap',[u(3206412825),u(32000000000000),update,cp('mock-ft'),Cl.stringAscii('mock-ft'),cp('mock-ft'),Cl.stringAscii('mock-ft'),Cl.bool(false)],bob));
+ok(call('v6-market','swap',[u(3206733467),u(32003200000000),update,cp('mock-ft'),Cl.stringAscii('mock-ft'),cp('mock-ft'),Cl.stringAscii('mock-ft'),Cl.bool(false)],bob));
 // A maker fill does not pass through the vault: anyone closes the emptied batch.
 ok(call(JV,'close-batch'));
-const makerOut=ok(call(J,'finalize-swap')).value;assert.equal(makerOut,3203212825n);
+const makerOut=ok(call(J,'finalize-swap')).value;// the vault asks mid + maker-spread-bps (default 1bp): 1e6 sats x 3200.32 uSTX, +10bps rebate
+assert.equal(makerOut,3203520320n);
 const aliceMaker=makerOut/4n, bobMaker=makerOut*3n/4n, juiceFee=bobMaker/20n;
 let a=stx(alice),b=stx(bob);
 ok(call(J,'pay-stx-stakers',[Cl.list([Cl.principal(alice),Cl.principal(bob)]),u(142),u(0)]));
@@ -172,8 +186,9 @@ assert.equal(read(F,'get-unswapped-sats').value,0n);assert.equal(read(F,'get-unp
 err(call(F,'withdraw-fees',[u(100001),Cl.principal(admin)],admin),1007);
 ok(call(F,'withdraw-fees',[u(100000),Cl.principal(admin)],admin));
 console.log('FastPool: snapshotted sBTC fees, late-claim batch isolation and incremental STX payouts passed');
-// Maker rounding residue is sweepable only after all stakers were paid.
-assert.equal(ok(call(J,'sweep-tranche-dust',[u(142),u(0)],admin)).value,1n);
+// The 1bp-spread maker out (3203520320) splits 1:3 exactly: no residue, so the
+// sweep is refused (residue sweeps are covered in juice-pool-payouts.test.ts).
+assert.equal(makerOut%4n,0n);err(call(J,'sweep-tranche-dust',[u(142),u(0)],admin),105);
 // A third-party sBTC donation cannot strand the next funding before it starts.
 ok(call('mock-ft','mint',[u(7),cp(JV)]));
 ok(call('mock-pox','stake-test',[cp(J),Cl.principal(alice),u(143),u(1)]));
@@ -473,7 +488,7 @@ ok(call(J,'set-vault-window-blocks',[u(288)],admin));
 for(const [who,amount]of [[alice,1],[bob,3]])ok(call('mock-pox','stake-test',[cp(J),Cl.principal(who),u(171),u(amount)]));
 ok(call('mock-pox','next-dist'));ok(call(J,'pox-claim-rewards',[Cl.list([]),u(171)]));
 ok(call(JV,'jing-place',[update]));
-ok(call('v6-market','swap',[u(3206412825),u(32000000000000),update,cp('mock-ft'),Cl.stringAscii('mock-ft'),cp('mock-ft'),Cl.stringAscii('mock-ft'),Cl.bool(false)],bob));
+ok(call('v6-market','swap',[u(3206733467),u(32003200000000),update,cp('mock-ft'),Cl.stringAscii('mock-ft'),cp('mock-ft'),Cl.stringAscii('mock-ft'),Cl.bool(false)],bob));
 assert.equal(read(JV,'get-clock').value['batch-start'].type,'some');
 sim.mineEmptyBurnBlocks(RECOVERY);
 const allStx=ok(call(J,'emergency-recover',[],admin));
@@ -537,7 +552,7 @@ assert.equal(upgradeStatus['batch-start'].type,'none');
  assert.equal(cvToString(read(J,'get-staker-fee',[cp('og-never'),u(600n*STX),u(1000000),u(500)])),'u50000');
  console.log('Juice OG seats: stake-in only, no min, top-up grows, no deadline, no seat limit, raise-only cap, cap clamp, partial fee passed');
 }
-const directory=resolve(projectRoot,'tests/vault/results');mkdirSync(directory,{recursive:true});
+const directory=resolve(projectRoot,'tests/vault/results'+(BUILD==='.build'?'':'/v2'));mkdirSync(directory,{recursive:true});
 const report=sim.collectReport(false,'');
 const vaultRecord=report.coverage.split('end_of_record').find(r=>r.includes('/juice-sbtc-autoswap.clar'));
 assert.ok(vaultRecord,'vault coverage missing');
@@ -547,8 +562,8 @@ const lineCounts=[...normalized.matchAll(/^DA:(\d+),(\d+)$/gm)].map(m=>({line:Nu
 const branchTotal=Number(normalized.match(/^BRF:(\d+)$/m)[1]),branchHits=Number(normalized.match(/^BRH:(\d+)$/m)[1]);
 const missedBranches=[...normalized.matchAll(/^BRDA:(\d+),(\d+),(\d+),(-|0)$/gm)].map(m=>`${m[1]},${m[2]},${m[3]}`);
 assert.equal(branchHits,branchTotal,`current vault branch coverage regressed; unhit (line,block,arm): ${missedBranches.join(' ')}`);
-writeFileSync(resolve(directory,'coverage.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,'.build/source-hashes.json'))),
+writeFileSync(resolve(directory,'coverage.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,BUILD+'/source-hashes.json'))),
  branchTotal,branchHits,lineTotal:lineCounts.length,lineHits:lineCounts.filter(c=>c.hits>0).length,
  zeroHitLines:lineCounts.filter(c=>!c.hits).map(c=>c.line),
  notes:'Zero-hit counters are tuple fields, bindings and multiline contract-call arguments exercised by the tests; all instrumented branch outcomes reached. Dependency addresses/assets rebound to fixtures, with declared fault injection. This is local vault coverage, not exhaustive mainnet dependency coverage.'},null,2)+'\n');
-writeFileSync(resolve(directory,'runtime.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,'.build/source-hashes.json'))),status:'passed',scope:'full-source local runtime with fixture dependencies; fork runs validate real dependency behavior'},null,2)+'\n');
+writeFileSync(resolve(directory,'runtime.json'),JSON.stringify({sourceHashes:JSON.parse(readFileSync(resolve(testDir,BUILD+'/source-hashes.json'))),status:'passed',scope:'full-source local runtime with fixture dependencies; fork runs validate real dependency behavior'},null,2)+'\n');

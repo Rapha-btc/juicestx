@@ -15,8 +15,12 @@ here = Path(__file__).resolve().parent
 root = here.parents[1]
 vault_build = root / 'tests/vault/build.py'
 
+V2 = '--v2' in sys.argv
+SUFFIX = '-v2' if V2 else ''
+PASS = [a for a in sys.argv[1:] if a == '--v2']
+
 def run(*args):
-    subprocess.run([sys.executable, str(vault_build), *args], check=True, cwd=root)
+    subprocess.run([sys.executable, str(vault_build), *args, *PASS], check=True, cwd=root)
 
 def manifest(names, name):
     m = f'[project]\nname = "{name}"\ntelemetry = false\ncache_dir = "./.cache"\n[repl.analysis]\npasses = []\n'
@@ -40,8 +44,8 @@ CONTRACTS = ['sip-010-trait', 'mock-ft', 'mock-signer-trait', 'mock-pox', 'mock-
 
 def build_pool():
     run()
-    src = root / 'tests/vault/.build/contracts'
-    out = here / '.build-pool'
+    src = root / f'tests/vault/.build{SUFFIX}/contracts'
+    out = here / f'.build-pool{SUFFIX}'
     fresh(out)
     for n in CONTRACTS:
         shutil.copy(src / f'{n}.clar', out / f'contracts/{n}.clar')
@@ -78,21 +82,23 @@ def build_pool():
 
 def build_vault():
     run('--rv')
-    src = root / 'tests/vault/.build-rv'
-    out = here / '.build-vault'
+    src = root / f'tests/vault/.build-rv{SUFFIX}'
+    out = here / f'.build-vault{SUFFIX}'
     fresh(out)
     names = [n for n in CONTRACTS if n != 'juice-pool-sbtc-signer']
     for n in names:
         shutil.copy(src / f'contracts/{n}.clar', out / f'contracts/{n}.clar')
     p = out / 'contracts/juice-sbtc-autoswap.clar'
-    p.write_text(p.read_text() + '\n' + (here / 'vault/vault.extra.clar').read_text())
+    extra = (here / 'vault/vault.extra.clar').read_text()
+    p.write_text(p.read_text() + '\n' + extra)
     (out / 'Clarinet.toml').write_text(manifest(names, 'juice-rv-vault'))
     print('built', out)
 
 def hashes():
+    vault = 'juice-sbtc-autoswap' + SUFFIX
     h = {n: hashlib.sha256((root / f'contracts/pox-5/{n}.clar').read_bytes()).hexdigest()
-         for n in ['juice-pool-sbtc-signer', 'juice-sbtc-autoswap']}
-    (here / 'source-hashes.json').write_text(json.dumps(h, indent=2) + '\n')
+         for n in ['juice-pool-sbtc-signer', vault]}
+    (here / f'source-hashes{SUFFIX}.json').write_text(json.dumps(h, indent=2) + '\n')
 
 if __name__ == '__main__':
     args = [a for a in sys.argv[1:] if not a.startswith('--')]

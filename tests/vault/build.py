@@ -2,16 +2,26 @@
 """Bind CURRENT Juice source to self-contained local fixtures, preserving guards."""
 from pathlib import Path
 import shutil,json,hashlib
-here=Path(__file__).resolve().parent;root=here.parents[1];out=here/('.build-rv' if '--rv' in __import__('sys').argv else '.build');(out/'contracts').mkdir(parents=True,exist_ok=True);(out/'settings').mkdir(exist_ok=True)
-# the -v6-4 / -v5-4 and -v6-3 / -v5-3 ids first: the bare -v6 / -v5 prefixes would otherwise leave a stray "-3"
-replacements={"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-4":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5-4":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-3":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5-3":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3":'.mock-native',"'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token":'.mock-ft',"'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2":'.mock-ft',"'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle":'.mock-dia',"'SP000000000000000000002Q6VF78.pox-5":'.mock-pox',"'ST000000000000000000002AMW42H.pox-5":'.mock-pox','"sbtc-token"':'"mock-ft"'}
+here=Path(__file__).resolve().parent;root=here.parents[1]
+# --v2 (or JUICE_VAULT=v2): contracts/pox-5/juice-sbtc-autoswap-v2.clar in the
+# juice-sbtc-autoswap slot (same contract name, so tests and RV run unchanged),
+# built into .build-v2 / .build-rv-v2; v1 builds stay in .build / .build-rv.
+V2='--v2' in __import__('sys').argv or __import__('os').environ.get('JUICE_VAULT')=='v2'
+out=here/(('.build-rv' if '--rv' in __import__('sys').argv else '.build')+('-v2' if V2 else ''));(out/'contracts').mkdir(parents=True,exist_ok=True);(out/'settings').mkdir(exist_ok=True)
+# exact ids (v6-5 / v5-5 / router v6) and the -v6-4 / -v5-4 and -v6-3 / -v5-3 ids first: the bare -v6 / -v5 prefixes would otherwise leave a stray "-3"
+replacements={"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-5":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5-5":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v6)":'.mock-router)',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v6\n":'.mock-router\n',**{"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-4":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5-4":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6-3":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5-3":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.markets-sbtc-stx-jing-v6":'.v6-market',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.swap-router-sbtc-stx-jing-v5":'.mock-router',"'SPV9K21TBFAK4KNRJXF5DFP8N7W46G4V9RCJDC22.rfq-sbtc-stx-jing-v2-3":'.mock-native',"'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token":'.mock-ft',"'SM1793C4R5PZ4NS4VQ4WMP7SKKYVH8JZEWSZ9HCCR.token-stx-v-1-2":'.mock-ft',"'SP1G48FZ4Y7JY8G2Z0N51QTCYGBQ6F4J43J77BQC0.dia-oracle":'.mock-dia',"'SP000000000000000000002Q6VF78.pox-5":'.mock-pox',"'ST000000000000000000002AMW42H.pox-5":'.mock-pox','"sbtc-token"':'"mock-ft"'}}
 files={p.stem:p.read_text() for p in (here/'fixtures').glob('*.clar') if p.stem!='pool-emergency-wrappers'}
 files['mock-signer-trait']='(define-trait signer-manager-trait ((validate-stake! (principal uint uint uint uint bool (optional (buff 500))) (response bool uint))))'
 hashes={}
 for n in ['juice-swap-vault-trait','juice-swap-vault-trait-v2']:
  files[n]=(root/f'contracts/pox-5/{n}.clar').read_text();hashes[n]=hashlib.sha256(files[n].encode()).hexdigest()
 for n in ['juice-pool-sbtc-signer','juice-sbtc-autoswap']:
- s=(root/f'contracts/pox-5/{n}.clar').read_text();hashes[n]=hashlib.sha256(s.encode()).hexdigest();files[n]=s
+ src=f'{n}-v2' if V2 and n=='juice-sbtc-autoswap' else n
+ s=(root/f'contracts/pox-5/{src}.clar').read_text();hashes[src]=hashlib.sha256(s.encode()).hexdigest();files[n]=s
+ if src!=n:
+  # router v6 split shape lives on the mock as swap-sbtc-for-stx-v6
+  assert s.count('JING_ROUTER swap-sbtc-for-stx ')==2
+  files[n]=s.replace('JING_ROUTER swap-sbtc-for-stx ','JING_ROUTER swap-sbtc-for-stx-v6 ')
 for n,s in files.items():
  for a,b in replacements.items():s=s.replace(a,b)
  s=s.replace('.mock-pox.signer-manager-trait','.mock-signer-trait.signer-manager-trait')
@@ -75,8 +85,14 @@ manifest='[project]\nname = "juice-vault-runtime"\ntelemetry = false\ncache_dir 
 for n in files:manifest+=f'\n[contracts.{n}]\npath = "contracts/{n}.clar"\nclarity_version = 6\nepoch = "4.0"\n'
 (out/'Clarinet.toml').write_text(manifest);shutil.copy(root/'settings/Devnet.toml',out/'settings/Devnet.toml');(out/'source-hashes.json').write_text(json.dumps(hashes,indent=2)+'\n');print('Built current-source vault fixtures:',out)
 
-if __import__('sys').argv[-1]=='--rv':
+if '--rv' in __import__('sys').argv:
  p=out/'contracts/juice-sbtc-autoswap.clar'
  s=p.read_text().replace('(define-constant POOL .juice-pool-sbtc-signer)', "(define-constant POOL 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)")
- p.write_text(s+'\n'+(here/'rv.invariants.clar').read_text())
+ inv=(here/'rv.invariants.clar').read_text()
+ if V2:
+  # RV binds POOL to the deployer actor (a standard principal), so the pool's
+  # get-admin lookup becomes that same actor: test-only, guard shape unchanged
+  assert s.count('(contract-call? POOL get-admin)')==1
+  s=s.replace('(contract-call? POOL get-admin)','POOL')
+ p.write_text(s+'\n'+inv)
  print('RV ONLY: pool principal bound to the deployer actor; original equality guards unchanged; eight invariants appended')

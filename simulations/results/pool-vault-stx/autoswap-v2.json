@@ -1,0 +1,53 @@
+{
+  "urls": [
+    "https://stxer.xyz/simulations/mainnet/ee4e55346657314deabbc04beb8ad804"
+  ],
+  "hashes": {
+    "swap-router-sbtc-stx-jing-v6": {
+      "sha256": "8325e0c5300b3c9b65dc6d89ba70c1f4067add9515640efd2ca325c32b4e7a84",
+      "sha512_256": "a48a187ec50341b00a6239d8cb8ed938b26da568bfc75b778db767be3dca90aa"
+    },
+    "juice-sbtc-autoswap-v2": {
+      "sha256": "c0aa11743191b11c866548e259035e40462485806750ed232ee63a6201e4fd32",
+      "sha512_256": "dd011f18c7bf3f50c081195ba223ae121d0bd7623d026a32d80f792e4c72f46a"
+    }
+  },
+  "passed": 72,
+  "total": 72,
+  "fails": [],
+  "notes": [],
+  "groups": {
+    "preconditions": [
+      6,
+      6
+    ],
+    "deploy": [
+      6,
+      6
+    ],
+    "guards": [
+      6,
+      6
+    ],
+    "upgrade: live pool -> v2 (real propose + confirm, notice clock aged)": [
+      6,
+      6
+    ],
+    "fund via the real pool claim (PoX reward fixture)": [
+      12,
+      12
+    ],
+    "liquidation: router v6, zest skipped": [
+      9,
+      9
+    ],
+    "zest entries: pool admin only": [
+      12,
+      12
+    ],
+    "trait-v2 splits through the live pool wrappers": [
+      15,
+      15
+    ]
+  }
+}

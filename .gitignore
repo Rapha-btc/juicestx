@@ -19,3 +19,7 @@ tests/vault/__pycache__/
 tests/rv/.build-pool/
 tests/rv/.build-vault/
 tests/rv/__pycache__/
+tests/vault/.build-v2/
+tests/vault/.build-rv-v2/
+tests/rv/.build-pool-v2/
+tests/rv/.build-vault-v2/

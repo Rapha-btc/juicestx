@@ -4,9 +4,9 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 const [target, runs = "1000", seed = "1"] = process.argv.slice(2);
-const dir = { pool: "tests/rv/.build-pool", vault: "tests/rv/.build-vault" }[target];
-const contract = { pool: "juice-pool-sbtc-signer", vault: "juice-sbtc-autoswap" }[target];
-if (!dir) throw new Error("target must be pool or vault");
+const dir = { pool: "tests/rv/.build-pool", vault: "tests/rv/.build-vault", "pool-v2": "tests/rv/.build-pool-v2", "vault-v2": "tests/rv/.build-vault-v2" }[target];
+const contract = { pool: "juice-pool-sbtc-signer", vault: "juice-sbtc-autoswap", "pool-v2": "juice-pool-sbtc-signer", "vault-v2": "juice-sbtc-autoswap" }[target];
+if (!dir) throw new Error("target must be pool, vault, pool-v2 or vault-v2");
 const cfg = {
   accounts: [
     { name: "deployer", address: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM" },

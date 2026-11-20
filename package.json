@@ -17,6 +17,12 @@
     "rv:pool": "python3 tests/rv/build.py pool && node tests/rv/run.mjs pool",
     "rv:pool:no-zero": "python3 tests/rv/build.py pool --no-zero-stake && node tests/rv/run.mjs pool",
     "rv:vault:ext": "python3 tests/rv/build.py vault && node tests/rv/run.mjs vault",
+    "test:v2": "python3 tests/vault/build.py --v2 && vitest run -- --manifest ./tests/vault/.build-v2/Clarinet.toml",
+    "check:v2": "python3 tests/vault/build.py --v2 && cd tests/vault/.build-v2 && clarinet check",
+    "test:vault:v2": "python3 tests/vault/build.py --v2 && JUICE_VAULT=v2 node tests/vault/runtime.mjs",
+    "rv:vault:v2:build": "python3 tests/vault/build.py --rv --v2",
+    "rv:vault:v2": "rv tests/vault/.build-rv-v2 juice-sbtc-autoswap invariant --runs=1000",
+    "rv:vault:ext:v2": "python3 tests/rv/build.py vault --v2 && node tests/rv/run.mjs vault-v2",
     "test:rv-repro": "python3 tests/vault/build.py && vitest run tests/rv-repro-og-zero-seat.test.ts -- --manifest ./tests/vault/.build/Clarinet.toml"
   },
   "author": "",
