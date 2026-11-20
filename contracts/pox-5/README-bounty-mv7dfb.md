@@ -25,7 +25,8 @@ Runners-up and tip candidates (all adopted):
   sBTC (signer).
 - Rare Io: payout gas (I1 `e425a4c`, I2 `da7913d`).
 
-Not awarded: Iron Hub (findings do not hold), Violet Reed (by design).
+Not awarded: Iron Hub (findings do not hold), Violet Reed (by design),
+Frosty Narwhal (no finding holds).
 
 | # | Submission | Who | Claim | Verdict | Status |
 |---|---|---|---|---|---|
@@ -39,6 +40,7 @@ Not awarded: Iron Hub (findings do not hold), Violet Reed (by design).
 | 9 | Violet Reed | Violet Reed | `router-swap-split` reverts u3002 when a bid sits in `[limit, book-limit)`: the manual book leg pays net, the vault signs a gross min-out | By design | No change: fail-safe, operator path; the keeper sizes the book slice at `book-limit` |
 | 10 | Patient Reed recheck | Patient Reed | Recheck of `d90dc1c`: after the lock ends, a fresh small stake before `evict-og` keeps the old cover | Holds, Medium | Fixed (uncommitted): a stake below the cover shrinks it to the stake (`og-shrink`). og-shrink 52/52 https://stxer.xyz/simulations/mainnet/06341a94a7acbdfe0b4f5cb3d87b7669 |
 | 11 | Zealous Citadel Info | Zealous Citadel | `propose-fee-bips` never expires | Holds, Info | Accepted, no change: the 5% cap is the guarantee |
+| 13 | Frosty Narwhal | Frosty Narwhal | 19 claims over 5 repos (C-1, H-1 to H-3, M-1 to M-8, L-1 to L-7) | None holds | No change: duplicates of apeir I-2/I-3, by design, or not true in the code (section 13) |
 
 ## 1. Patient Reed: OG seat without stake
 
@@ -348,3 +350,83 @@ stxer mainnet fork, exact repo source:
 - pool-accounting 126/126 https://stxer.xyz/simulations/mainnet/eb9a4c99ed698a1e3e2388a30ee2c1c9
 
 The same fix is in fastpool-swap-vault.
+
+## 13. Frosty Narwhal: 19 claims, none holds
+
+**No change.** Submission 2026-10-14 19:20Z (gist by Iskander-Agent), pinned
+at the bounty commits. Checked against the final code: juicestx `570226c`.
+Every verdict below is the same at the pinned `1e9a2fb`. Items for the other
+repos are answered in their own READMEs (pillar
+`README-juice-autostake-safe-review.md`, jing-contracts-v3
+`contracts/README-bounty-mv7dfb.md`, fastpool `docs/deploy-stx-rewards.md`
+11.4, ccd016 `README-ccd016-swap-vault-v2.md`).
+
+**C-1, `emergency-recover` books the vault's numbers without a balance
+diff: duplicate of apeir I-3, accepted by design.** Pool L1130-1153 books
+`(get stx recovered)` and `(get sbtc recovered)` as reported;
+`finalize-swap` (L991-1004) checks the diff. The report's code is not the
+pool's: it shows `(var-set stx-pot cycle (+ ...))`, the pool does
+`map-set stx-pot batch` (L1137). Our vault returns exactly what it sends
+(autoswap `emergency-recover`, L292-365). A lying vault needs the admin key and a public
+notice: `propose-swap-vault` (L158), then 4,032 burn blocks
+(`SWAP_VAULT_COOLDOWN`, L22, about a month), then `confirm-swap-vault`
+(L190) with no pending swap and both vaults idle. Such a vault also holds
+the whole funded tranche, so the trust is already total. The diff would
+only cap the extra harm to other tranches' STX, and it adds a way for the
+exit path to fail.
+
+**H-1, `close-batch` is permissionless: does not hold.** It is open on
+purpose (L222, "Anyone may close"). It needs `is-empty` (L828): at most
+`DUST_SATS` (2) sats in the vault and nothing on the market. The
+`reclaim-core` in it (L242-246) runs only when wallet + market is at most 2
+sats. Then the batch is sold. The STX proceeds stay in the vault, and
+`finish` sends them to the pool (L261-290); nothing is zeroed. A reclaim
+mid-window puts the sBTC back in the vault, so `is-empty` is false and the
+close is refused (`ERR_SOME_FUNDS`). Every sale already ends with
+`close-if-empty` (L818), which does the same.
+
+**H-2, `finish` uses `(and ...)` for the transfer: does not hold.** L274-280:
+`(and (> amount u0) (try! ...))`. When `amount` is 0 nothing is owed and
+`finish` returns 0. When it is above 0 the transfer runs, and `try!` aborts
+the call if it fails. The pool checks `after - before = amount` (L1001).
+`juice-pool-swap-vault.clar`, named in the report, is not in the repo.
+
+**H-3, the native fallback floor is mid / 2: by design.** L603-630. The
+DIA branch uses `no-pyth-slippage-bps`. The fallback (DIA errored) uses the
+RFQ `get-native-price`: the miners' implied STX price, a day average of
+tenure spend. It is a coarse second source, not a market price, so the
+floor is its lower band edge, `native / 2`, as the core-spread rungs use
+it (commit `0f5bdc0`, "the deployed RFQ's native lower band edge"). A 10%
+band on it would stop the emergency sale whenever the miner price lags the
+market. It is reached only by `router-swap-split-dia` (L549), which is
+POOL-only (L556), and only when DIA errors.
+
+**M-4, `router-swap-split` allowance lacks the rebate dust: does not hold**
+(claimed for fastpool and ccd016, the same here). The split calls the
+manual router path with `fallback none` (L520). Router v5-3 `with-fallback`
+(L396-406) adds the Jing residual only to the fallback venue, so with
+`none` nothing is re-sold. The vault sends at most `jing + dlmm + xyk +
+velar = amount`; the refunded rest and rebate dust stay in the vault.
+`amount + min-x` (L516) already covers that. `router-swap` passes a
+fallback through the smart path, which is why it has the larger
+allowance (`024d2b1`).
+
+**M-5, DIA timestamp in the future passes: duplicate of apeir I-2,
+accepted.**
+
+**M-6, `is-empty` uses `is-none` on the pending deposit, `market-total`
+uses the amount: does not hold.** A pending entry is never left at 0. The
+market writes it only with the deposited `amount` (market v6-3 L1590), the
+sBTC transfer before it refuses 0, and the entry is deleted, not reduced,
+on settle (L1628), cancel (L1781) and refund. A pending deposit is not
+filled, so no partial fill touches it.
+
+**L-5, `jing-reclaim` is permissionless after the window: by design.**
+L389-394. When the patience window has elapsed, the resting order has had
+its chance. Anyone may bring the sBTC home so the permissionless
+`router-swap` can sell it. This keeps the sale from depending on our
+keeper.
+
+**L-6, `dia-band-bps` u0 turns off the DIA check: by design** (apeir I-2:
+it is the off switch). The mid is then the Pyth Lazer mid from the market's
+`refresh-mid`, not a raw book price (L723-742).
