@@ -475,7 +475,22 @@
   }
 )
 
-(define-public (router-swap-split
+;; Split sales come in two pairs.
+;; - router-swap-split / router-swap-split-dia keep the exact
+;;   juice-swap-vault-trait-v2 signatures and payloads, so the live
+;;   juice-pool-sbtc-signer can switch to this vault and call them as before.
+;;   They send nothing to Zest.
+;; - router-swap-split-zest / router-swap-split-dia-zest add the Zest leg. The
+;;   live pool has no wrapper for them, so the pool's admin (get-admin on
+;;   juice-pool-sbtc-signer, it follows the pool's own admin handover) calls
+;;   them directly. No new key or setter.
+(define-private (assert-pool-admin)
+  (ok (asserts! (is-eq contract-caller (contract-call? POOL get-admin))
+    ERR_UNAUTHORIZED
+  ))
+)
+
+(define-private (split-core
     (amount uint)
     (jing uint)
     (zest uint)
@@ -497,7 +512,6 @@
       })
       (market-mins (contract-call? JING_MARKET get-min-deposits))
     )
-    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (is-eq amount (+ jing zest dlmm xyk velar)) ERR_SPLIT_MISMATCH)
     (asserts! (window-elapsed) ERR_WINDOW_OPEN)
     (asserts! (<= amount (var-get max-chunk-sats)) ERR_CHUNK_TOO_BIG)
@@ -521,27 +535,18 @@
         ))
       ))))
       (close-if-empty)
-      (ok (print {
-        notification: "router-swap-split",
-        payload: {
-          amount: amount,
-          jing: jing,
-          zest: zest,
-          dlmm: dlmm,
-          xyk: xyk,
-          velar: velar,
-          limit-price: limit,
-          velar-limit: velar-limit,
-          mid: mid,
-          out: (get out result),
-          unsold: (get unsold result),
-        },
-      }))
+      (ok {
+        limit-price: limit,
+        velar-limit: velar-limit,
+        mid: mid,
+        out: (get out result),
+        unsold: (get unsold result),
+      })
     )
   )
 )
 
-(define-public (router-swap-split-dia
+(define-private (split-dia-core
     (amount uint)
     (zest uint)
     (zest-ticks (list 32 int))
@@ -550,7 +555,6 @@
     (velar uint)
   )
   (begin
-    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
     (asserts! (is-eq amount (+ zest dlmm xyk velar)) ERR_SPLIT_MISMATCH)
     (asserts! (window-elapsed) ERR_WINDOW_OPEN)
     (asserts! (<= amount (var-get max-chunk-sats)) ERR_CHUNK_TOO_BIG)
@@ -578,24 +582,138 @@
             ))
           ))))
           (close-if-empty)
-          (ok (print {
-            notification: "router-swap-split-dia",
-            payload: {
-              amount: amount,
-              zest: zest,
-              dlmm: dlmm,
-              xyk: xyk,
-              velar: velar,
-              mid: (get mid price),
-              limit-price: limit,
-              price-source: (get source price),
-              dia-error: (get dia-error price),
-              out: (get out result),
-              unsold: (get unsold result),
-            },
-          }))
+          (ok {
+            mid: (get mid price),
+            limit-price: limit,
+            price-source: (get source price),
+            dia-error: (get dia-error price),
+            out: (get out result),
+            unsold: (get unsold result),
+          })
         )
       )
+    )
+  )
+)
+
+(define-public (router-swap-split
+    (amount uint)
+    (jing uint)
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+    (update (buff 8192))
+  )
+  (begin
+    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
+    (let ((r (try! (split-core amount jing u0 (list) dlmm xyk velar update))))
+      (ok (print {
+        notification: "router-swap-split",
+        payload: {
+          amount: amount,
+          jing: jing,
+          dlmm: dlmm,
+          xyk: xyk,
+          velar: velar,
+          limit-price: (get limit-price r),
+          velar-limit: (get velar-limit r),
+          mid: (get mid r),
+          out: (get out r),
+          unsold: (get unsold r),
+        },
+      }))
+    )
+  )
+)
+
+(define-public (router-swap-split-zest
+    (amount uint)
+    (jing uint)
+    (zest uint)
+    (zest-ticks (list 32 int))
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+    (update (buff 8192))
+  )
+  (begin
+    (try! (assert-pool-admin))
+    (let ((r (try! (split-core amount jing zest zest-ticks dlmm xyk velar update))))
+      (ok (print {
+        notification: "router-swap-split-zest",
+        payload: {
+          amount: amount,
+          jing: jing,
+          zest: zest,
+          dlmm: dlmm,
+          xyk: xyk,
+          velar: velar,
+          limit-price: (get limit-price r),
+          velar-limit: (get velar-limit r),
+          mid: (get mid r),
+          out: (get out r),
+          unsold: (get unsold r),
+        },
+      }))
+    )
+  )
+)
+
+(define-public (router-swap-split-dia
+    (amount uint)
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+  )
+  (begin
+    (asserts! (is-eq contract-caller POOL) ERR_UNAUTHORIZED)
+    (let ((r (try! (split-dia-core amount u0 (list) dlmm xyk velar))))
+      (ok (print {
+        notification: "router-swap-split-dia",
+        payload: {
+          amount: amount,
+          dlmm: dlmm,
+          xyk: xyk,
+          velar: velar,
+          mid: (get mid r),
+          limit-price: (get limit-price r),
+          price-source: (get price-source r),
+          dia-error: (get dia-error r),
+          out: (get out r),
+          unsold: (get unsold r),
+        },
+      }))
+    )
+  )
+)
+
+(define-public (router-swap-split-dia-zest
+    (amount uint)
+    (zest uint)
+    (zest-ticks (list 32 int))
+    (dlmm uint)
+    (xyk uint)
+    (velar uint)
+  )
+  (begin
+    (try! (assert-pool-admin))
+    (let ((r (try! (split-dia-core amount zest zest-ticks dlmm xyk velar))))
+      (ok (print {
+        notification: "router-swap-split-dia-zest",
+        payload: {
+          amount: amount,
+          zest: zest,
+          dlmm: dlmm,
+          xyk: xyk,
+          velar: velar,
+          mid: (get mid r),
+          limit-price: (get limit-price r),
+          price-source: (get price-source r),
+          dia-error: (get dia-error r),
+          out: (get out r),
+          unsold: (get unsold r),
+        },
+      }))
     )
   )
 )
